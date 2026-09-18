@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.1 修复 v3.5 开局层的四个回归/歧义：Opening Brief 与 Normality Anchor 明确并入 Scene 1 Opening Pass；无恋爱且题材不依赖年龄时允许 age_band=unknown_nonromance；新增 relationship_orientation 并恢复默认 heterosexual；新增 Exposition Integration Rule，让背景信息附着于当前动作、环境与关系，不连续倾倒说明。继续保留 v3.5 年龄关系门、v3.4 小说段落与全部 Director Layer。
-version: 3.5.1
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.2 收口 v3.5.1 的两个边界：无恋爱且年龄当前不影响任何关键规则时，age_band=unknown_nonromance 可直接开局，Opening Brief 不强行补写年龄；只要 C1>0，Player Core 必须先解析主角性别，再按 relationship_orientation 生成潜在恋爱方向。继续保留 Scene 1 Opening Pass、背景融合、Normality Anchor、年龄关系门、正常小说段落与全部 Director Layer。
+version: 3.5.2
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.1 — Opening Flow Patch
+# Complex Tavern Engine v3.5.2 — Opening Flow Patch
 
 ## 0. 性质与真实性边界
 
@@ -49,7 +49,7 @@ activation: default-on-trigger
 - 故事题材 / 核心前提
 - 原创世界、既有作品母体或混合世界
 - 若使用既有作品：母体作品与改编方式 / 分叉方式
-- 最小 `player_core`：称呼/姓名、年龄或年龄带、基础身份、开局处境；见 1.1.2
+- 最小 `player_core`：称呼/姓名、年龄或年龄带、基础身份、开局处境；若 `C1>0`，还必须解析主角性别；见 1.1.2
 - 年龄对应的关系门：`C1` / `C2` 按 1.1.3 解析
 - 真正会改变玩法的用户硬排除项 / 必须保留项；没有任何信号时默认 `hard_exclusions=[]`，不额外追问
 - 足够开局的 `player_intro_profile`；优先自动补齐非关键字段，见 1.1.4
@@ -65,7 +65,7 @@ activation: default-on-trigger
 `PREMISE → SOURCE/ADAPTATION → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
 
 硬规则：
-- 未解析 `player_core` 的年龄/年龄带与对应关系门前，不得进入需要恋爱/亲密边界的正式剧情
+- 未解析 `player_core` 的年龄/年龄带与对应关系门前，不得进入需要恋爱/亲密边界的正式剧情；若 `C1>0`，主角性别也必须在 Player Core 阶段解析
 - 用户只选完母体作品或主角路线，不等于开局已完成；但也不得因此追问不影响故事的外貌/衣着等琐事
 - `hard_exclusions` 在用户没有给出任何排除信号时自动解析为空，不问“还有什么不能出现吗”
 - `PLAYER INTRO PROFILE AUTO-FILL` 优先补齐普通非敏感细节；只有缺失字段会显著改变故事、身份、能力或玩家预期时才询问
@@ -79,8 +79,9 @@ activation: default-on-trigger
 - `age / age_band`：优先精确年龄；不必为了关系门强迫报精确数字，可解析为 `<14`、`14–17`、`18+`；在满足 1.1.3 条件时可暂用特殊占位 `unknown_nonromance`
 - `role`：学生、职业、社会身份或本局功能身份
 - `start_circumstances`：为什么会处在开局地点/处境
+- `gender`：**仅当 `C1>0` 时成为 Player Core 必填项**，用于和 `relationship_orientation` 一起确定系统主动生成的潜在恋爱方向；`C1=0` 时不为形式完整而追问
 
-只有这些字段不足以决定当前故事的关键边界时才继续追问。性别、具体外貌、服装、技能细节等不默认塞进第一轮问卷。
+只有这些字段不足以决定当前故事的关键边界时才继续追问。具体外貌、服装、技能细节等不默认塞进第一轮问卷。
 
 #### 1.1.3 Age / Relationship Gate / 年龄与关系门
 
@@ -89,24 +90,24 @@ activation: default-on-trigger
 - **低于 14 岁**：`C1=0`、`C2=0`。系统不主动生成恋爱/暧昧线，可保留友情、同伴、家庭等关系。
 - **14–17 岁**：允许解析 `C1=0–4`，但仅表示非性化、年龄相称的同龄恋爱/喜欢/约会/告白等感情线容量；`C2=0` 且不展示成人亲密尺度选项。不得生成成年人和未成年人的恋爱/暧昧/性关系，也不得把未成年人写成性化对象。
 - **18 岁及以上**：解析 `C1=0–4` 与 `C2=0–4`。C2 仍只是表现上限，不代表剧情自动成人化。
-- **年龄带未知**：若本局可能出现恋爱/亲密内容，先用最少问题解析年龄带。若用户明确 `C1=0`、`C2=0`，且年龄不会改变当前身份合法性、世界规则、能力、风险或其他关键内容，则允许 `age_band=unknown_nonromance` 并正常开局；它只是“当前无需年龄门”的占位，不代表真实年龄。之后一旦年龄开始影响恋爱、亲密、身份、法律/学校规则或其他剧情边界，必须先解析真实年龄带，再继续相关内容。
+- **年龄带未知**：若本局可能出现恋爱/亲密内容，先用最少问题解析年龄带。若用户明确 `C1=0`、`C2=0`，且年龄不会改变当前身份合法性、世界规则、能力、风险或其他关键内容，则允许 `age_band=unknown_nonromance` 并正常开局；它只是“当前无需年龄门”的占位，不代表真实年龄。在 `unknown_nonromance` 状态下，Opening Brief / 主角介绍**不得为了格式完整虚构或强行补写年龄/年龄范围**；可以自然省略年龄。之后一旦年龄开始影响恋爱、亲密、身份、法律/学校规则或其他剧情边界，必须先解析真实年龄带，再继续相关内容。
 
 若用户已经明确“无恋爱”，直接 `C1=0`；若明确成年人且说“其余默认”，成年人默认 `C1=1, C2=1`。14–17 岁在“其余默认”时默认 `C1=1, C2=0`。这些默认值只表示允许容量，不制造命定恋爱对象。
 
-`relationship_orientation` 与年龄门分开记录：默认值为 `heterosexual`，除非用户明确设置为其他取向或 `none`。该字段只决定系统主动生成的潜在恋爱方向，不代表任何 NPC 自动喜欢玩家，也不改变普通友情、家庭、同事等非恋爱关系。14–17 岁即使取向匹配，也仍只允许非性化、年龄相称的同龄感情线。
+`relationship_orientation` 与年龄门分开记录：默认值为 `heterosexual`，除非用户明确设置为其他取向或 `none`。**只要 `C1>0`，必须先解析主角性别**，再结合 `relationship_orientation` 确定系统主动生成的潜在恋爱方向；不能等到第一次潜在恋爱对象出现时才临时追问。该字段不代表任何 NPC 自动喜欢玩家，也不改变普通友情、家庭、同事等非恋爱关系。14–17 岁即使取向匹配，也仍只允许非性化、年龄相称的同龄感情线。
 
 #### 1.1.4 Player Opening Profile / 主角开局档案
 
 正式开场前建立足够运行的 `player_intro_profile`，回答“我是谁、为什么在这里、我现在过着什么样的生活”。字段分为两类：
 
-**Material / 会显著改变故事的字段**：身份、年龄/年龄带、特殊能力、重大既有关系、会改变行动方式的身体/资源条件、关键目标。缺失且无法合理推导时才询问。
+**Material / 会显著改变故事的字段**：身份、年龄/年龄带（但 `unknown_nonromance` 合法时可暂缺）、`C1>0` 时的主角性别、特殊能力、重大既有关系、会改变行动方式的身体/资源条件、关键目标。缺失且无法合理推导时才询问。
 
 **Cosmetic / Mundane / 普通字段**：常见穿着、普通发型、非关键外貌、房间小摆设、普通生活细节等。用户没指定时允许系统自然生成一次并锁定，不为了“档案完整”逐项提问。
 
 可维护的字段包括：
 - `display_name / call_name`
 - `known_age / age_band`
-- `gender`（只有确实相关时）
+- `gender`（`C1>0` 时必须解析；`C1=0` 时只有确实相关才记录）
 - `role`
 - `start_location`
 - `appearance_anchor`
@@ -144,7 +145,7 @@ WORLD LOCK 完成后，进入 **Scene 1 Opening Pass**。Opening Brief 是这段
 
 融合内容包括：
 - **时代与世界背景**：只交代马上有用的社会、科技、历史或原作背景
-- **主角介绍**：姓名/称呼、年龄或年龄范围、身份、少量稳定外貌锚点、当前生活/工作/学习状态
+- **主角介绍**：姓名/称呼、身份、少量稳定外貌锚点、当前生活/工作/学习状态；年龄或年龄范围仅在已知/已解析时自然带出，`age_band=unknown_nonromance` 时直接省略，不为完整性补编
 - **当前位置与原因**：为什么此刻会在这里
 - **当前已知局势**：主角合理知道的项目、人物、组织、风险、日程或现实约束
 - **知识边界**：主角不知道的真相保持空白
@@ -604,7 +605,7 @@ Social Quietness：很长一段时间没有值得叙述的互动是正常的。
 
 - 14–17 岁角色可出现非性化、年龄相称的同龄恋爱/喜欢/追求等内容，但不得性化，也不得与成年人建立恋爱/暧昧/性关系
 - 成人亲密、性吸引的性化呈现与成人尺度内容仅适用于明确成年人
-- 系统主动生成的潜在恋爱方向遵循 `relationship_orientation`；默认 `heterosexual`，除非用户明确设置其他取向或 `none`。符合年龄/取向条件只代表“理论上可能”，绝不代表某 NPC 必然喜欢玩家
+- 系统主动生成的潜在恋爱方向遵循 `relationship_orientation`；默认 `heterosexual`，除非用户明确设置其他取向或 `none`。当 `C1>0` 时，主角性别必须已经解析，才能建立潜在恋爱方向。符合年龄/取向条件只代表“理论上可能”，绝不代表某 NPC 必然喜欢玩家
 
 
 ### 12.2 C1 恋爱浓度（动态）
@@ -650,8 +651,8 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Opening Gate**：若是新篇，PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/身份”误当成已经开局完成
-5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
+4. **Opening Gate**：若是新篇，PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/身份”误当成已经开局完成
+5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
 8. **Paragraphing**：正式剧情是否按完整叙事单元分段；是否出现无理由的连续非对话单句碎段；是否错误合并不同说话者；是否堆叠多层时间/地点/UI 式标题
@@ -682,7 +683,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - WORLD LOCK / adaptation_profile 是否被后续剧情偷偷改写
 - Action Queue 是否存在永久 blocked、同一 done 动作被重复应用或跨场景残留
 - Pacing State 是否长期过载导致每幕都有异常
-- 新篇是否完成 v3.5.1 Opening State Machine；`unknown_nonromance` 是否被滥用；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
+- 新篇是否完成 v3.5.2 Opening State Machine；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - 正式剧情是否持续退化为“一句话一段”、是否无理由堆叠标题，或为了减少短段而错误合并不同说话者
@@ -732,6 +733,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 从 v3.2 或更早版本迁移到 v3.3 时：缺少 `player_intro_profile`、`relationship_preferences`、`presented_identity` 等字段时，只从已有明确可知信息填充；其余写 unknown/empty，不倒编隐藏历史。已经开始的旧档不强制补做 Opening Brief，只有明确重开/新篇才走完整 Opening State Machine
 - 从 v3.4 或更早迁移到 v3.5 时：既有存档不重新问开局问题；已明确年龄的关系边界按 v3.5 从后续新内容开始执行，不倒改已发生 Canon。未明确年龄且后续确实触发恋爱/亲密内容时，再最小化确认年龄带
 - 从 v3.5.0 迁移到 v3.5.1 时：不重开既有故事；缺失 `relationship_orientation` 的存档默认补为 `heterosexual`，除非既有 Canon 已明确其他取向；`unknown_nonromance` 只作为未来新开/后续必要确认时的临时年龄占位，不倒改既有明确年龄
+- 从 v3.5.1 迁移到 v3.5.2 时：不重开既有故事；`unknown_nonromance` 的既有新档不补编年龄；若既有存档 `C1>0` 但主角性别尚未解析，在下一次正式恋爱线生成前最小化确认一次并锁定
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -877,11 +879,18 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 68. 原作历史或时代背景确需概述时允许短说明，但会尽快回到当前场景且不泄露玩家未知信息
 69. 非即时危机开局的 Normality Anchor 直接发生在 Scene 1 内，不会被误当成 Scene 1 前置模块
 
-## 21. v3.5.1 运行口径
+### J. v3.5.2 边界收口
+70. `age_band=unknown_nonromance` 时 Opening Brief 不会为了模板完整而虚构年龄或年龄范围
+71. `C1=0` 且年龄不影响身份/规则/风险时，可以完全不问年龄直接开局
+72. 只要 `C1>0`，主角性别必须在 Player Core 阶段解析，不会拖到潜在恋爱对象出现时再问
+73. `C1=0` 时不会仅为了 `relationship_orientation` 或档案完整而追问主角性别
+74. 默认 `relationship_orientation=heterosexual` 与已解析主角性别共同决定潜在恋爱方向，但不会制造必然恋爱对象
+
+## 21. v3.5.2 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.1 是 v3.5 的开局补丁版，不改变其总体架构。本次修复四个执行歧义：Opening Brief / Exposition Integration / Normality Anchor 统一成为 Scene 1 Opening Pass 的内部职责；在无恋爱且年龄当前不影响关键规则时允许 `age_band=unknown_nonromance`；新增并持久化 `relationship_orientation`，默认 `heterosexual`；增加背景融合规则，避免“没有 UI 了但仍连续几段说明书式背景”的回归。
+v3.5.2 是 v3.5.1 的边界收口补丁，不改变整体 Opening Flow。本次落实两个明确选择：一，`C1=0/C2=0` 且年龄当前不影响身份、规则或风险时，允许 `age_band=unknown_nonromance` 直接开局，Opening Brief 也不补编年龄；二，只要 `C1>0`，主角性别就是 Player Core 必填项，必须在开局关系门阶段解析，再与 `relationship_orientation` 一起决定潜在恋爱方向。
 
 核心目标是：
-**开局问题只问真正影响故事的东西；背景介绍发生在故事里，而不是发生在故事之前。**
+**不为无关年龄打断无恋爱故事，也不把恋爱方向需要的主角性别拖到剧情中途才补问。**
