@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.2 收口 v3.5.1 的两个边界：无恋爱且年龄当前不影响任何关键规则时，age_band=unknown_nonromance 可直接开局，Opening Brief 不强行补写年龄；只要 C1>0，Player Core 必须先解析主角性别，再按 relationship_orientation 生成潜在恋爱方向。继续保留 Scene 1 Opening Pass、背景融合、Normality Anchor、年龄关系门、正常小说段落与全部 Director Layer。
-version: 3.5.2
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.3 修复运行层三处一致性问题：第 6 节每轮执行流程恢复严格 1–19 顺序；Opening Gate 同步 v3.5.2 的 PLAYER CORE / AGE-RELATIONSHIP / Scene 1 Opening Pass 逻辑；持久化 schema_version 统一升级到 3.5.3，并明确从旧 3.3/3.5.x 状态迁移时只补结构字段、不改既有 Canon。继续保留 v3.5.2 的开局与叙事规则。
+version: 3.5.3
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.2 — Opening Flow Patch
+# Complex Tavern Engine v3.5.3 — Runtime Fix
 
 ## 0. 性质与真实性边界
 
@@ -414,17 +414,17 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 
 1. **Input Parser**：解析玩家输入、授权范围、连续/条件动作
 2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情
-3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，检查 C1/C2、player_intro_profile、WORLD LOCK 与 Opening Brief；缺少硬门槛时先补齐，不得进入 SCENE 1
+3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，检查 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 与 Scene 1 Opening Pass 的必要条件；`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
 5. **Context Loader**：加载当前场景与必要 Active Context
 6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
 7. **Time Resolver**：仅按实际行动推进合理游戏时间
-14. **Background Simulator**：计算与经过时间相称的必要离屏变化
-15. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
-14. **Random Resolver**：如需随机判定，先定条件/难度，再获得结果
-15. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
-14. **Decision Gate**：判定 D0–D3，决定是否真正需要停下
-15. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
+8. **Background Simulator**：计算与经过时间相称的必要离屏变化
+9. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
+10. **Random Resolver**：如需随机判定，先定条件/难度，再获得结果
+11. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
+12. **Decision Gate**：判定 D0–D3，决定是否真正需要停下
+13. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
 14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3
 15. **Director Preflight**：逐轮轻量预检，见 13.1
 16. **Continuity Auditor**：仅在必要范围检查本轮状态变更；周期性深审计见第 14 节
@@ -734,6 +734,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 从 v3.4 或更早迁移到 v3.5 时：既有存档不重新问开局问题；已明确年龄的关系边界按 v3.5 从后续新内容开始执行，不倒改已发生 Canon。未明确年龄且后续确实触发恋爱/亲密内容时，再最小化确认年龄带
 - 从 v3.5.0 迁移到 v3.5.1 时：不重开既有故事；缺失 `relationship_orientation` 的存档默认补为 `heterosexual`，除非既有 Canon 已明确其他取向；`unknown_nonromance` 只作为未来新开/后续必要确认时的临时年龄占位，不倒改既有明确年龄
 - 从 v3.5.1 迁移到 v3.5.2 时：不重开既有故事；`unknown_nonromance` 的既有新档不补编年龄；若既有存档 `C1>0` 但主角性别尚未解析，在下一次正式恋爱线生成前最小化确认一次并锁定
+- 从旧 `schema_version: 3.3` 或 v3.5.x 状态迁移到 `schema_version: 3.5.3` 时，只补充缺失的结构字段、默认值与索引（例如 relationship_orientation、年龄占位、Opening 状态字段等）；已发生 Canon、人物关系事实、资源、时间、物品、事件结果与 Raw Story Log 不得因此改写
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -753,7 +754,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.3`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器与最后已提交的 TURN
+- `state.json`：`schema_version: 3.5.3`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器与最后已提交的 TURN
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与大体检结果
 
@@ -886,11 +887,18 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 73. `C1=0` 时不会仅为了 `relationship_orientation` 或档案完整而追问主角性别
 74. 默认 `relationship_orientation=heterosexual` 与已解析主角性别共同决定潜在恋爱方向，但不会制造必然恋爱对象
 
-## 21. v3.5.2 运行口径
+### K. v3.5.3 Runtime Fix
+75. 第 6 节每轮执行流程严格按 1–19 唯一编号推进，不存在重复或跳号
+76. 第 6 节 Opening Gate 与 v3.5.2 Opening State Machine 使用同一套 PLAYER CORE / AGE-RELATIONSHIP / Scene 1 Opening Pass 判定
+77. state.json 使用 schema_version: 3.5.3
+78. 从 schema 3.3 或旧 v3.5.x 状态迁移到 3.5.3 时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源
+79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
+
+## 21. v3.5.3 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.2 是 v3.5.1 的边界收口补丁，不改变整体 Opening Flow。本次落实两个明确选择：一，`C1=0/C2=0` 且年龄当前不影响身份、规则或风险时，允许 `age_band=unknown_nonromance` 直接开局，Opening Brief 也不补编年龄；二，只要 `C1>0`，主角性别就是 Player Core 必填项，必须在开局关系门阶段解析，再与 `relationship_orientation` 一起决定潜在恋爱方向。
+v3.5.3 是运行层一致性修复版，不改变 v3.5.2 的开局体验与叙事行为。本次只修三类底层合同：执行流程 1–19 唯一顺序、Opening Gate 与最新版开局状态机统一、持久化 schema_version 升级到 3.5.3 并定义旧状态迁移。
 
 核心目标是：
-**不为无关年龄打断无恋爱故事，也不把恋爱方向需要的主角性别拖到剧情中途才补问。**
+**让“规则写对了”同时等于“执行流程也按同一套规则运行”，并让旧档恢复不会因 schema 漂移产生歧义。**
