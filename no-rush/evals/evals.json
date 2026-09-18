@@ -1,0 +1,103 @@
+{
+  "skill": "no-rush",
+  "version": "2.1.0",
+  "purpose": "Regression tests for default activation, explicit disable/restore, clarification convergence, latest-wins behavior, and final delivery checks.",
+  "cases": [
+    {
+      "name": "unknown_effort_still_defaults_on",
+      "context": "Thinking effort is unavailable or unknown.",
+      "request": "帮我做一个减脂计划",
+      "expect": ["no_rush_enabled", "do_not_require_effort_detection"]
+    },
+    {
+      "name": "instant_mode_still_defaults_on",
+      "context": "Model is Instant.",
+      "request": "帮我做一个复杂方案",
+      "expect": ["no_rush_enabled"]
+    },
+    {
+      "name": "gpt6pro_still_defaults_on",
+      "context": "Model is GPT-6 Pro.",
+      "request": "帮我做一个复杂方案",
+      "expect": ["no_rush_enabled"]
+    },
+    {
+      "name": "explicit_current_task_disable",
+      "context": "No-Rush is normally enabled.",
+      "request": "这次不用不着急，直接回答",
+      "expect": ["no_rush_disabled_for_current_task_only"]
+    },
+    {
+      "name": "explicit_conversation_disable_and_restore",
+      "context": "User says 关闭不着急, then later says 恢复不着急.",
+      "request": "恢复不着急",
+      "expect": ["no_rush_reenabled"]
+    },
+    {
+      "name": "ambiguous_request_asks_key_question",
+      "context": "No-Rush is enabled.",
+      "request": "帮我把昨天那个东西优化一下",
+      "expect": ["ask_key_clarification"]
+    },
+    {
+      "name": "simple_question_zero_rounds",
+      "context": "No-Rush is enabled.",
+      "request": "1+1等于多少",
+      "expect": ["zero_clarification_rounds", "answer_directly"]
+    },
+    {
+      "name": "delegation_stops_questions",
+      "context": "User already said: 剩下的你决定.",
+      "request": "继续做",
+      "expect": ["mark_delegated", "do_not_reask_same_decision"]
+    },
+    {
+      "name": "self_retrieval_before_question",
+      "context": "Required fact can be obtained from an available file/tool.",
+      "request": "按文件里的要求继续",
+      "expect": ["retrieve_first", "do_not_ask_user_for_retrievable_fact"]
+    },
+    {
+      "name": "latest_requirement_wins",
+      "context": "Earlier: 16:9. Later: 改成4:3.",
+      "request": "继续",
+      "expect": ["current_is_4_3", "16_9_is_superseded"]
+    },
+    {
+      "name": "non_conflicting_requirements_accumulate",
+      "context": "Earlier: 4:3. Later: 字体大一点.",
+      "request": "继续",
+      "expect": ["keep_4_3", "add_larger_font"]
+    },
+    {
+      "name": "normal_task_converges_by_three",
+      "context": "Normal task with ambiguity.",
+      "request": "After three clarification rounds, continue.",
+      "expect": ["no_more_than_3_rounds_unless_complex"]
+    },
+    {
+      "name": "complex_task_fourth_round_is_final",
+      "context": "Complex contradictory task at clarification round 4.",
+      "request": "继续确认",
+      "expect": ["final_convergence_only", "no_new_question_branch"]
+    },
+    {
+      "name": "direct_do_skips_stage_a_only",
+      "context": "No-Rush is active.",
+      "request": "直接做",
+      "expect": ["skip_clarification", "still_make_task_brief", "still_run_final_check"]
+    },
+    {
+      "name": "final_check_catches_omission",
+      "context": "Task Brief has three MUST items but draft output contains only two.",
+      "request": "交付",
+      "expect": ["detect_missing_must", "repair_before_delivery"]
+    },
+    {
+      "name": "final_check_truthfulness",
+      "context": "External action failed.",
+      "request": "交付结果",
+      "expect": ["do_not_claim_success", "state_specific_unfinished_part"]
+    }
+  ]
+}
