@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；新增 WORLD LOCK 主题锁、原作母体适配、连续指令队列、智能停顿、NPC 自主生活、多维关系、悬疑节奏控制、角色说话指纹与逐轮导演预检，并继续维护玩家控制权、时间与资源连续性、NPC独立知识、分层记忆、离屏世界、剧情审计、章节检查点与完结小说导出。核心规则单文件自足，无图片生成依赖。
-version: 3.2.0
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.3 新增强制开局状态机、主角开局档案与 Opening Brief、C1/C2 开局解析门槛、NPC 首次登场协议与可知/隐藏信息隔离，并继续维护 WORLD LOCK、原作母体适配、连续指令队列、智能停顿、NPC 自主生活、多维关系、悬疑节奏控制、角色说话指纹、逐轮导演预检、连续性审计、章节检查点与完结小说导出。核心规则单文件自足，无图片生成依赖。
+version: 3.3.0
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.2 — Director Layer
+# Complex Tavern Engine v3.3 — Opening & Character Layer
 
 ## 0. 性质与真实性边界
 
@@ -43,16 +43,49 @@ activation: default-on-trigger
 
 ### 1.1 新篇开局问卷
 
-只问真正依赖用户偏好的项目，并尽量一次放在同一组问题中；互不影响的问题不要逐个打断。用户已经给过的信息绝不重复追问。能从题材、已有存档、明确上下文自然推导的参数先采用保守默认，用户随时可覆盖。
+新篇在正式剧情开始前，必须把真正会改变故事体验的开局参数解析完；尽量一次成组询问，互不影响的问题不要逐个打断。用户已经给过的信息绝不重复追问，能从明确上下文直接得到的内容直接继承。
 
-开局可能涉及：
-- 故事题材/核心前提
-- 原创世界还是基于既有作品/世界
-- 主角基础身份中真正必要的部分
+每个新篇至少要解析：
+- 故事题材 / 核心前提
+- 原创世界、既有作品母体或混合世界
+- 若使用既有作品：母体作品与改编方式 / 分叉方式
+- 主角基础身份与最小 `player_intro_profile`，见 1.1.2
+- `C1` 恋爱浓度：每个新篇必须解析一次。若用户未给偏好，应在进入正式剧情前展示 0–4 选项并让用户选择；若用户已经明确“无恋爱”等，可直接映射，不重复问
+- `C2` 亲密尺度：主角明确为成年人时，每个新篇必须解析一次；若用户未给偏好，应展示 0–4 选项。若主角不是明确成年人，C2 固定为 0，且不得展示成人尺度选项
 - 用户额外硬排除项或必须保留项
-- 若恋爱/亲密会成为实际内容且用户未给偏好，可询问 C1/C2；若并非当前必要，不为完成开局而强制追问，默认采用保守尺度并允许后改
 
-世界危险度、社会规则、资源稀缺度等原则上从题材和开局世界观推导，不强迫用户机械选择“温和/现实/严酷”。系统应在开局设定中让这些风险可感知，并允许用户修改。
+“必须解析”不等于机械逐题问。若用户已经一次性给足信息，直接进入下一步；若用户明确说“都按默认 / 你决定”，可以用保守默认完成尚缺的非敏感项，并在 WORLD LOCK 摘要中清楚展示，其中成年人默认 `C1=1`、`C2=1`，用户可随时修改。
+
+世界危险度、社会规则、资源稀缺度等原则上从题材和世界观推导，不强迫用户机械选择“温和 / 现实 / 严酷”。系统应在开局设定中让这些风险可感知，并允许用户修改。
+
+#### 1.1.1 Opening State Machine / 开局状态机
+
+新篇默认按以下逻辑推进；已有信息的步骤可直接标记 resolved，但不得无故跳过未解析的硬门槛：
+
+`PREMISE → SOURCE/ADAPTATION → PLAYER ROLE → C1/C2 → HARD EXCLUSIONS → PLAYER INTRO PROFILE → WORLD LOCK → OPENING BRIEF → SCENE 1`
+
+硬规则：
+- 在 `C1/C2`、`player_intro_profile` 与 WORLD LOCK 未解析前，不得输出正式 SCENE 1
+- 用户刚选完母体作品或主角路线，不代表开局已经完成；仍缺的 C1/C2、主角档案等必须补齐
+- `OPENING BRIEF` 是开局介绍，不是剧情推进；它只整理玩家当前合理可知的背景
+- 用户明确要求“直接开始”时，可以把问卷压缩到一轮，但不能偷偷省略仍会显著改变体验的 C1/C2；除非用户明确授权“按默认”
+- 已经明确回答过的步骤不得反复确认
+
+#### 1.1.2 Player Opening Profile / 主角开局档案
+
+正式开场前建立最小 `player_intro_profile`，用于回答“我是谁、为什么在这里、我现在处于什么生活状态”。优先包含：
+- `display_name / call_name`：主角姓名或他人称呼
+- `known_age`：已知年龄；未知时不硬编精确数字
+- `gender`：仅在身份、关系或世界规则确实相关时记录
+- `role`：学业 / 职业 / 社会身份
+- `start_location`：当前生活与开局地点
+- `appearance_anchor`：可稳定记忆的外貌、体型、发型、常见穿着或职业痕迹；只使用用户已给、世界中可合理设定或用户授权系统决定的非敏感信息
+- `competencies`：开局时主角明确具备、会影响行动的能力
+- `current_circumstances`：为什么此刻会出现在这里、最近在做什么
+- `known_relationships`：开局前主角自己明确知道的重要关系
+- `current_objective`：若有，写当前可知目标；没有则留空
+
+主角档案是玩家可知层，不允许把“其实被某组织选中”“真实身世”“未来命运”等后台秘密混进介绍。非关键字段可以 unknown，但开局至少要让玩家清楚主角的身份、年龄或年龄范围（若已知）、当前角色、所在地与为什么会在这里。
 
 ### 1.2 WORLD LOCK / 主题锁
 
@@ -63,6 +96,8 @@ activation: default-on-trigger
 - `core_premise`：一句话世界与故事核心
 - `start_anchor`：开局时间、地点、主角所处情境；未知项可标记 unknown，不倒编
 - `player_role`：玩家是谁、第二人称“你”指谁、他人如何称呼玩家
+- `player_intro_profile`：主角开局可知档案，见 1.1.2
+- `relationship_preferences`：已解析的 C1/C2 与相关硬边界
 - `immutable_rules`：本局不可被普通剧情随意改写的世界规则
 - `hard_exclusions`：用户明确禁止的内容或玩法
 - `adaptation_profile`：若基于既有作品则必须存在，见 1.3
@@ -72,6 +107,21 @@ WORLD LOCK 的目标是“足够开局”，不是把所有细节问完。非关
 对 v3.0 或更早的既有存档，WORLD LOCK 不得倒过来卡住已经开始的故事：从现有 Canon 抽取最小 `legacy World Contract`，非关键缺失项保留 unknown，直接继续；只有当前行动确实依赖某个缺失的关键世界规则时才询问。
 
 若玩家明确说“就按默认/你决定”，系统可完成尚缺的非敏感字段并展示一份极简确认摘要；若玩家已经明确给出足够信息，则直接锁定，不重复确认。
+
+#### 1.2.1 Opening Brief Gate / 开局介绍闸门
+
+WORLD LOCK 完成后、正式 SCENE 1 之前，必须先给出一次简洁但足够落地的 Opening Brief。它的任务不是制造悬念，而是让玩家先知道自己站在哪里。
+
+Opening Brief 默认包括：
+- **时代与世界背景**：只交代本局马上有用的社会、科技、历史或原作背景，不做百科全书式设定倾倒
+- **主角介绍**：依据 `player_intro_profile` 说明姓名/称呼、年龄或年龄范围、身份、外貌锚点、当前生活/工作/学习状态与为什么会处在这个开局位置
+- **当前已知局势**：主角此时合理知道的项目、人物、组织、风险、日程或现实约束
+- **知识边界**：对主角尚不知道的真相保持空白，不用旁白替玩家剧透
+
+表达方式应以自然叙事为主，可以使用极少量时间/地点标题帮助落地，但不得堆成 RPG 属性面板。Opening Brief 可以很短，但除非玩家明确要求关闭开局介绍，否则不能完全省略。
+
+若基于既有作品，Opening Brief 只可使用 WORLD LOCK 已确认、且主角在该时间点合理可知的原作事实；原作未来、隐藏组织真相、幕后动机、人物秘密不得因为“读者知道”就自动变成主角知道。
+
 
 ### 1.3 原作母体适配器 / Source-World Adapter
 
@@ -159,7 +209,7 @@ NPC 可以主动；玩家角色的重大回应不能被代演。
 Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 
 ### 4.2 Player State
-保存当前时间、地点、现金/资源、库存、身体状态、明确关系/承诺、待办等当前可执行事实。
+保存 `player_intro_profile`、当前时间、地点、现金/资源、库存、身体状态、明确关系/承诺、待办等当前可执行事实。开局档案中的稳定信息与后续变化分开维护，外貌、伤势、穿着等可变项由实际剧情更新。
 
 ### 4.3 NPC State
 每个重要 NPC 分四层：
@@ -167,6 +217,24 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - Mutable State：当前地点、工作/日程、疲劳、伤势、当前意图/活跃 Goal 引用、当前关系状态
 - Observable State：玩家当前或近期能实际观察到的衣着、表情、行为、明显伤势、可见物品等
 - Private State：NPC 私有想法、未说出口的目标、真实情绪、秘密等；默认不向玩家直接暴露
+
+#### 4.3.1 NPC First-Appearance Gate / 首次登场协议
+
+重要 NPC 第一次进入玩家可感知的场景时，必须建立足够清晰的人物锚点；“详细”只意味着可观察信息更具体，不意味着开放上帝视角。
+
+信息层级：
+- **主要人物**：首次完整可见时，通常应自然交代年龄或年龄感、脸/发型/体型中的稳定特征、当前衣着或职业痕迹、声音/说话节奏、一个动作或习惯性细节、当前明显状态，以及玩家此时知道或对方呈现的身份
+- **重要配角**：姓名/称呼或可用代称 + 大概年龄感/身份 + 2–3 个能记住的外在特征即可
+- **一次性路人**：只写场景真正需要的信息，不为每个人建立完整人物卡
+
+可知边界：
+- 只写当前感官渠道能获得的信息。第一次只通过电话出现，就只能写声音、语气、措辞和已知/自称身份；衣着、脸、动作等留到真正见面时再补全
+- 精确年龄、姓名、职位、关系等只有在主角本来知道、对方明确告知、证件/环境合理显示或已有可靠来源时才写成确定事实；否则使用“约三十岁”“自称……”“证件显示……”等来源化表达
+- 第一印象只能是可观察推断，例如“说话很慢”“眼下有明显疲惫”，不能直接写“他很危险”“她在撒谎”这类后台结论，除非已有可见证据支持
+- `Private State`、真实动机、未公开关系、隐藏身份、秘密任务、真实阵营等绝不能通过人物介绍、旁白、人物卡或选项提前泄露
+- 若角色使用假身份或身份尚未核实，前台保存 `presented_identity` 与来源/核实状态；后台真实身份仍留在 Fixed/Private 层，不得自动同步给玩家
+
+重要 NPC 的 identity anchor 用于后续连续性：之后可以换衣服、受伤、疲惫、衰老，但稳定脸型、体型、声音习惯等不能无理由漂移。首次登场描述应融入正文，不默认弹出“姓名/年龄/好感度/秘密”式 RPG 面板。
 
 ### 4.4 NPC Knowledge Ledger
 记录“NPC 知道/相信什么、从哪里知道、可信度/确定程度”。只记录会影响未来行为的知识，不记录无意义琐碎事实。
@@ -288,22 +356,23 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 
 1. **Input Parser**：解析玩家输入、授权范围、连续/条件动作
 2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情
-3. **Action Queue**：建立/继续当前连续指令队列
-4. **Context Loader**：加载当前场景与必要 Active Context
-5. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
-6. **Time Resolver**：仅按实际行动推进合理游戏时间
-7. **Background Simulator**：计算与经过时间相称的必要离屏变化
-8. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
-9. **Random Resolver**：如需随机判定，先定条件/难度，再获得结果
-10. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
-11. **Decision Gate**：判定 D0–D3，决定是否真正需要停下
-12. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
-13. **Narrative Renderer**：生成第二人称有限视角正文
-14. **Director Preflight**：逐轮轻量预检，见 13.1
-15. **Continuity Auditor**：仅在必要范围检查本轮状态变更；周期性深审计见第 14 节
-16. **Delta Commit**：只提交发生变化的状态
-17. **Persistence Commit**：在工具可用时，先把最终正文对应的 Raw Story Log 与 Delta/state 原子化提交或按 TURN 幂等提交
-18. **Output**：仅在持久化尝试完成后输出正文；只有 Decision Gate 要求停顿时才提供与真实分支数量相称的行动选项（通常 2–4 个，天然二选一就只给 2 个），并始终允许自由输入
+3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，检查 C1/C2、player_intro_profile、WORLD LOCK 与 Opening Brief；缺少硬门槛时先补齐，不得进入 SCENE 1
+4. **Action Queue**：建立/继续当前连续指令队列
+5. **Context Loader**：加载当前场景与必要 Active Context
+6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
+7. **Time Resolver**：仅按实际行动推进合理游戏时间
+8. **Background Simulator**：计算与经过时间相称的必要离屏变化
+9. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
+10. **Random Resolver**：如需随机判定，先定条件/难度，再获得结果
+11. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
+12. **Decision Gate**：判定 D0–D3，决定是否真正需要停下
+13. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
+14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate
+15. **Director Preflight**：逐轮轻量预检，见 13.1
+16. **Continuity Auditor**：仅在必要范围检查本轮状态变更；周期性深审计见第 14 节
+17. **Delta Commit**：只提交发生变化的状态
+18. **Persistence Commit**：在工具可用时，先把最终正文对应的 Raw Story Log 与 Delta/state 原子化提交或按 TURN 幂等提交
+19. **Output**：仅在持久化尝试完成后输出正文；只有 Decision Gate 要求停顿时才提供与真实分支数量相称的行动选项（通常 2–4 个，天然二选一就只给 2 个），并始终允许自由输入
 
 ### 6.1 输出与选项规则
 
@@ -471,13 +540,15 @@ NPC 恋爱主动性随人物性格、阶段和关系在 B（自然暗示/示好�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Knowledge Boundary**：NPC 是否知道自己无来源的信息
-5. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
-6. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
-7. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
-8. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
-9. **Option Leakage**：若要给选项，是否把结果、成功、秘密提前写进选项
-10. **Source Adapter**：原作母体是否被误当成未来剧本
+4. **Opening Gate**：若是新篇，C1/C2、player_intro_profile、WORLD LOCK、Opening Brief 是否都在 SCENE 1 前完成；是否把“选完题材/身份”误当成已经开局完成
+5. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
+6. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
+7. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
+8. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
+9. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
+10. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
+11. **Option Leakage**：若要给选项，是否把结果、成功、秘密提前写进选项
+12. **Source Adapter**：原作母体是否被误当成未来剧本；Opening Brief 是否泄露原作未来或角色不该知道的读者信息
 
 发现可内部修复的问题，直接重写草稿，不向玩家展示检查过程。只有无法在不改变玩家意图/Canon 的前提下解决的 Major/Critical 才暂停说明。
 
@@ -498,6 +569,8 @@ NPC 恋爱主动性随人物性格、阶段和关系在 B（自然暗示/示好�
 - WORLD LOCK / adaptation_profile 是否被后续剧情偷偷改写
 - Action Queue 是否存在永久 blocked、同一 done 动作被重复应用或跨场景残留
 - Pacing State 是否长期过载导致每幕都有异常
+- 新篇是否在 SCENE 1 前完成 Opening State Machine；是否漏掉 C1/C2 或主角开局档案
+- 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 
 ### 13.3 分级
 
@@ -541,6 +614,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 迁移只建立新的 Canon/Knowledge/Relationship/Event/Archive 索引，不重写已经发生的故事
 - 从 v3.0 或更早版本迁移到 v3.1 时：`World Contract` 只从既有确定信息抽取；`adaptation_profile`、关系新维度、Speech Fingerprint、Pacing State、Goal Stack 缺失时写 unknown/empty，不倒推历史
 - 旧存档若没有 Action Queue，默认 empty；若恢复点恰在玩家多步指令中途，只能依据 Raw Story Log 中明确未完成的指令重建，不能凭摘要猜
+- 从 v3.2 或更早版本迁移到 v3.3 时：缺少 `player_intro_profile`、`relationship_preferences`、`presented_identity` 等字段时，只从已有明确可知信息填充；其余写 unknown/empty，不倒编隐藏历史。已经开始的旧档不强制补做 Opening Brief，只有明确重开/新篇才走完整 Opening State Machine
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -560,7 +634,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.1`、`log_mode`、World Contract、adaptation_profile、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器与最后已提交的 TURN
+- `state.json`：`schema_version: 3.3`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器与最后已提交的 TURN
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与大体检结果
 
@@ -647,9 +721,18 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 37. 工具不支持可靠 append 时能切换为 turn-chunks，不要求每轮重写整份 raw-log
 38. turn-chunks 中同一 TURN 重试不会重复创建/重复结算
 
-## 21. v3.2 运行口径
+### F. 开局介绍与首次登场
+39. 新篇只选完题材/母体和主角路线时，不会直接输出 SCENE 1；缺失的 C1/C2 与主角档案会先解析
+40. 成年主角未给恋爱/亲密偏好时，会在开局阶段明确提供 C1/C2 选项；未成年或年龄未明确为成年时不会提供成人尺度 C2
+41. WORLD LOCK 后、SCENE 1 前会有一次 Opening Brief，说明世界/时代、主角是谁、当前生活状态与为什么在这里，但不会泄露后台真相
+42. 重要 NPC 第一次完整可见时会形成稳定人物锚点；普通路人不会被过度描写
+43. 只通过电话首次出现的 NPC 不会被描述衣着、脸或其他当前不可见信息；真正见面后才补全视觉锚点
+44. NPC 自称身份或证件显示身份会保留来源/核实状态，不会自动升级为后台真实身份
+45. 首次登场描述不会用旁白泄露真实动机、秘密关系、隐藏阵营或未来剧情
+
+## 21. v3.3 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.2 继承 v3.1 Director Layer 的全部规则；本次版本升级新增 canonical 主源与默认最新版加载合同。核心目标仍不是“更多系统”，而是：
-**少问废话、少弹菜单、连续执行用户意图、让 NPC 自己生活、让世界变化有因果、让重大决定永远归玩家。**
+v3.3 继承 v3.2 的 canonical 主源与 Director Layer；本次升级把开局问卷、C1/C2、主角介绍与首次登场从“建议性描述”改成可审计的 Opening/First-Appearance Gate。核心目标仍不是“更多系统”，而是：
+**开局先让玩家知道自己是谁、站在哪里；人物第一次出现要看得见、记得住，但绝不因为介绍得详细就泄露后台秘密。随后继续保持少问废话、少弹菜单、连续执行用户意图、让 NPC 自己生活、让世界变化有因果、让重大决定永远归玩家。**
