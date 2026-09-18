@@ -124,7 +124,7 @@ activation: default-on-trigger
 - `core_premise`：一句话世界与故事核心
 - `start_anchor`：开局时间、地点、主角所处情境；未知项可标记 unknown，不倒编
 - `player_role`：玩家是谁、第二人称“你”指谁、他人如何称呼玩家
-- `player_intro_profile`：主角开局可知档案，见 1.1.2
+- `player_intro_profile`：主角开局可知档案，见 1.1.4
 - `relationship_preferences`：已解析的 C1/C2 与相关硬边界
 - `immutable_rules`：本局不可被普通剧情随意改写的世界规则
 - `hard_exclusions`：用户明确禁止的内容或玩法
@@ -638,12 +638,12 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief 是否自然融入小说；非即时危机开局是否有正常性锚点，还是为了“有戏”过早强塞异常
-14. **Paragraphing**：正式剧情是否按完整叙事单元分段；是否出现无理由的连续非对话单句碎段；是否错误合并不同说话者；是否堆叠多层时间/地点/UI 式标题
-15. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
-14. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
-15. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
-14. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
-15. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
+8. **Paragraphing**：正式剧情是否按完整叙事单元分段；是否出现无理由的连续非对话单句碎段；是否错误合并不同说话者；是否堆叠多层时间/地点/UI 式标题
+9. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
+10. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
+11. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
+12. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
+13. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
 14. **Option Leakage**：若要给选项，是否把结果、成功、秘密提前写进选项
 15. **Source Adapter**：原作母体是否被误当成未来剧本；Opening Brief 是否泄露原作未来或角色不该知道的读者信息
 
