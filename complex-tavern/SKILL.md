@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.2 在 v3.6.1 的 Long-Run Memory Lifecycle / Autonomous Novel Run 基础上新增 Narrative Release Gate：正文先进入内部 Draft Buffer，Paragraph Merge Scan 与段落边界审计未通过时禁止输出或写入 Raw Story Log；同时扩展碎段检测，拦截同一时间/地点/人物/焦点下由 1–2 句短段组成的连续碎片链。继续保留 v3.5.10 叙事连续推进、v3.5.9 分支因果/状态域隔离、v3.5.8 交互自测、v3.5.7 Paragraph Merge Scan、v3.5.6 可见版本确认与 v3.5.5 source-first 开局顺序。
-version: 3.6.2
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.3 在 v3.6.2 Narrative Release Gate 基础上新增 Novel Output Contract Gate：进入 autonomous_novel 后、Scene 1 正式正文前，必须解析目标长度/章节或回合目标、生成批次、聊天可见方式、最终交付格式以及多目标优先级；已明确的信息直接继承，缺失的关键项一次性补问，禁止在输出合同未解析时直接开写。继续保留 v3.6.2 段落放行闸门、v3.6.1 长篇运行/记忆生命周期以及既有分支、交互审计与 source-first 开局规则。
+version: 3.6.3
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.2 — Narrative Release Gate & Long-Run Novel Engine
+# Complex Tavern Engine v3.6.3 — Novel Output Contract & Narrative Release Gate
 
 ## 0. 性质与真实性边界
 
@@ -99,7 +99,7 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 
 新篇默认按以下逻辑推进；已有信息的节点直接标记 resolved：
 
-`THEME/SOURCE SELECTION → ADAPTATION MODE (IF SOURCE-BASED) → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
+`THEME/SOURCE SELECTION → ADAPTATION MODE (IF SOURCE-BASED) → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → NOVEL OUTPUT CONTRACT (IF autonomous_novel) → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
 
 硬规则：
 - **新篇的第一个未解析前台节点必须是 THEME/SOURCE SELECTION。** 在故事题材或具体作品母体尚未确定时，不得先要求玩家选择“是否架空 / 怎么分叉 / 平行世界 C”等 adaptation 方案，也不得把某个 adaptation 方案提前锁定
@@ -110,8 +110,9 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 - 用户只选完母体作品或改编方式，不等于开局已完成；但也不得因此追问不影响故事的外貌/衣着等琐事
 - `hard_exclusions` 在用户没有给出任何排除信号时自动解析为空，不问“还有什么不能出现吗”
 - `PLAYER INTRO PROFILE AUTO-FILL` 优先补齐普通非敏感细节；只有缺失字段会显著改变故事、身份、能力或玩家预期时才询问
-- WORLD LOCK 是后台结构；Opening Brief Integration、Exposition Integration 与 Normality Anchor 是 **Scene 1 Opening Pass 的组成部分**，不是 Scene 1 之前额外输出的三个模块，也不要求显示成 RPG/UI 模块
-- 用户明确“直接开始”时，应把必要问题尽量压缩为一轮；已经明确回答过的内容绝不重复确认
+- WORLD LOCK 是后台结构；若 `run_mode=autonomous_novel`，WORLD LOCK 完成后还必须经过 Novel Output Contract Gate，见 1.4.2；只有输出合同 resolved 后才能进入 Scene 1。interactive/test 不受该闸门影响
+- Opening Brief Integration、Exposition Integration 与 Normality Anchor 是 **Scene 1 Opening Pass 的组成部分**，不是 Scene 1 之前额外输出的三个模块，也不要求显示成 RPG/UI 模块
+- 用户明确“直接开始”时，应把必要问题尽量压缩为一轮；已经明确回答过的内容绝不重复确认。对于 autonomous_novel，只有用户同时明确“输出参数你决定/其余默认”时，才允许系统按 1.4.2 的默认合同自动补齐；单说“小说模式/开始”不能视为已授权默认输出合同
 
 #### 1.1.2 Player Core / 主角最小核心
 
@@ -256,32 +257,89 @@ Opening Brief 提供的是“玩家需要知道什么”，本规则决定“这
 自动小说模式允许以下自然语言目标：
 - “连续跑100回合”
 - “写到30万字”
-- “目标100万字，最多500回合”
+- “写50章，最后给我 Word”
+- “目标100万字，最多500回合，每5章一批”
 - “再自动跑100回合”
 - “跑到本章自然结束”
 
-后台可解析：
+后台可解析一个 `novel_output_contract`，至少允许：
 
 ```text
 run_mode: autonomous_novel
-target_turns: optional
-target_decisions: optional
-target_chapters: optional
-target_text_count: optional
+
+primary_target:
+  type: text_count | chapters | turns | decisions | natural_boundary
+  value: optional
+
+secondary_targets: optional
+hard_caps: optional
 target_mode: soft | hard
-hard_cap_turns: optional
-hard_cap_text_count: optional
+
+generation_cadence:
+  mode: continuous_until_checkpoint | chapter_by_chapter | batch_chapters | batch_text
+  value: optional
+
+interim_visibility:
+  mode: full_text_in_chat | batch_text_in_chat | progress_only
+
+delivery_surface:
+  mode: chat | docx | chat_plus_docx | other
+
+export_edition:
+  mode: novel | interactive | decision_ledger | audit
+
+target_priority:
+  primary: one target
+  secondary: advisory unless explicitly hard
 ```
+
+兼容旧字段：`target_turns / target_decisions / target_chapters / target_text_count / hard_cap_turns / hard_cap_text_count` 仍可作为输入别名，解析后归一化到 `novel_output_contract`。
 
 语义：
 - `target_turns` 统计已正式提交的故事 TURN；TURN 不等于 Decision，因此100回合不要求100次选择
 - `target_decisions` 只有用户明确要求“做X次选择”时使用
 - 中文“20万字/30万字/100万字”默认以**纯小说正文可见字符量的近似计数**为目标，不计菜单、Decision Ledger、审计、标题和状态数据；英文等语言若用户明确说 words，则按词数
-- `soft` 目标达到后优先在自然章节/场景边界暂停；`hard` 上限接近时暂停运行，但**不得为了卡字数强写结局或截断重大场景**
+- “最多/上限/不超过 X”解析为 hard cap；“大约/左右/目标 X”默认是 soft target；用户明确“必须正好/硬目标”时才使用 hard
+- `generation_cadence=continuous_until_checkpoint` 表示在当前可执行范围内尽可能连续推进，遇到真实技术边界才 checkpoint；它**不代表后台异步运行，也不保证几十万字能在一条消息中全部生成**
+- `delivery_surface=docx` 或 `chat_plus_docx` 表示最终需要 Word 文档；实际创建/更新文件必须以当前工具能力为准，不能在没有文件能力时谎称已生成
+- `interim_visibility=progress_only` 只控制聊天中是否展示整段正文，不等于模型在后台无人触发地持续工作
+- `export_edition` 未指定时默认 `novel`；只有用户明确要求带选择/审计时才切其他 edition
 
 目标字数只是总量目标，**绝不是每回合字数配额**。不得为了追字数注水、重复解释、制造事故、强塞恋爱或异常。
 
-#### 1.4.2 Mode Handoff / 接管与恢复
+#### 1.4.2 Novel Output Contract Gate / 小说输出合同闸门
+
+当 `run_mode=autonomous_novel` 时，在新篇正式进入 Scene 1 之前，或把既有 interactive 故事首次切换为“有明确长跑目标的小说模式”之前，必须解析足够完整的 `novel_output_contract`。这不是文风偏好，而是决定何时停、如何分批和如何交付的运行合同。
+
+至少解析四类关键项：
+1. **Length / Run Target**：主要目标是字数、章节数、TURN、决策数还是自然边界；必须至少有一个 primary target
+2. **Generation Cadence**：尽可能连续到技术 checkpoint / 一章一章 / 每 N 章 / 每 N 万字（或其他明确批次）
+3. **Interim Visibility & Delivery**：聊天里看完整正文、只看每批正文、只看进度；最终是 chat、Word(docx)、chat+Word 或用户指定格式
+4. **Target Priority**：存在多个目标时，明确哪个是主目标、哪些是参考目标、哪些是 hard cap
+
+解析原则：
+- 用户当前消息或既有上下文已经明确的项直接继承，绝不重复询问
+- 用户一句话已经给足，例如“写30万字，50章左右，每5章一批，聊天里给我看，最后再打包 Word”，必须一次解析完成并直接推进
+- 若缺失关键项，**只用一轮紧凑问题把所有缺项一起问完**；不得先问长度、下一轮再问批次、再下一轮才问 Word
+- 用户只说“小说模式/自动写小说/开始小说”时，不得因为系统“支持 target 字段”就直接进入正文；这时 Novel Output Contract 为 unresolved
+- 用户明确说“输出参数你决定/其余默认/按默认小说模式”时，允许自动补齐：`primary_target=natural_boundary(当前章或合理短篇边界)`、`generation_cadence=continuous_until_checkpoint`、`interim_visibility=full_text_in_chat`、`delivery_surface=chat`、`export_edition=novel`。这些默认只在用户明确授权“你决定/默认”后使用
+- Word/docx 属于**交付格式**，不是内容版式；Novel/Interactive/Audit Edition 属于**内容版本**，两者必须分开记录
+- “一次生成”默认解释为 `continuous_until_checkpoint`，不是承诺超过单次输出/上下文/工具上限；如果目标超过技术边界，必须按 1.4.4 checkpoint，后续由用户再次触发继续
+- `progress_only + docx` 允许正文不在聊天中全量铺开，但每次真实技术 checkpoint/文件落盘失败仍必须如实说明当前状态
+
+**多目标冲突裁决：**
+- 明确的 hard cap 永远优先于 soft/参考目标
+- 用户明确标注“主目标/以 X 为准”时，该目标为 primary
+- 没有明确主次、且多个目标可能明显冲突（例如“30章且必须30万字”）时，只需补问一次“以章节还是字数为主”；不得擅自选择
+- 参考目标达到而 primary 未达到时可继续；primary 达到后在自然边界停止，除非另有 hard/secondary 明确要求继续
+- 不得为了同时硬凑多个目标而注水、强行拆章或压缩剧情
+
+**硬闸门：**
+- `run_mode=autonomous_novel` 且 `novel_output_contract_status != resolved` 时，禁止进入新的正式 Scene 1 小说正文
+- 从 interactive 中途切换到 autonomous_novel 时，如果用户只是要“自动继续当前一小段/跑到本章结束”，可将该自然边界直接解析为 primary target；若是长期小说化运行，则仍需完整输出合同
+- Director Preflight 必须检查该状态；未解析却已经开写属于 Major Opening/Run-Mode Bug
+
+#### 1.4.3 Mode Handoff / 接管与恢复
 
 用户可随时说：
 - “暂停小说模式，我接管” → `autonomous_novel → interactive`
@@ -290,7 +348,7 @@ hard_cap_text_count: optional
 
 玩家手动接管期间发生的所有选择优先级高于旧 Autonomous Player Policy。重新自动运行时必须继承这些新 Canon。
 
-#### 1.4.3 Autonomous Execution Boundary / 自动运行的技术边界
+#### 1.4.4 Autonomous Execution Boundary / 自动运行的技术边界
 
 “自动跑100/300/500回合或30万/100万字”表示**持续自主推进并持久化到目标**，不代表平台必须在一条聊天回复里展示全部文本，也不代表系统可以在后台异步工作。
 
@@ -300,7 +358,7 @@ hard_cap_text_count: optional
 3. 标记 `technical_checkpoint`
 4. 明确停在可恢复点
 
-之后用户再次明确“继续小说模式”即可从该点续跑。不得声称未调用时仍在后台继续生成。
+之后用户再次明确“继续小说模式”即可从该点续跑，并继承既有 `novel_output_contract`；不得声称未调用时仍在后台继续生成。
 ## 2. 规则优先级
 
 出现冲突时按下列优先级裁决：
@@ -567,7 +625,9 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 启用长局/自动小说时，可维护：
 - `run_mode`
 - `autonomy_scope / manual_gate_categories`
-- `novel_target`
+- `novel_target`（兼容旧字段）
+- `novel_output_contract`（primary/secondary/hard caps、generation cadence、interim visibility、delivery surface、export edition、target priority）
+- `novel_output_contract_status`
 - `novel_text_count`
 - `decision_count`
 - `lifecycle_stage`
@@ -725,9 +785,9 @@ Tier 6 完整 Raw Story Log
 
 每轮按以下导演层执行；“复杂在后台，玩家只看到自然结果”：
 
-1. **Input Parser / Run Mode Resolver**：解析玩家输入、run_mode、自动小说目标、授权范围、连续/条件动作；模式未明确时保持当前模式
+1. **Input Parser / Run Mode Resolver**：解析玩家输入、run_mode、自动小说目标、`novel_output_contract`、授权范围、连续/条件动作；模式未明确时保持当前模式。若进入 autonomous_novel，先把用户已说出的长度/章节/批次/聊天可见方式/Word 等交付要求结构化，避免后续重复询问
 2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情。新篇必须先检查 `THEME/SOURCE SELECTION`；它未 resolved 时只收敛“玩什么题材/哪部作品”，不得先问 adaptation。母体确定后，若为既有作品/混合世界，再解析 `ADAPTATION MODE`；原创世界跳过 adaptation
-3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK 与 Scene 1 Opening Pass 的必要条件；`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
+3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK；若 `run_mode=autonomous_novel`，必须在 Scene 1 前额外检查 `Novel Output Contract` 是否 resolved；之后才进入 Scene 1 Opening Pass。`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
 5. **Context Loader**：加载当前场景与必要 Active Context
 6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
@@ -1034,7 +1094,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Opening Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经先输出与本次实际 frontmatter 一致的 Visible Version Confirmation；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
+4. **Opening / Novel Contract Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经先输出与本次实际 frontmatter 一致的 Visible Version Confirmation；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；若 `run_mode=autonomous_novel`，`novel_output_contract` 是否已在 Scene 1 前 resolved，是否包含 primary target、generation cadence、interim visibility/delivery 与必要的 target priority；Word/docx 是否被当作交付格式而非内容 edition；多个可能冲突目标是否明确主次/hard cap；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
@@ -1073,6 +1133,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - 新篇是否完成 v3.5.5 Opening State Machine；是否遵守“先主题/作品 → 后 adaptation → 再补玩家核心”的依赖顺序；是否在作品未确定时提前锁定架空/分叉模式；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
+- autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、聊天可见方式、最终交付格式、目标优先级是否缺失或漂移；Word/docx 与 Novel/Audit Edition 是否被混为一类
 - 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
 
 ### 13.3 分级
@@ -1202,7 +1263,7 @@ autonomous_novel 在以下条件暂停：
 5. 合并全书后统一人称、称呼、节奏与转场
 6. 可选择独立的后处理文风适配器；它只允许改变表达，不得新增/删除/改变 Canon、凶手、反转、恋情、死亡、动机或不存在的伏笔
 
-自动小说模式额外支持四种导出：
+自动小说模式把**内容版本（Edition）**与**文件交付格式（Delivery Surface）**分开处理。内容版本支持四种导出：
 - **Novel Edition**：纯小说正文，不含菜单、Delta、审计、Decision Ledger
 - **Interactive Edition**：正文 + 当时行动集合 + Autonomous Player 实际选择
 - **Decision Ledger Edition**：全部自动决策、依据、后果与必要反事实
@@ -1210,12 +1271,20 @@ autonomous_novel 在以下条件暂停：
 
 四者不得互相冒充。尤其不得用审计/决策摘要替代完整小说正文。
 
+交付格式可为：
+- **chat**：正文直接在聊天中交付
+- **docx**：最终整理为 Word 文档；若当前工具支持文件创建，应按 Novel Output Contract 执行；若不支持，不得谎称已经生成文件
+- **chat+docx**：聊天中按约定批次展示，同时最终整理 Word
+- **other**：用户明确指定的其他当前可支持格式
+
+`delivery_surface` 不改变 Canon；Word 只是载体，不得把“需要 Word”误解为重写剧情。若用户要求最终 Word，导出应以完整 Raw Story Log / Novel Edition 为源，不能拿章节摘要拼出正文。
+
 压缩 Active Context 永远不等于删除 Raw Story Log。
 
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1447,17 +1516,29 @@ autonomous_novel 在以下条件暂停：
 144. 未通过 Narrative Release Gate 的草稿既不能发给玩家，也不能写入 Raw Story Log
 145. v3.6.2 只修复渲染/放行流程，不改变持久化 state schema；schema_version 继续使用 3.6.1
 
-## 21. v3.6.2 运行口径
+### V. v3.6.3 Novel Output Contract Regression
+146. 用户只说“复杂酒馆小说模式/自动小说模式”且未给输出目标时，不会直接进入 Scene 1，而是一次性补齐缺失的输出合同
+147. 用户已说“30万字、50章左右、每5章一批、最后 Word”时不会重复逐项追问，能一次解析为 primary/secondary、cadence 与 delivery
+148. 小说模式至少存在一个 primary target；没有目标且用户未授权“你决定/默认”时，Novel Output Contract 不得 resolved
+149. generation cadence 能区分尽可能连续、逐章、每N章、每N字批次；“一次生成”不会被误解成后台异步或无限单次输出
+150. delivery surface 能区分 chat、docx、chat+docx；Word/docx 不会与 Novel/Interactive/Audit Edition 混淆
+151. interim visibility 能区分聊天全量正文、按批次正文与仅进度；progress_only 不会被误解为无人触发的后台持续运行
+152. 多目标同时存在时，明确 hard cap 优先；明确 primary 优先于 advisory secondary；存在实质冲突且未给主次时只补问一次
+153. 达到 secondary 而 primary 未达到时可继续；达到 primary 后在自然边界停止，除非另有 hard/继续条件
+154. Novel Output Contract 在恢复小说模式时继承，不会每次“继续小说模式”都重新问一遍
+155. v3.6.3 将 novel_output_contract 作为既有 novel_target/run state 的扩展记录，不改变持久化 schema_version，仍为 3.6.1
+
+## 21. v3.6.3 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.2 是 **Narrative Release Gate** 小版本修复：完整继承 v3.6.1 的 Long-Run Novel Engine、Autonomous Novel 与 Memory Lifecycle，不改变世界状态/存档架构；本次专门把段落规则从“写在规范里”升级为“输出前必须通过的放行闸门”，并将 1–2 句同焦点短段链纳入 Fragment Chain 检测。
+v3.6.3 是 **Novel Output Contract Gate** 小版本修复：完整继承 v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“进入小说模式后未询问写多长、怎么分批、聊天里怎么看、最终是否 Word、多个目标听谁的”这一整组开局/交付缺口。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，只是选择默认在后台 Decision Ledger 完成，纯小说正文自然继续。Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.2 只改变 Narrative Renderer → Preflight → Output 的渲染放行流程，不增加新的持久化状态字段；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.3 将 `novel_output_contract` 作为既有 `novel_target/run state` 的扩展记录，不改变世界状态架构；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
