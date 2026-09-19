@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.1 合并 v3.5.10 的叙事连续推进修复与 Long-Run Memory Lifecycle / Autonomous Novel Run：普通互动、自动小说和测试模式严格分离；自动小说可按回合、决策数、章节或正文目标字数持续运行，Autonomous Player 只依据主角已知信息、人格、目标、关系、资源与承诺作真实选择；每50回合做里程碑完整性检查、每100回合建立可回查来源的长期档案，150–250回合进入压缩准备，约200–350回合后仅在实际上下文压力下进入深层归档；Raw Story Log 永久完整。继续保留 v3.5.9 分支因果/状态域隔离、v3.5.8 交互自测、v3.5.7 Paragraph Merge Scan、v3.5.6 可见版本确认与 v3.5.5 source-first 开局顺序。
-version: 3.6.1
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.2 在 v3.6.1 的 Long-Run Memory Lifecycle / Autonomous Novel Run 基础上新增 Narrative Release Gate：正文先进入内部 Draft Buffer，Paragraph Merge Scan 与段落边界审计未通过时禁止输出或写入 Raw Story Log；同时扩展碎段检测，拦截同一时间/地点/人物/焦点下由 1–2 句短段组成的连续碎片链。继续保留 v3.5.10 叙事连续推进、v3.5.9 分支因果/状态域隔离、v3.5.8 交互自测、v3.5.7 Paragraph Merge Scan、v3.5.6 可见版本确认与 v3.5.5 source-first 开局顺序。
+version: 3.6.2
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.1 — Long-Run Novel Engine & Memory Lifecycle
+# Complex Tavern Engine v3.6.2 — Narrative Release Gate & Long-Run Novel Engine
 
 ## 0. 性质与真实性边界
 
@@ -834,18 +834,49 @@ interactive 真正停在决策点时，选项只描述玩家可选择的**意图
 
 #### 6.3.7 Paragraph Merge Scan / 段落合并扫描
 
-Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须额外执行一次 **Paragraph Merge Scan**。这是硬执行步骤，不是文风建议。
+Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须额外执行一次 **Paragraph Merge Scan**。这是硬执行步骤，不是文风建议；扫描结果必须显式得到 `paragraph_scan_status = PASS | FAIL`。
 
 扫描规则：
 - 把时间/地点标题、不同说话者的对白轮次、短信/终端原文、名单/数据输出先排除
-- 对其余正文，**先问是否存在真正的分段理由，而不是先问句子有几句**；同一连续场景默认尝试合并成更少、更长的段落
-- 连续 **2 个或以上**仅因动作结束、观察结束、心理一句、判断一句而形成的非对话短段，就应检查能否回并；出现连续 **3 个或以上非对话单句段**时默认判定为失败并必须重排
-- 只有换说话者、明显时间跳跃、地点切换、主要叙事焦点彻底转移、或极强强调，才是优先分段理由；“为了节奏”“读起来有停顿感”“看起来更悬疑”“已经三五句了”都不能单独作为分段依据
+- 对其余正文，**先问每一个段落边界为什么必须存在，再问段落有几句**；同一连续场景默认尝试合并成更少、更完整的小说段落
+- 每一个非对话空行/换段都必须至少能归因于以下一种有效理由：**换说话者、明显时间跳跃、地点切换、主要叙事焦点明显转移、或有明确必要的强强调**
+- “为了节奏”“读起来有停顿感”“看起来更悬疑”“动作做完了”“观察结束了”“已经三五句了”**不能单独构成有效换段理由**
+- **Fragment Chain Detector / 碎段链检测**：不再只检查“连续 3 个单句段”。只要连续多个非对话短段仍处于同一时间、地点、主要人物组合和核心焦点，并呈现“动作 → 观察 → 判断 → 心理 → 结果”等本可连续承载的链条，即使每段有 1–2 句，也默认判定为碎段候选；无法为各换段提供有效理由时直接 FAIL
+- 连续 **2 个或以上**仅因动作结束、观察结束、心理一句、判断一句而形成的非对话短段，必须尝试回并；出现连续 **3 个或以上非对话单句段**时，在不存在真实强调功能的情况下直接 FAIL
 - 同一人物连续动作、同一对象观察、同一推理链、同一信息点核验、同一情绪过程与紧随其后的结果，若焦点没有改变，应优先合并为一个长段；即使合并后达到 20–30 句也不视为问题
 - 合并时不得把不同说话者强行塞进同一段，也不得跨越明确的时间/空间/场景边界
-- 扫描发现违规时，先内部重写正文，再重新扫描；未通过前不得提交给玩家或写入 Raw Story Log
+- 扫描发现违规时，先内部重写正文，再重新扫描；`paragraph_scan_status != PASS` 时不得提交给玩家或写入 Raw Story Log
+
+**真实回归 FAIL 样例：**
+- 普通连续叙事中把“第四个样品。 / 第五个。 / 第六个。”拆成连续独立非对话段，若没有明确的强强调功能，判定为 FAIL，应回并到同一实验推进段
+- 普通连续叙事中把“当然……”与“比如今天。”之类同一说明/心理焦点拆成相邻短段，仅靠“节奏感”解释，判定为 FAIL，应与前后相关叙述合并
 
 最低验收口径：**系统不得机械寻找分段机会，也不得机械拒绝分段。** 普通叙事回合不应长期出现“动作一段 → 判断一段 → 反应一段 → 总结一段”的流水碎片化模式，也不应长期退化为“每个 TURN 只有一堵固定长度大段文字”。
+
+#### 6.3.8 Narrative Release Gate / 正文放行闸门
+
+正式剧情不得让 Narrative Renderer 的初稿直接进入最终输出。正文必须经过以下内部阶段：
+
+`NARRATIVE_DRAFT → Paragraph Merge Scan → Paragraph Boundary Audit → Director Preflight → RELEASE`
+
+运行态至少维护本轮临时标志：
+- `paragraph_scan_status = PASS | FAIL`
+- `paragraph_boundary_audit = PASS | FAIL`
+- `narrative_preflight_status = PASS | FAIL`
+- `narrative_release_status = PASS | FAIL`
+
+放行条件：
+1. `paragraph_scan_status == PASS`
+2. `paragraph_boundary_audit == PASS`，即所有非对话换段均可被有效分段理由解释，且不存在未处理的 Fragment Chain
+3. `narrative_preflight_status == PASS`
+
+只有三项全部通过时，才设置 `narrative_release_status = PASS`，此时正文才允许进入 Output 与 Raw Story Log。任一项 FAIL：
+- 失败草稿只存在于内部 Draft Buffer，不得展示给玩家，不得写入 Raw Story Log
+- 回到 Narrative Renderer 进行合并/重排后重新扫描
+- 不得把“文风选择”“悬疑感”“短段更有冲击力”作为绕过 FAIL 的理由；只有真正满足 6.3.3 的稀缺强调才可保留短单句段
+- 若修复段落会改变事件事实、玩家意图或 Canon，应只调整排版与句段组织，不改写因果；若仍无法在不改变事实的前提下通过，才按 Major/Critical 处理
+
+**本闸门是输出许可，不是建议。没有 `narrative_release_status = PASS`，就没有本轮小说正文输出。**
 
 ## 7. Delta State
 
@@ -1007,7 +1038,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Narrative Continuation & Paragraphing**：是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮长度是否异常趋同并机械附带选项；正文草稿是否已经执行 Paragraph Merge Scan；是否仍存在连续 3 个或以上非对话单句碎段；是否反向退化为每 TURN 一堵固定长度大段；不同说话者、时间/空间切换与叙事单元变化是否被合理分段。发现模板化节拍或段落极端时必须先重写再放行
+8. **Narrative Continuation & Paragraphing**：是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮长度是否异常趋同并机械附带选项；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan 与 Paragraph Boundary Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain；是否仍存在无真实强调功能的连续 3 个或以上非对话单句碎段；每一个非对话换段是否都能由换说话者、明显时间跳跃、地点切换、主要焦点明显转移或必要强强调解释；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链或段落极端时必须先重写，且只有 `paragraph_scan_status`、`paragraph_boundary_audit`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
 9. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
 10. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
 11. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
@@ -1406,17 +1437,27 @@ autonomous_novel 在以下条件暂停：
 136. schema 3.5.3 旧档迁移到 3.6.1 不倒编历史自动选择，不重写 Canon/Raw Story Log
 137. 百万字级运行使用分层加载；压缩 Active Context 永远不等于删除 Story Archive
 
-## 21. v3.6.1 运行口径
+### U. v3.6.2 Narrative Release Gate Regression
+138. 正式小说正文先进入内部 NARRATIVE_DRAFT，不允许 Narrative Renderer 初稿直接输出
+139. Paragraph Merge Scan 会捕捉同一连续焦点下由 1–2 句短段组成的 Fragment Chain，而不只检查“3 个单句段”
+140. 每一个非对话换段都必须有可说明的有效理由；“为了节奏/悬疑感/动作结束”本身不能作为放行理由
+141. “第四个样品。/第五个。/第六个。”在普通连续实验叙事中若被拆成连续独立段，回归测试必须判 FAIL 并合并
+142. “当然……/比如今天。”在同一说明焦点下若仅靠节奏拆段，回归测试必须判 FAIL 并回并
+143. 只有 paragraph_scan_status、paragraph_boundary_audit、narrative_preflight_status 全部 PASS 时，narrative_release_status 才能 PASS
+144. 未通过 Narrative Release Gate 的草稿既不能发给玩家，也不能写入 Raw Story Log
+145. v3.6.2 只修复渲染/放行流程，不改变持久化 state schema；schema_version 继续使用 3.6.1
+
+## 21. v3.6.2 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.1 是 **Long-Run Novel Engine & Memory Lifecycle** 合并版本：完整保留 v3.5.10 的 Narrative Continuation Gate、v3.5.9 的真实分支因果与状态域隔离、v3.5.8 的交互自测合同、v3.5.7 的段落扫描、v3.5.6 的可见版本确认与 v3.5.5 的 source-first 开局顺序，并正式加入 `autonomous_novel` 与长局档案生命周期。
+v3.6.2 是 **Narrative Release Gate** 小版本修复：完整继承 v3.6.1 的 Long-Run Novel Engine、Autonomous Novel 与 Memory Lifecycle，不改变世界状态/存档架构；本次专门把段落规则从“写在规范里”升级为“输出前必须通过的放行闸门”，并将 1–2 句同焦点短段链纳入 Fragment Chain 检测。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，只是选择默认在后台 Decision Ledger 完成，纯小说正文自然继续。Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-本版本把持久化 `schema_version` 升级为 **3.6.1**，新增的 run mode / policy / target / lifecycle / ledger/archive 字段从旧档迁移时只做空值或明确事实初始化；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.2 只改变 Narrative Renderer → Preflight → Output 的渲染放行流程，不增加新的持久化状态字段；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
