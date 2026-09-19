@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.4 在 v3.6.3 Novel Output Contract Gate 基础上新增 Visible Output Semantics Lock：凡会改变用户最终/中间可见内容、批次是否暂停、Word 如何持续更新或何时交付的字段，都必须显式解析或由用户明确措辞可靠推导；禁止 silent default 隐藏自动选择、把批次擅自变成停顿、提前交付用户只要求最终版的 Word，或在最终导出时强制退回 Novel Edition。继续保留 v3.6.2 Narrative Release Gate、v3.6.1 长篇运行/记忆生命周期以及既有分支、交互审计与 source-first 开局规则。
-version: 3.6.4
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.5 在 v3.6.4 Visible Output Semantics Lock 基础上新增 Activation Banner Barrier、Paragraph Boundary Hardening 与 Reader Term Annotation：普通 interactive / autonomous_novel / test 启动都必须把实际 canonical 版本作为首个可见输出；连续场景的非对话分段改用硬边界理由码并加强碎段密度审计；科幻、奇幻与专业专有词可在正文首次出现处加读者标记，并在正文外独立解释，禁止把注释写进角色叙述或用注释泄露后台秘密。继续保留 v3.6.4 输出语义锁、v3.6.2 Narrative Release Gate、v3.6.1 长篇运行/记忆生命周期以及既有分支与 source-first 开局规则。
+version: 3.6.5
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.4 — Visible Output Semantics Lock
+# Complex Tavern Engine v3.6.5 — Activation Banner, Paragraph Hardening & Reader Annotation
 
 ## 0. 性质与真实性边界
 
@@ -65,6 +65,9 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 - 同一已激活游戏中的普通行动回合不要求每回合重复版本号，避免污染小说正文；但用户再次明确说“开始/继续/使用复杂酒馆”时，视为新的 activation invocation，必须重新真实读取并重新显示
 - 版本确认行不得被“复杂在后台、简单在玩家面前”“减少 UI”“Opening Brief 不独立显示”等规则吞掉
 - 未显示该行时，不得继续本次复杂酒馆入口流程；Director Preflight 应视为启动缺陷并先修正
+- **First Visible Output Barrier / 首个可见输出硬闸门**：只要本轮属于一次新的复杂酒馆 activation invocation，版本确认行必须成为本轮**第一个玩家可见文本**。无论后续是 interactive 普通玩法、autonomous_novel 小说模式、test、自定义开局问卷、存档恢复还是直接剧情续写，都不得先输出“请选择题材 / 继续吗 / 正文 / 存档摘要 / 我先检查一下”等任何其他可见内容
+- 工具读取 canonical 可以发生在版本行之前，但工具结果不是玩家剧情输出；一旦读取成功，下一段玩家可见文本必须先发版本确认。若同一回复里包含后续设定或剧情，版本确认仍必须占第一行，不能埋在中间
+- 普通“复杂酒馆 / 开始复杂酒馆 / 按复杂酒馆玩”默认进入 interactive，也**同样**适用首个可见输出硬闸门；小说模式不是触发版本提示的前提
 - 显示的版本号与本轮 `skill_version`、frontmatter `version` 不一致时属于 Critical 启动错误
 
 当 Files/Library 等持久化工具可用时，优先用它保存/读取存档、Raw Story Log 与章节检查点；工具不可用时仍可在当前对话内按同一规则运行，但不得声称已持久保存到外部。
@@ -649,7 +652,7 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - `run_mode`
 - `autonomy_scope / manual_gate_categories`
 - `novel_target`（兼容旧字段）
-- `novel_output_contract`（primary/secondary/hard caps、generation cadence、interim visibility、delivery surface、export edition、target priority）
+- `novel_output_contract`（primary/secondary/hard caps、generation cadence、batch boundary、interim visibility、delivery surface、content edition、artifact policy、target priority）
 - `novel_output_contract_status`
 - `novel_text_count`
 - `decision_count`
@@ -659,6 +662,25 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - `technical_checkpoint`
 
 这些字段只描述运行与持久化，不得被误当成世界内 Canon。
+
+### 4.15 Reader Glossary Ledger / 读者术语注释账本
+
+Reader Glossary 是**读者辅助层**，不属于世界内 Canon、角色知识、NPC Knowledge 或旁白事实。它只解决“读者第一次遇到陌生科幻/奇幻/专业词时看不懂”的问题。
+
+可维护：
+- `term / normalized_term`
+- `category`：real_science / in_world_science / technology / magic / organization / artifact / species / culture / other
+- `first_seen_turn / last_annotated_turn`
+- `reader_safe_definition`：只解释当前阅读所需的最小含义
+- `source_scope`：现实通识 / 当前世界已公开设定 / 当前场景可安全解释
+- `spoiler_ceiling`：注释最多能说到哪里
+- `familiarity`：new / introduced / familiar
+- `aliases`
+
+默认 `annotation_policy=balanced`：只标注**确实可能让一般读者停下来查词**、且理解当前句子有帮助的词。普通人名、普通地名、常见物品、上下文已经自然解释清楚的词不标；不能为了展示功能把每个名词都做成脚注。
+
+读者注释账本不得反向改变人物行为：读者通过注释知道一个术语的通识解释，不代表主角或 NPC 自动获得相同知识。
+
 ## 5. 长上下文与双层叙事档案
 
 ### 5.1 Raw Story Log（完整档案）
@@ -821,7 +843,7 @@ Tier 6 完整 Raw Story Log
 11. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
 12. **Decision Gate / Decision Router**：判定 D0–D3；interactive 按玩家控制权决定是否停下，autonomous_novel 在授权范围内交给 Autonomous Player，test 交给 TEST PLAYER；不得混用三种决策策略
 13. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
-14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3
+14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3；正文主体放行后再执行 Reader Term Annotation Pass，见 6.4，注释不得混进角色叙述
 15. **Director Preflight**：逐轮轻量预检，见 13.1
 16. **Continuity / Long-Run Auditor**：检查本轮状态变更；按第5.8与第14节触发里程碑、长期档案与自动小说审计
 17. **Delta Commit**：只提交发生变化的状态
@@ -879,7 +901,7 @@ interactive 真正停在决策点时，选项只描述玩家可选择的**意图
 - 同一说话者的对白、动作、神态与紧随其后的叙述
 - 围绕同一个信息点展开的发现、核验与反应
 
-不得因为“句子已经有两三句”“写到某个固定字数”“TURN 快结束了”“每回合想保持一个大段”就机械换段或拒绝换段。只要仍在同一连续叙事单元内，动作、观察、推理、心理、环境和结果可以继续共存于同一长段；但当**换说话者、明显时间跳跃、地点切换、主要叙事焦点转移、一个完整动作组结束并进入新的叙事单元、或强转折/强调**时，应自然分段。不能为了“少分段”把本来应分开的多个叙事单元硬塞成一堵文字墙。
+不得因为“句子已经有两三句”“写到某个固定字数”“TURN 快结束了”“每回合想保持一个大段”就机械换段或拒绝换段。只要仍在同一连续叙事单元内，动作、观察、推理、心理、环境和结果可以继续共存于同一长段。**一个动作组结束、一次观察结束、轻微情绪变化、镜头从手移到脸、从动作转到一两句判断，都只是软边界，不能单独触发换段。** 非对话正文只有出现 6.3.9 定义的硬边界理由时才优先分段；不能为了“少分段”跨真正的时间/空间/主焦点硬边界，也不能为了“节奏”把连续微动作切碎。
 
 **不设段落字数、句数、段落数量目标或上下限。** 评价标准是小说阅读是否自然、叙事单元是否完整，而不是“每回合必须只有一个长段”或“每段必须达到多少字”。
 
@@ -960,6 +982,78 @@ Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须
 - 若修复段落会改变事件事实、玩家意图或 Canon，应只调整排版与句段组织，不改写因果；若仍无法在不改变事实的前提下通过，才按 Major/Critical 处理
 
 **本闸门是输出许可，不是建议。没有 `narrative_release_status = PASS`，就没有本轮小说正文输出。**
+
+#### 6.3.9 Hard Boundary Reason Codes & Paragraph Density Guard / 硬分段理由码与密度闸门
+
+为防止“规则写了少分段，但实际还是一小块一小块”的执行回退，所有**非对话**换段在 Paragraph Boundary Audit 中必须能标记至少一个硬理由码：
+
+- `H1_TIME`：明显时间跳跃，不只是“过了几秒/接着”
+- `H2_SPACE`：地点或空间阶段真正切换
+- `H3_PRIMARY_FOCUS`：主要叙事对象/问题发生实质转移，前一单元已经闭合，后一单元不能自然承接在同段
+- `H4_STRUCTURED_INSERT`：信件、终端输出、日志、名单、数据块等世界内结构化文本需要独立视觉层级
+- `H5_EMPHASIS`：真正稀缺的冲击、揭示、危险、强转折或情绪骤变；不得连续滥用
+
+以下只能作为**软边界 `S`**，不能单独放行非对话换段：动作做完、看完一个物体、想法说完、换了一个身体动作、人物走了几步、轻微视角移动、普通因果结果出现、从环境写到心理、从心理写回动作、为了呼吸感/悬疑感/屏幕好看。
+
+密度闸门：
+- 同一时间、地点、主要人物组合和主焦点连续时，若相邻非对话段之间只能给出 `S` 理由，必须回并
+- 若一段连续场景出现“叙述一两句 → 空行 → 再叙述一两句 → 空行”的重复视觉节奏，即使每个小段都能勉强说出“动作结束/观察结束”，仍判为 **Paragraph Density Drift**，必须重排
+- “每个段落各自语义完整”不等于“必须分段”；连续小说首先检查这些完整微单元能否组成一个更完整的大单元
+- Dialogue speaker change 继续按 6.3.2 正常换段，不纳入非对话密度惩罚
+
+Paragraph Boundary Audit 必须验证：每个非对话段落边界都有 `H1–H5` 之一；只有软理由的边界一律 FAIL。
+
+### 6.4 Reader Term Annotation Gate / 读者术语标注闸门
+
+本功能用于科幻、奇幻、硬科学、军事技术、神秘学、架空制度等题材。目标是让读者**不离开当前故事也能理解陌生词**，但解释必须在正文外，不能把作者注释塞进角色叙述。
+
+#### 6.4.1 何时标注
+
+默认 `annotation_policy=balanced`。术语满足以下任一情况且当前上下文没有已经自然说明时，可标注：
+- 世界自造的科技、魔法、装置、物质、物种、制度、组织术语
+- 现实中存在、但对一般读者较专业且对当前理解重要的科学/工程/医学/军事概念
+- 同一个普通词在本世界中有特殊定义
+- 原作母体中的专有概念，当前读者若不知道会明显影响理解
+
+原则上在**第一次有意义出现**时标一次。已经进入 `familiarity=familiar` 的词不反复标；长篇隔了很久重新出现、含义发生变化、或进入新的关键用法时，可以再次简短标注。
+
+不要标：
+- 一般常识词
+- 仅仅“听起来高级”但不影响理解的词
+- 人名/普通地名本身
+- 紧接着正文已经自然解释清楚的词
+- 会因为注释而提前泄露身份、伏笔、真相或未来用途的词
+
+#### 6.4.2 正文标记与注释位置
+
+聊天/纯文本默认在术语后加小标记：
+`宏原子〔注1〕`
+
+正文主体结束后、若本轮存在真实 Decision Gate 则在选项**之前**，输出独立读者注释块，例如：
+
+`术语注`
+`〔注1〕宏原子：这里指……（只解释当前阅读所需含义）。`
+
+硬规则：
+- 注释块是**正文外元信息**，不得伪装成主角思考、旁白说明、NPC 台词或世界内资料
+- 不得为了方便解释，把“宏原子，也就是……”之类作者式定义强塞回剧情段落；角色自己确实在解释时除外
+- 每条解释默认 1–3 句，先给最简单中文，再在必要时补一层
+- 同轮注释较多时合并到一个“术语注”块，不在每段后插一个小卡片打断阅读
+
+Word/docx：
+- 工具支持真正脚注/尾注时可使用上标脚注标记；不支持时使用与聊天一致的 `〔注N〕` + 独立“术语注”块
+- Reader Annotation 属于阅读层，不改变 Content Edition；Novel/Interactive Edition 都可以有注释，用户说“纯净版/不要注释”时才关闭
+
+#### 6.4.3 Spoiler & Knowledge Firewall / 剧透与知识防火墙
+
+Reader Annotation 可以跳出角色视角解释**概念**，但不能跳出故事时序泄密：
+- 现实科学词可以给现实通识定义
+- 世界内自造词只解释到当前公开/当前阅读必要层级，使用“当前可理解为……”等安全口径
+- 不得写“其实它真正是……”“后来会用于……”“某人真实身份是……”等未来/后台信息
+- 注释内容不得写入 NPC Knowledge，也不得让人物因为读者注释自动知道答案
+- 原作改编时，注释不得把原作未来事件当作本局既定事实
+
+Reader Annotation Pass 发生在小说正文主体通过 Narrative Release Gate **之后、玩家可见 Output 之前**。它只能添加术语标记与正文外注释块，不得借注释阶段重写剧情事实或段落因果。
 
 ## 7. Delta State
 
@@ -1117,20 +1211,21 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Opening / Novel Contract Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经先输出与本次实际 frontmatter 一致的 Visible Version Confirmation；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；若 `run_mode=autonomous_novel`，`novel_output_contract` 是否已在 Scene 1 前 resolved，是否包含 primary target、generation cadence、interim visibility/delivery 与必要的 target priority；Word/docx 是否被当作交付格式而非内容 edition；多个可能冲突目标是否明确主次/hard cap；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
+4. **Opening / Version / Novel Contract Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经完成 canonical 真实读取，并且**本轮第一个玩家可见文本**就是与本次实际 frontmatter 一致的 Visible Version Confirmation；interactive 普通玩法是否也正确显示，而不是只在小说模式显示；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；若 `run_mode=autonomous_novel`，`novel_output_contract` 是否已在 Scene 1 前 resolved，是否包含 primary target、generation cadence、interim visibility/delivery 与必要的 target priority；Word/docx 是否被当作交付格式而非内容 edition；多个可能冲突目标是否明确主次/hard cap；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Narrative Continuation & Paragraphing**：是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮长度是否异常趋同并机械附带选项；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan 与 Paragraph Boundary Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain；是否仍存在无真实强调功能的连续 3 个或以上非对话单句碎段；每一个非对话换段是否都能由换说话者、明显时间跳跃、地点切换、主要焦点明显转移或必要强强调解释；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链或段落极端时必须先重写，且只有 `paragraph_scan_status`、`paragraph_boundary_audit`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
-9. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
-10. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
-11. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
-12. **Branch Causality**：关键 D2/D3 的选择是否产生真实可观察路径差异，还是只改后台数字后立即回到预设同一事件表；是否存在状态装饰型伪分支
-13. **State-Domain Isolation**：本轮 Delta 是否只修改有直接或合理间接因果的状态域；是否出现专业/调查决策污染关系、关系事件删除证据等跨域串改
-14. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
-15. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
-16. **Option Leakage**：若要给选项，是否把结果、成功、秘密提前写进选项
-17. **Source Adapter**：原作母体是否被误当成未来剧本；Opening Brief 是否泄露原作未来或角色不该知道的读者信息
+8. **Narrative Continuation & Paragraphing**：是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮长度是否异常趋同并机械附带选项；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan 与 Paragraph Boundary Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链或无硬理由换段时必须先重写，且只有 `paragraph_scan_status`、`paragraph_boundary_audit`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
+9. **Reader Annotation Safety**：本轮是否出现对一般读者明显陌生且影响理解的特殊术语却完全未处理；是否反过来过度标注普通词；标记是否放在术语处而解释独立位于正文外；Reader Annotation 是否泄露后台秘密/原作未来、被写进角色知识，或把注释强塞进小说段落
+10. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
+11. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
+12. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
+13. **Branch Causality**：关键 D2/D3 的选择是否产生真实可观察路径差异，还是只改后台数字后立即回到预设同一事件表；是否存在状态装饰型伪分支
+14. **State-Domain Isolation**：本轮 Delta 是否只修改有直接或合理间接因果的状态域；是否出现专业/调查决策污染关系、关系事件删除证据等跨域串改
+15. **NPC Autonomy**：NPC 行动是否来自目标/计划/限制，而非剧情强推
+16. **Pacing**：是否为了“有戏”连续制造异常/灾难/反转
+17. **Option Leakage**：若要给选项，是否把结果、成功、秘密提前写进选项
+18. **Source Adapter**：原作母体是否被误当成未来剧本；Opening Brief 是否泄露原作未来或角色不该知道的读者信息
 
 发现可内部修复的问题，直接重写草稿，不向玩家展示检查过程。只有无法在不改变玩家意图/Canon 的前提下解决的 Major/Critical 才暂停说明。
 
@@ -1157,7 +1252,8 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
-- 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
+- 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；非对话段落边界是否存在仅靠软理由放行的 Paragraph Density Drift；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
+- Reader Glossary 是否过密/过稀；陌生术语是否首次出现未解释、同一熟悉术语是否反复脚注；注释是否混入正文叙述、改变角色知识或泄露未来/秘密
 
 ### 13.3 分级
 
@@ -1320,6 +1416,7 @@ Artifact Policy：
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
 - `long-term-archive.md` 或 `archive/<TURN>.md`：每100 TURN 的带 source_turn/source_type 长期档案快照
 - `decision-ledger.md` 或 `decision-ledger/<TURN>.md`：autonomous_novel 的关键决策证据链；普通 interactive 可不建立
+- `reader-glossary.md` 或等价状态字段：Reader Glossary Ledger，仅保存术语、读者安全解释、首次/最近标注位置与熟悉度；它是阅读辅助索引，不属于 Canon/NPC Knowledge
 
 **每个有效剧情推进轮结束时**，先完成正文草稿与 Delta，再在发出本轮用户可见回复之前，把本轮最终正文对应的 Raw Story Log、最新 state 与 TURN 一并落盘；自动小说有实际决策时同步写 Decision Ledger；小/大体检、50回合 milestone、100回合 archive snapshot 和章节结束按对应节点落盘。若落盘失败，仍可输出当前剧情，但不得声称“已保存”，并把该 TURN 标记为待补写；autonomous_novel 在恢复持久化之前不得继续跨越多个关键决策，以免 Decision Ledger 与 Canon 脱节。
 
@@ -1573,17 +1670,33 @@ Artifact Policy：
 167. “最后给我 Word”与“只在同一个 Word 修改，最终才给我”能被区分：前者可映射 final_assembly+final_only，后者映射 single_working_file+final_only
 168. v3.6.4 只扩展 novel_output_contract 的语义与兼容字段，不改变持久化 schema_version，仍为 3.6.1
 
-## 21. v3.6.4 运行口径
+### X. v3.6.5 Activation Banner / Paragraph Hardening / Reader Annotation Regression
+169. 用户只说“复杂酒馆”并进入普通 interactive 时，canonical 读取成功后的第一个玩家可见文本仍必须是“复杂酒馆 vX.Y.Z｜GitHub canonical 已验证”，不能因为不是小说模式就省略
+170. 新 activation 中若系统先输出题材选择、存档摘要或剧情，再补版本号，回归测试直接 FAIL
+171. 同一连续场景中“动作结束/观察结束/心理一句/镜头轻移”只能记为软边界，不能单独造成非对话换段
+172. 每个非对话段落边界必须至少有 H1–H5 一个硬理由；只有软理由时 Paragraph Boundary Audit 必须 FAIL 并回并
+173. 连续出现“一两句非对话叙述 + 空行”的重复视觉节奏时，即使不是连续单句段，也能被 Paragraph Density Drift 捕捉
+174. 换说话者的正常对话段不因 Paragraph Density Guard 被错误合并
+175. 科幻/奇幻/专业陌生术语第一次有意义出现且当前正文未自然解释时，balanced 注释策略会添加读者标记与正文外解释
+176. “宏原子〔注1〕”的解释必须出现在独立术语注块，不能改写成主角脑中突然知道定义
+177. Reader Annotation 不能把未来剧情、隐藏身份、后台机制或原作未来写进注释
+178. Reader Annotation Ledger 与 NPC Knowledge/Canon 严格隔离；注释不会让角色自动获得知识
+179. 同一术语进入 familiar 后不机械重复标注；长篇隔很久重新出现或语义升级时可重新简注
+180. Word 支持脚注时可用真正上标脚注；不支持时退化为〔注N〕+术语注块，不能因为工具限制把解释塞回正文
+181. 用户说“不要注释/纯净版”时关闭 Reader Annotation，但不改变剧情 Canon；再次开启只影响后续/重新导出的阅读层
+182. v3.6.5 新增 reader glossary / annotation policy 与段落审计语义，不改变持久化 schema_version，仍为 3.6.1
+
+## 21. v3.6.5 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.4 是 **Visible Output Semantics Lock** 小版本修复：完整继承 v3.6.3 Novel Output Contract Gate、v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“用户没指定 Edition 时被静默降级成纯小说、自动模式运行流程再次隐藏选择、最终 Word 强制退回 Novel Edition、批次边界被误当暂停点、只要最终版却提前发工作稿、同一 Word 与每批 Word 混淆”等一整类可见输出回退问题。
+v3.6.5 是 **Activation Banner Barrier + Paragraph Boundary Hardening + Reader Term Annotation** 小版本修复：完整继承 v3.6.4 Visible Output Semantics Lock、v3.6.3 Novel Output Contract Gate、v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“普通互动模式开局版本号被吞、段落规则存在但仍频繁碎段”，并新增不会污染角色视角的科幻/奇幻/专业术语读者注释层。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.4 继续将 `novel_output_contract` 作为既有 `novel_target/run state` 的扩展记录，不改变世界状态架构；新增 content edition / batch boundary / artifact policy 语义与兼容映射，不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.5 继续使用既有世界状态架构；Reader Glossary/annotation policy 属于阅读辅助扩展，Paragraph Hardening 属于渲染放行规则，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
