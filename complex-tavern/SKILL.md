@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.6 新增 Visible Version Confirmation Gate：每次明确触发开始/继续/使用复杂酒馆时，必须在任何设定或剧情输出之前，以单行明确显示本次实际加载的版本号与来源验证状态；版本号必须来自本次读取到的 frontmatter，不得硬编码或凭记忆。继续保留 v3.5.5 的 source-first 开局顺序与此前全部规则。
-version: 3.5.6
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.7 强化 Narrative Paragraphing Gate：正文草稿在提交前必须执行 Paragraph Merge Scan，连续非对话单句碎段不得仅凭“有节奏感”放行；同一焦点下的动作、观察、判断与反应优先合并成完整小说段落。继续保留 v3.5.6 的可见版本确认与 v3.5.5 的 source-first 开局顺序。
+version: 3.5.7
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.6 — Visible Version Confirmation
+# Complex Tavern Engine v3.5.7 — Paragraph Merge Enforcement
 
 ## 0. 性质与真实性边界
 
@@ -549,6 +549,20 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 
 本规则自 **v3.4.0 启用后的新剧情与续写** 开始生效。已经写入 Raw Story Log 的旧正文保持原样，不因升级自动重排、覆盖或重写；只有用户明确要求整理/导出旧正文时，才可在不改变 Canon 的前提下应用新的段落排版。
 
+#### 6.3.7 Paragraph Merge Scan / 段落合并扫描
+
+Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须额外执行一次 **Paragraph Merge Scan**。这是硬执行步骤，不是文风建议。
+
+扫描规则：
+- 把时间/地点标题、不同说话者的对白轮次、短信/终端原文、名单/数据输出先排除
+- 对其余正文，若出现连续 **3 个或以上非对话单句段**，默认判定为需要重排；只有其中某一段确实承担独立冲击/揭示/转折功能时，才允许该**单个**段落保留
+- “为了节奏”“读起来有停顿感”“看起来更悬疑”不能单独作为连续碎段的放行理由
+- 同一人物连续动作、同一对象的观察、同一推理链、同一信息点的核验与反应，若焦点没有改变，应优先合并成一个或少数几个完整段落
+- 合并时不得把不同说话者强行塞进同一段，也不得为了消灭单句段制造超长无结构段落
+- 扫描发现违规时，先内部重写正文，再重新扫描；未通过前不得提交给玩家或写入 Raw Story Log
+
+最低验收口径：普通叙事回合不应长期出现“动作一句一段 → 判断一句一段 → 反应一句一段 → 再一句总结”的流水碎片化模式。
+
 ## 7. Delta State
 
 没有变化的状态不重复重算。只提交变化。时间经过本身可产生 Delta（疲劳恢复、伤势变化、食物变质、日程推进等），因此“没有显式事件”不等于世界冻结。
@@ -697,7 +711,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Paragraphing**：正式剧情是否按完整叙事单元分段；是否出现无理由的连续非对话单句碎段；是否错误合并不同说话者；是否堆叠多层时间/地点/UI 式标题
+8. **Paragraphing**：正文草稿是否已经执行 Paragraph Merge Scan；是否仍存在连续 3 个或以上非对话单句碎段；若存在，是否真的只有独立冲击/揭示功能而非一般动作、观察或推理；是否错误合并不同说话者；是否堆叠多层时间/地点/UI 式标题。发现一般性碎段时必须先重写并重新扫描，不能直接放行
 9. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
 10. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
 11. **Relation Causality**：关系维度是否无原因跳变；是否把信任/吸引等错误互推
@@ -958,15 +972,21 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 93. 同一已激活剧情的普通行动回合不会机械重复版本提示；用户再次明确触发复杂酒馆入口时会重新读取并重新显示
 94. 若提示版本号与本轮实际 frontmatter / skill_version 不一致，Preflight 将其视为 Critical 启动错误，不继续进入设定或剧情
 
-## 21. v3.5.6 运行口径
+### O. v3.5.7 Paragraph Merge Enforcement
+95. Narrative Renderer 草稿提交前必须执行 Paragraph Merge Scan，而不是只依赖笼统文风判断
+96. 连续 3 个或以上一般性非对话单句段会被默认重排；“为了节奏/悬疑感”不能成为整串碎段的豁免理由
+97. 同一焦点下的连续动作、观察、判断和反应会优先合并为完整叙事单元，同时保留不同说话者正常换段
+98. Preflight 发现段落扫描未通过时会内部重写并重新检查，违规正文不会先写入 Raw Story Log 再事后修补
+
+## 21. v3.5.7 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.6 是启动可见性修复版本，不改变 v3.5.3 的持久化 schema，也不改变 v3.5.5 的 source-first 开局顺序、既有故事 Canon 或叙事规则。它新增 Visible Version Confirmation Gate：**每次明确触发复杂酒馆入口，玩家都必须先看到本次真实加载的版本号与来源验证状态，再进入任何设定或剧情。**
+v3.5.7 是正文渲染可靠性修复版本，不改变 v3.5.3 的持久化 schema，也不改变既有故事 Canon、v3.5.6 的 Visible Version Confirmation 或 v3.5.5 的 source-first 开局顺序。它把“不要一句话一段”从原则性要求升级为可执行的 Paragraph Merge Scan：**草稿若出现连续一般性非对话单句碎段，必须先内部合并重写，再允许输出和落盘。**
 
-v3.5.5 的 source-first 规则完整保留：先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”。v3.5.4 的 Canonical Load Verification Gate 也完整保留：版本确认行只能建立在本次真实读取结果上，不能用缓存或记忆伪造。
+v3.5.6 的版本确认规则完整保留：每次明确触发复杂酒馆入口，玩家仍然先看到本次真实读取的版本号与来源验证状态。v3.5.5 的 source-first 规则也完整保留。
 
-本次仍沿用 `schema_version: 3.5.3`。Visible Version Confirmation 属于运行态/前台启动合同，不新增存档必需字段，因此不需要迁移已有 Canon。
+本次仍沿用 `schema_version: 3.5.3`。Paragraph Merge Scan 属于渲染与 Preflight 流程，不新增存档必需字段，因此不需要迁移已有 Canon，也不重排已经写入的旧 Raw Story Log。
 
 核心目标是：
-**让玩家每次调用复杂酒馆时一眼知道“现在到底跑的是哪个版本、是不是本次验证过的 GitHub canonical”，从前台杜绝悄悄回退旧版而用户不知情。**
+**让长局连续运行时也保持正常小说段落，而不是开头几轮正常、跑久后又退化成 AI 式一句话一段。**
