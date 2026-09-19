@@ -1314,7 +1314,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract`（含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing）` / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
