@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.4 新增 Canonical Load Verification Gate：每次明确触发复杂酒馆且 GitHub 可访问时，必须在当前运行中真实读取 canonical 文件并从文件 frontmatter 获取版本，禁止仅凭记忆、摘要、旧上下文或缓存声称“已加载最新版”；读取失败时只能明确使用 fallback，不能假装已验证最新版。继续保留 v3.5.3 的运行修复与 v3.5.2 的开局/叙事规则。
-version: 3.5.4
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.5 修复新篇开局依赖顺序：必须先选择故事主题或作品母体，再在母体已确定后决定原作介入、分叉、平行架空或重构方式；不得在主题/作品未确定时提前锁定 adaptation。继续保留 v3.5.4 Canonical Load Verification Gate、v3.5.3 运行修复与此前开局/叙事规则。
+version: 3.5.5
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.4 — Canonical Load Guard
+# Complex Tavern Engine v3.5.5 — Source-First Opening Order
 
 ## 0. 性质与真实性边界
 
@@ -59,16 +59,15 @@ activation: default-on-trigger
 
 新篇在正式剧情开始前，只解析**会显著改变故事体验或安全边界**的项目。能从用户当前消息、既有上下文或已锁定设定可靠得到的内容直接继承，不重复追问；普通外貌、衣着细节、具体房间布置等低影响信息原则上由系统自然生成并在首次确定后锁定，而不是做成长问卷。
 
-每个新篇需要解析：
-- 故事题材 / 核心前提
-- 原创世界、既有作品母体或混合世界
-- 若使用既有作品：母体作品与改编方式 / 分叉方式
+每个新篇按依赖顺序解析：
+- `theme_source_selection`：**第一步先确定“玩什么”**。用户先选择原创题材 / 核心前提，或选择一个既有作品母体；混合世界也必须先明确主要母体与主题
+- `adaptation_mode`：**只有在既有作品母体或混合世界已经确定后才解析“怎么改”**。可包括原作时间线内介入、从某点分叉、平行/架空版本、重构式改编等；原创世界没有原作母体时标记为 `not_applicable` 并跳过
 - 最小 `player_core`：称呼/姓名、年龄或年龄带、基础身份、开局处境；若 `C1>0`，还必须解析主角性别；见 1.1.2
 - 年龄对应的关系门：`C1` / `C2` 按 1.1.3 解析
 - 真正会改变玩法的用户硬排除项 / 必须保留项；没有任何信号时默认 `hard_exclusions=[]`，不额外追问
 - 足够开局的 `player_intro_profile`；优先自动补齐非关键字段，见 1.1.4
 
-“必须解析”不等于逐题询问。若用户一次性给足信息，直接推进；若用户明确说“其余默认 / 你决定 / 直接开始”，可自动处理所有非敏感、非关键字段，但年龄门、关系门和其他会改变内容边界的关键信息不能被含糊跳过。
+“必须解析”不等于逐题询问，但**依赖顺序是硬约束**：先确定主题/作品，再决定是否以及如何架空/分叉，之后才补齐尚缺的玩家核心和关系边界。若用户提前主动给出年龄、性别、C1/C2、角色身份或改编偏好，可以先记录为已知/待应用信息，不得丢失，也不得重复追问；但提前给出的改编偏好在母体作品尚未确定时只能视为 `pending`，不能因此把 ADAPTATION 节点判定为 resolved。若用户一次性给足全部信息，则按依赖关系内部解析后直接推进；若用户明确说“其余默认 / 你决定 / 直接开始”，可自动处理所有非敏感、非关键字段，但年龄门、关系门和其他会改变内容边界的关键信息不能被含糊跳过。
 
 世界危险度、社会规则、资源稀缺度等原则上从题材与世界观推导，不强迫玩家机械选择“温和 / 现实 / 严酷”；只有不同取值会明显改变故事且当前无法合理推导时才询问。
 
@@ -76,11 +75,15 @@ activation: default-on-trigger
 
 新篇默认按以下逻辑推进；已有信息的节点直接标记 resolved：
 
-`PREMISE → SOURCE/ADAPTATION → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
+`THEME/SOURCE SELECTION → ADAPTATION MODE (IF SOURCE-BASED) → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
 
 硬规则：
+- **新篇的第一个未解析前台节点必须是 THEME/SOURCE SELECTION。** 在故事题材或具体作品母体尚未确定时，不得先要求玩家选择“是否架空 / 怎么分叉 / 平行世界 C”等 adaptation 方案，也不得把某个 adaptation 方案提前锁定
+- 只有 `theme_source_selection` resolved 后，既有作品/混合世界才进入 `ADAPTATION MODE`；原创世界直接跳过该节点
+- 若用户在选作品/主题之前已经主动给出 adaptation 偏好，只记录为 `pending_adaptation_preference`；作品确定后再按该作品语境确认/应用，不能倒置开局顺序
+- 玩家年龄、性别、C1/C2 等若已提前主动给出，可以提前记录并在后续对应节点直接 resolved，但**不得因为这些信息已经存在而把主题/作品选择挪到后面**
 - 未解析 `player_core` 的年龄/年龄带与对应关系门前，不得进入需要恋爱/亲密边界的正式剧情；若 `C1>0`，主角性别也必须在 Player Core 阶段解析
-- 用户只选完母体作品或主角路线，不等于开局已完成；但也不得因此追问不影响故事的外貌/衣着等琐事
+- 用户只选完母体作品或改编方式，不等于开局已完成；但也不得因此追问不影响故事的外貌/衣着等琐事
 - `hard_exclusions` 在用户没有给出任何排除信号时自动解析为空，不问“还有什么不能出现吗”
 - `PLAYER INTRO PROFILE AUTO-FILL` 优先补齐普通非敏感细节；只有缺失字段会显著改变故事、身份、能力或玩家预期时才询问
 - WORLD LOCK 是后台结构；Opening Brief Integration、Exposition Integration 与 Normality Anchor 是 **Scene 1 Opening Pass 的组成部分**，不是 Scene 1 之前额外输出的三个模块，也不要求显示成 RPG/UI 模块
@@ -197,11 +200,12 @@ Opening Brief 提供的是“玩家需要知道什么”，本规则决定“这
 
 ### 1.3 原作母体适配器 / Source-World Adapter
 
-当 `world_mode` 为既有作品母体或混合时，建立 `adaptation_profile`：
+当 `world_mode` 为既有作品母体或混合时，必须先完成 `source_title`，再建立 `adaptation_profile`。作品/母体未确定前禁止提前锁定改编模式。
 
-- `source_title`：母体作品/世界
-- `canon_cutoff`：哪些原作事实在开局前已经确定发生
-- `divergence_point`：从哪里开始允许因玩家与新事件产生分叉；可为“开局即分叉”
+- `source_title`：母体作品/世界；这是 adaptation 的前置依赖
+- `adaptation_mode`：明确记录玩家如何使用该母体。常用值可为 `canon_insertion`（原作时间线内介入）、`divergence`（指定点分叉）、`parallel_au`（平行/架空版本）、`reconstruction`（重构，只保留选定人物/规则）；用户自己的表述优先，不强迫套枚举
+- `canon_cutoff`：哪些原作事实在开局前已经确定发生；平行/重构模式下只记录明确保留的前史
+- `divergence_point`：从哪里开始允许因玩家与新事件产生分叉；仅在相关模式下使用，可为“开局即分叉”
 - `source_characters`：哪些原作人物存在及其开局状态
 - `plot_gravity`：原作主线对当前世界的牵引强度（低/中/高），只影响“原事件是否仍有因果压力”，不保证照原作发生
 - `protected_world_rules`：必须保留的世界机制/历史事实
@@ -427,8 +431,8 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 每轮按以下导演层执行；“复杂在后台，玩家只看到自然结果”：
 
 1. **Input Parser**：解析玩家输入、授权范围、连续/条件动作
-2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情
-3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，检查 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 与 Scene 1 Opening Pass 的必要条件；`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。缺少硬门槛时先补齐，不得进入正式 SCENE 1
+2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情。新篇必须先检查 `THEME/SOURCE SELECTION`；它未 resolved 时只收敛“玩什么题材/哪部作品”，不得先问 adaptation。母体确定后，若为既有作品/混合世界，再解析 `ADAPTATION MODE`；原创世界跳过 adaptation
+3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK 与 Scene 1 Opening Pass 的必要条件；`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
 5. **Context Loader**：加载当前场景与必要 Active Context
 6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
@@ -697,7 +701,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - WORLD LOCK / adaptation_profile 是否被后续剧情偷偷改写
 - Action Queue 是否存在永久 blocked、同一 done 动作被重复应用或跨场景残留
 - Pacing State 是否长期过载导致每幕都有异常
-- 新篇是否完成 v3.5.2 Opening State Machine；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
+- 新篇是否完成 v3.5.5 Opening State Machine；是否遵守“先主题/作品 → 后 adaptation → 再补玩家核心”的依赖顺序；是否在作品未确定时提前锁定架空/分叉模式；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - 正式剧情是否持续退化为“一句话一段”、是否无理由堆叠标题，或为了减少短段而错误合并不同说话者
@@ -749,6 +753,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 从 v3.5.0 迁移到 v3.5.1 时：不重开既有故事；缺失 `relationship_orientation` 的存档默认补为 `heterosexual`，除非既有 Canon 已明确其他取向；`unknown_nonromance` 只作为未来新开/后续必要确认时的临时年龄占位，不倒改既有明确年龄
 - 从 v3.5.1 迁移到 v3.5.2 时：不重开既有故事；`unknown_nonromance` 的既有新档不补编年龄；若既有存档 `C1>0` 但主角性别尚未解析，在下一次正式恋爱线生成前最小化确认一次并锁定
 - 从旧 `schema_version: 3.3` 或 v3.5.x 状态迁移到 `schema_version: 3.5.3` 时，只补充缺失的结构字段、默认值与索引（例如 relationship_orientation、年龄占位、Opening 状态字段等）；已发生 Canon、人物关系事实、资源、时间、物品、事件结果与 Raw Story Log 不得因此改写
+- 从 v3.5.4 迁移到 v3.5.5 时：既有已开场存档不重跑开局、不改变已确认母体或 Canon；若旧状态缺少显式 `adaptation_mode`，只从玩家已经明确确认过的改编方式中映射，无法确定则保留 `unknown`，不得根据后续剧情倒推。尚未进入 Scene 1 的新篇按 v3.5.5 顺序继续：先补齐 THEME/SOURCE，再解析 adaptation
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -856,7 +861,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 38. turn-chunks 中同一 TURN 重试不会重复创建/重复结算
 
 ### F. 开局介绍与首次登场
-39. 新篇只选完题材/母体和主角路线时，不会直接输出 SCENE 1；会先解析最小 PLAYER CORE 与年龄/关系门，但不会追问不影响故事的外貌/衣着琐事
+39. 新篇开局先解析题材/作品母体；若为既有作品/混合世界，母体确定后才解析 adaptation；之后再补齐最小 PLAYER CORE 与年龄/关系门。不会在作品尚未确定时先要求玩家选择架空/分叉方式，也不会追问不影响故事的外貌/衣着琐事
 40. 用户未给 hard exclusions 时自动解析为空，不额外问“还有什么不能出现吗”
 41. 14–17 岁可选择 C1=0–4，但 C2 固定为 0 且不展示成人尺度；18+ 才解析 C2=0–4
 42. WORLD LOCK 默认后台化，不打印完整设定 UI；Opening Brief 自然融入正文
@@ -903,7 +908,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 
 ### K. v3.5.3 Runtime Fix
 75. 第 6 节每轮执行流程严格按 1–19 唯一编号推进，不存在重复或跳号
-76. 第 6 节 Opening Gate 与 v3.5.2 Opening State Machine 使用同一套 PLAYER CORE / AGE-RELATIONSHIP / Scene 1 Opening Pass 判定
+76. 第 6 节 Theme/Open­ing Gate 与 v3.5.5 Opening State Machine 使用同一套 THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP → Scene 1 Opening Pass 判定
 77. state.json 使用 schema_version: 3.5.3
 78. 从 schema 3.3 或旧 v3.5.x 状态迁移到 3.5.3 时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源
 79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
@@ -914,13 +919,23 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 82. GitHub 读取失败时可以使用 fallback，但会明确标记“未验证 GitHub 最新版”，不会伪装成 canonical 已确认
 83. 本次真实读取到的 canonical 规则与旧记忆冲突时，以本次文件内容为准；首个剧情输出前 Preflight 会拦截旧版 Opening UI、碎片化段落等已被新版本禁止的行为
 
-## 21. v3.5.4 运行口径
+### M. v3.5.5 Source-First Opening Order
+84. 新篇第一次缺失设定时，先让玩家选择原创题材或具体作品母体，不会先问“是否架空/选哪种分叉”
+85. 既有作品/混合世界只有在 `source_title` resolved 后才允许解析并锁定 `adaptation_mode`
+86. 玩家在选作品前提前给出年龄、性别、C1/C2 或角色信息时会保留这些信息，但前台仍先补齐主题/作品；后续不会重复询问已知字段
+87. 玩家在作品未定前提前说“我要平行架空/选 C”时，只记为 pending；作品确定后才按具体母体应用，不会提前把 adaptation 判定为 resolved
+88. 原创题材没有原作母体时，`adaptation_mode=not_applicable` 并直接跳过改编方式节点
+89. `adaptation_profile` 显式记录 `adaptation_mode`，平行/架空、分叉、原作时间线介入与重构不会只靠模糊的 divergence_point 猜测
+
+## 21. v3.5.5 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.4 是启动可靠性小版本，不改变 v3.5.3 的持久化 schema，也不改变 v3.5.2/v3.5.3 已有的开局体验、叙事规则与 Canon。它新增一条更高优先级的运行合同：**不能把“记得最新版”当成“已经加载最新版”**。每次明确触发复杂酒馆且 GitHub 可访问时，必须先在当前运行真实读取 canonical，再声明版本并执行；若读取失败，只能以未验证 fallback 身份继续。
+v3.5.5 是开局依赖顺序修复版本，不改变 v3.5.3 的持久化 schema，也不改变已经开始的故事 Canon。它把此前容易混淆的 `SOURCE/ADAPTATION` 合并节点拆成两个有前置依赖的阶段：**先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”**。玩家可以提前主动提供后续字段，但系统只能提前记录，不能因此改变前台的依赖顺序。
 
-本次仍沿用 `schema_version: 3.5.3`，因为没有新增需要写入存档的必需结构字段；`skill_source / skill_version / canonical_verified_this_run` 属于运行态验证信息，不要求迁移既有故事 Canon。
+v3.5.4 的 Canonical Load Verification Gate 完整保留：每次明确触发复杂酒馆且 GitHub 可访问时，仍必须先在当前运行真实读取 canonical，再声明版本并执行；若读取失败，只能以未验证 fallback 身份继续。
+
+本次仍沿用 `schema_version: 3.5.3`。新增的 `adaptation_mode` 对新篇属于显式运行字段；旧存档只在已有明确玩家确认时映射，不能倒推 Canon，因此不需要整体 schema 迁移。
 
 核心目标是：
-**让“使用最新版”成为一次可验证的启动动作，而不是依赖记忆或口头声明，从源头避免规则文件已经修复、实际输出却仍按旧习惯运行。**
+**让开局提问与设定依赖一致：先确定世界，再确定改编方式，最后补齐玩家与关系边界；避免“作品还没选，架空方式已经被锁定”的倒序错误。**
