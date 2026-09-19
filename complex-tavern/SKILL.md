@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.5 修复新篇开局依赖顺序：必须先选择故事主题或作品母体，再在母体已确定后决定原作介入、分叉、平行架空或重构方式；不得在主题/作品未确定时提前锁定 adaptation。继续保留 v3.5.4 Canonical Load Verification Gate、v3.5.3 运行修复与此前开局/叙事规则。
-version: 3.5.5
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.6 新增 Visible Version Confirmation Gate：每次明确触发开始/继续/使用复杂酒馆时，必须在任何设定或剧情输出之前，以单行明确显示本次实际加载的版本号与来源验证状态；版本号必须来自本次读取到的 frontmatter，不得硬编码或凭记忆。继续保留 v3.5.5 的 source-first 开局顺序与此前全部规则。
+version: 3.5.6
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.5 — Source-First Opening Order
+# Complex Tavern Engine v3.5.6 — Visible Version Confirmation
 
 ## 0. 性质与真实性边界
 
@@ -42,6 +42,30 @@ activation: default-on-trigger
 - Director Preflight 在首个用户可见剧情输出前额外检查：本轮是否完成主源加载验证、所声称版本是否来自本次实际读取、正文渲染是否违反当前版本的 Opening / Paragraphing 等规则。若违反，先内部重写，不把错误草稿发给玩家。
 
 建议运行态记录（仅后台）：`skill_source`、`skill_version`、`canonical_verified_this_run`。其中 `canonical_verified_this_run` 只有在当前运行真实读取 GitHub canonical 后才可为 `true`。
+
+### 0.1.2 Visible Version Confirmation Gate / 可见版本确认闸门
+
+每次用户**明确触发一次复杂酒馆会话入口**（例如“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆 / 从复杂酒馆存档恢复”），在完成 0.1.1 的主源加载验证后、输出任何设定问题、存档信息或剧情正文之前，必须先向玩家显示一行版本确认。
+
+GitHub canonical 本次读取成功时，固定语义格式为：
+`复杂酒馆 vX.Y.Z｜GitHub canonical 已验证`
+
+其中 `vX.Y.Z` 必须动态取自**本次实际读取文件的 frontmatter `version`**，禁止把某个版本号硬编码到运行提示里，也禁止用记忆、摘要或上一次窗口的版本号代替。
+
+若 GitHub 本次不可访问而使用 fallback，则必须显示：
+`复杂酒馆 fallback vX.Y.Z｜未验证 GitHub 最新版`
+
+其中版本号取自实际 fallback 文件；若 fallback 自身无法可靠取得版本号，则显示：
+`复杂酒馆 fallback｜版本未知｜未验证 GitHub 最新版`
+
+若用户明确指定旧版/特定版本，版本提示必须同时表明“指定版本”，不得让玩家误以为它是 canonical 最新版。
+
+硬规则：
+- 版本确认行属于**启动/恢复入口提示**，不是普通剧情 UI；它允许且必须出现在 Opening State Machine / 存档恢复之前
+- 同一已激活游戏中的普通行动回合不要求每回合重复版本号，避免污染小说正文；但用户再次明确说“开始/继续/使用复杂酒馆”时，视为新的 activation invocation，必须重新真实读取并重新显示
+- 版本确认行不得被“复杂在后台、简单在玩家面前”“减少 UI”“Opening Brief 不独立显示”等规则吞掉
+- 未显示该行时，不得继续本次复杂酒馆入口流程；Director Preflight 应视为启动缺陷并先修正
+- 显示的版本号与本轮 `skill_version`、frontmatter `version` 不一致时属于 Critical 启动错误
 
 当 Files/Library 等持久化工具可用时，优先用它保存/读取存档、Raw Story Log 与章节检查点；工具不可用时仍可在当前对话内按同一规则运行，但不得声称已持久保存到外部。
 
@@ -669,7 +693,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Opening Gate**：若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
+4. **Opening Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经先输出与本次实际 frontmatter 一致的 Visible Version Confirmation；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
@@ -927,15 +951,22 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 88. 原创题材没有原作母体时，`adaptation_mode=not_applicable` 并直接跳过改编方式节点
 89. `adaptation_profile` 显式记录 `adaptation_mode`，平行/架空、分叉、原作时间线介入与重构不会只靠模糊的 divergence_point 猜测
 
-## 21. v3.5.5 运行口径
+### N. v3.5.6 Visible Version Confirmation
+90. 每次明确触发“开始/继续/使用复杂酒馆”时，会在任何设定或剧情输出前显示一行实际加载版本号
+91. GitHub canonical 读取成功时，版本提示使用本次 frontmatter 的动态版本号，并明确标记“GitHub canonical 已验证”
+92. GitHub 不可访问而使用 fallback 时，版本提示明确包含“fallback”和“未验证 GitHub 最新版”，不会伪装成 canonical
+93. 同一已激活剧情的普通行动回合不会机械重复版本提示；用户再次明确触发复杂酒馆入口时会重新读取并重新显示
+94. 若提示版本号与本轮实际 frontmatter / skill_version 不一致，Preflight 将其视为 Critical 启动错误，不继续进入设定或剧情
+
+## 21. v3.5.6 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.5 是开局依赖顺序修复版本，不改变 v3.5.3 的持久化 schema，也不改变已经开始的故事 Canon。它把此前容易混淆的“SOURCE 与 ADAPTATION 合并节点”拆成两个有前置依赖的阶段：**先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”**。玩家可以提前主动提供后续字段，但系统只能提前记录，不能因此改变前台的依赖顺序。
+v3.5.6 是启动可见性修复版本，不改变 v3.5.3 的持久化 schema，也不改变 v3.5.5 的 source-first 开局顺序、既有故事 Canon 或叙事规则。它新增 Visible Version Confirmation Gate：**每次明确触发复杂酒馆入口，玩家都必须先看到本次真实加载的版本号与来源验证状态，再进入任何设定或剧情。**
 
-v3.5.4 的 Canonical Load Verification Gate 完整保留：每次明确触发复杂酒馆且 GitHub 可访问时，仍必须先在当前运行真实读取 canonical，再声明版本并执行；若读取失败，只能以未验证 fallback 身份继续。
+v3.5.5 的 source-first 规则完整保留：先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”。v3.5.4 的 Canonical Load Verification Gate 也完整保留：版本确认行只能建立在本次真实读取结果上，不能用缓存或记忆伪造。
 
-本次仍沿用 `schema_version: 3.5.3`。新增的 `adaptation_mode` 对新篇属于显式运行字段；旧存档只在已有明确玩家确认时映射，不能倒推 Canon，因此不需要整体 schema 迁移。
+本次仍沿用 `schema_version: 3.5.3`。Visible Version Confirmation 属于运行态/前台启动合同，不新增存档必需字段，因此不需要迁移已有 Canon。
 
 核心目标是：
-**让开局提问与设定依赖一致：先确定世界，再确定改编方式，最后补齐玩家与关系边界；避免“作品还没选，架空方式已经被锁定”的倒序错误。**
+**让玩家每次调用复杂酒馆时一眼知道“现在到底跑的是哪个版本、是不是本次验证过的 GitHub canonical”，从前台杜绝悄悄回退旧版而用户不知情。**
