@@ -622,7 +622,7 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 
 #### 5.8.2 每 50 TURN：Milestone Integrity Checkpoint
 
-在 TURN 50、150、250、350……以及等价的每50回合节点执行更完整的里程碑检查；TURN 100、200、300……与百回合长期快照合并为一次联合扫描，避免重复工作。
+每 50 TURN 执行一次更完整的里程碑检查：TURN 50、100、150、200、250、300……；其中 TURN 100、200、300……同时命中百回合长期档案快照，因此合并为一次联合扫描，避免重复工作。
 
 至少核对：
 - 主角/NPC身份与稳定外貌锚点
@@ -1326,8 +1326,8 @@ autonomous_novel 在以下条件暂停：
 ### K. v3.5.3 Runtime Fix
 75. 第 6 节每轮执行流程严格按 1–19 唯一编号推进，不存在重复或跳号
 76. 第 6 节 Theme/Opening Gate 与 v3.5.5 Opening State Machine 使用同一套 THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP → Scene 1 Opening Pass 判定
-77. state.json 使用 schema_version: 3.5.3
-78. 从 schema 3.3 或旧 v3.5.x 状态迁移到 3.5.3 时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源
+77. v3.5.3 历史存档继续被识别为合法迁移来源；当前正式 state.json 使用 schema_version: 3.6.1
+78. 从 schema 3.3 或旧 v3.5.x 状态迁移时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源；最终按第16节迁移到当前 schema
 79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
 
 ### L. v3.5.4 Canonical Load Guard
