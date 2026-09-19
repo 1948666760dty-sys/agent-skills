@@ -669,7 +669,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
-4. **Opening Gate**：若是新篇，PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/身份”误当成已经开局完成
+4. **Opening Gate**：若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
@@ -908,7 +908,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 
 ### K. v3.5.3 Runtime Fix
 75. 第 6 节每轮执行流程严格按 1–19 唯一编号推进，不存在重复或跳号
-76. 第 6 节 Theme/Open­ing Gate 与 v3.5.5 Opening State Machine 使用同一套 THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP → Scene 1 Opening Pass 判定
+76. 第 6 节 Theme/Opening Gate 与 v3.5.5 Opening State Machine 使用同一套 THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP → Scene 1 Opening Pass 判定
 77. state.json 使用 schema_version: 3.5.3
 78. 从 schema 3.3 或旧 v3.5.x 状态迁移到 3.5.3 时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源
 79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
@@ -931,7 +931,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.5 是开局依赖顺序修复版本，不改变 v3.5.3 的持久化 schema，也不改变已经开始的故事 Canon。它把此前容易混淆的 `SOURCE/ADAPTATION` 合并节点拆成两个有前置依赖的阶段：**先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”**。玩家可以提前主动提供后续字段，但系统只能提前记录，不能因此改变前台的依赖顺序。
+v3.5.5 是开局依赖顺序修复版本，不改变 v3.5.3 的持久化 schema，也不改变已经开始的故事 Canon。它把此前容易混淆的“SOURCE 与 ADAPTATION 合并节点”拆成两个有前置依赖的阶段：**先回答“玩什么题材/哪部作品”，再回答“这个作品要不要以及怎样架空/分叉”**。玩家可以提前主动提供后续字段，但系统只能提前记录，不能因此改变前台的依赖顺序。
 
 v3.5.4 的 Canonical Load Verification Gate 完整保留：每次明确触发复杂酒馆且 GitHub 可访问时，仍必须先在当前运行真实读取 canonical，再声明版本并执行；若读取失败，只能以未验证 fallback 身份继续。
 
