@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.5 在 v3.6.4 Visible Output Semantics Lock 基础上新增 Activation Banner Barrier、Paragraph Boundary Hardening 与 Reader Term Annotation：普通 interactive / autonomous_novel / test 启动都必须把实际 canonical 版本作为首个可见输出；连续场景的非对话分段改用硬边界理由码并加强碎段密度审计；科幻、奇幻与专业专有词可在正文首次出现处加读者标记，并在正文外独立解释，禁止把注释写进角色叙述或用注释泄露后台秘密。继续保留 v3.6.4 输出语义锁、v3.6.2 Narrative Release Gate、v3.6.1 长篇运行/记忆生命周期以及既有分支与 source-first 开局规则。
-version: 3.6.5
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.6 在 v3.6.5 基础上新增 Persistent Paragraph Style Lock / 跨回合段落风格锁：长段落连续小说风格从“单轮放行检查”升级为故事级持久状态，interactive / autonomous_novel / test 的每次 Narrative Renderer 都必须先加载同一 paragraph_profile，再生成草稿；章节切换、Scene 切换、Decision Gate、模式切换或上下文压缩都不得把排版重置为模型默认短段风格。新增 rolling paragraph drift audit 与 draft-construction-first 规则，防止开头长段、后续逐轮回退成一两句一段。继续保留 v3.6.5 版本首行闸门、硬分段理由码、读者术语注释、v3.6.4 输出语义锁及长篇运行规则。
+version: 3.6.6
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.5 — Activation Banner, Paragraph Hardening & Reader Annotation
+# Complex Tavern Engine v3.6.6 — Persistent Paragraph Style Lock
 
 ## 0. 性质与真实性边界
 
@@ -681,6 +681,36 @@ Reader Glossary 是**读者辅助层**，不属于世界内 Canon、角色知识
 
 读者注释账本不得反向改变人物行为：读者通过注释知道一个术语的通识解释，不代表主角或 NPC 自动获得相同知识。
 
+### 4.16 Narrative Layout Profile / 故事级段落风格档案
+
+段落风格不是“这一轮临时文风提示”，而是**故事级持续状态**。新故事第一次进入正式 Scene 1 前建立 `narrative_layout_profile`；之后 interactive、autonomous_novel、test、章节切换、Scene 切换、存档恢复与上下文压缩都必须继承，除非用户明确修改。
+
+默认档案：
+
+```text
+narrative_layout_profile:
+  paragraph_mode: longform_continuous
+  continuity_scope: story
+  non_dialogue_fragment_tolerance: low
+  dialogue_layout: standard_speaker_change
+  single_sentence_emphasis: rare
+  draft_strategy: build_full_paragraph_units_first
+  cross_turn_drift_guard: enabled
+```
+
+含义：
+- `longform_continuous`：普通连续叙事优先由少量完整长段承载，不回退到聊天式/短视频式“一两句一段”
+- `continuity_scope=story`：该排版习惯跨 TURN、SCENE、CHAPTER 和运行模式持续，不因“新一轮生成”重置
+- `draft_strategy=build_full_paragraph_units_first`：Narrative Renderer **从草稿构造阶段就按完整段落单元生成**；不得先按模型默认习惯写大量微段，再指望 Paragraph Merge Scan 事后勉强修补
+- `cross_turn_drift_guard=enabled`：当前轮不仅检查自身段落，还检查是否相对最近已放行正文出现明显“越写越碎”的风格漂移
+
+硬规则：
+- `narrative_layout_profile` 属于故事运行状态，不属于 Canon；它改变排版，不改变事件事实
+- 任何“新章节 / 新 Scene / 进入选项后 / 选择完成后 / 切小说模式 / 恢复普通模式 / 压缩上下文”都**不是**重置 paragraph profile 的理由
+- 若用户明确说“以后更紧凑/更碎/对白密一点/恢复普通分段”等，可修改未来 `narrative_layout_profile`；不得倒改已经发生的 Canon
+- 用户没有修改时，后续所有正文必须沿用最近已锁定 profile；“模型默认文风”没有更高优先级
+- 旧存档缺少该字段时，从当前 Skill 默认建立 `longform_continuous`，但不自动重排已写历史正文；只约束后续新输出
+
 ## 5. 长上下文与双层叙事档案
 
 ### 5.1 Raw Story Log（完整档案）
@@ -843,7 +873,7 @@ Tier 6 完整 Raw Story Log
 11. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
 12. **Decision Gate / Decision Router**：判定 D0–D3；interactive 按玩家控制权决定是否停下，autonomous_novel 在授权范围内交给 Autonomous Player，test 交给 TEST PLAYER；不得混用三种决策策略
 13. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
-14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3；正文主体放行后再执行 Reader Term Annotation Pass，见 6.4，注释不得混进角色叙述
+14. **Narrative Renderer**：先加载故事级 `narrative_layout_profile`，按其 `draft_strategy` 从一开始就构造完整段落单元，再生成第二人称有限视角正文；不得每轮重新采用模型默认短段风格。人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3；正文主体放行后再执行 Reader Term Annotation Pass，见 6.4，注释不得混进角色叙述
 15. **Director Preflight**：逐轮轻量预检，见 13.1
 16. **Continuity / Long-Run Auditor**：检查本轮状态变更；按第5.8与第14节触发里程碑、长期档案与自动小说审计
 17. **Delta Commit**：只提交发生变化的状态
@@ -965,17 +995,21 @@ Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须
 `NARRATIVE_DRAFT → Paragraph Merge Scan → Paragraph Boundary Audit → Director Preflight → RELEASE`
 
 运行态至少维护本轮临时标志：
+- `paragraph_profile_loaded = true | false`
 - `paragraph_scan_status = PASS | FAIL`
 - `paragraph_boundary_audit = PASS | FAIL`
+- `paragraph_style_drift_status = PASS | FAIL`
 - `narrative_preflight_status = PASS | FAIL`
 - `narrative_release_status = PASS | FAIL`
 
 放行条件：
-1. `paragraph_scan_status == PASS`
-2. `paragraph_boundary_audit == PASS`，即所有非对话换段均可被有效分段理由解释，且不存在未处理的 Fragment Chain
-3. `narrative_preflight_status == PASS`
+1. `paragraph_profile_loaded == true`
+2. `paragraph_scan_status == PASS`
+3. `paragraph_boundary_audit == PASS`，即所有非对话换段均可被有效分段理由解释，且不存在未处理的 Fragment Chain
+4. `paragraph_style_drift_status == PASS`，即没有相对既有故事排版档案出现跨回合碎段回退
+5. `narrative_preflight_status == PASS`
 
-只有三项全部通过时，才设置 `narrative_release_status = PASS`，此时正文才允许进入 Output 与 Raw Story Log。任一项 FAIL：
+只有五项全部通过时，才设置 `narrative_release_status = PASS`，此时正文才允许进入 Output 与 Raw Story Log。任一项 FAIL：
 - 失败草稿只存在于内部 Draft Buffer，不得展示给玩家，不得写入 Raw Story Log
 - 回到 Narrative Renderer 进行合并/重排后重新扫描
 - 不得把“文风选择”“悬疑感”“短段更有冲击力”作为绕过 FAIL 的理由；只有真正满足 6.3.3 的稀缺强调才可保留短单句段
@@ -1002,6 +1036,60 @@ Narrative Renderer 生成正文草稿后、Director Preflight 通过前，必须
 - Dialogue speaker change 继续按 6.3.2 正常换段，不纳入非对话密度惩罚
 
 Paragraph Boundary Audit 必须验证：每个非对话段落边界都有 `H1–H5` 之一；只有软理由的边界一律 FAIL。
+
+#### 6.3.10 Persistent Paragraph Style Lock / 跨回合段落风格锁
+
+本节专门防止一种长期运行 Bug：**开头几轮严格遵守长段落，后续模型逐渐恢复自己的默认短段落风格。**
+
+每个正式剧情 TURN 在 Narrative Renderer 之前必须：
+1. 读取当前故事的 `narrative_layout_profile`
+2. 读取最近已放行正文的少量**排版签名**，只需要知道长段/短段分布、非对话碎段是否频繁、对白是否按说话者分段，不需要把全文重新加载
+3. 以该 profile 作为本轮草稿的构造约束，而不是输出后才临时提醒
+4. 草稿完成后同时做“本轮边界审计 + 跨回合漂移审计”
+
+**Paragraph Style Signature / 排版签名** 可维护：
+- `mode`：longform_continuous 等
+- `recent_turns_observed`：最近若干有效剧情轮
+- `non_dialogue_fragment_pattern`：stable / drifting / fragmented
+- `repeated_short_block_pattern`：true / false
+- `last_drift_turn`
+- `last_repair_turn`
+
+不要求保存伪精确的“平均每段多少字”作为硬目标；签名只用于识别**方向性漂移**。
+
+跨回合漂移判定：
+- 最近正文原本以完整长段为主，而当前草稿突然大量出现“一句/两句非对话 + 空行”，且没有 H1–H5 硬边界，判为 `Paragraph Style Drift`
+- 连续两轮或以上出现“上一轮已经略碎，这一轮更碎”的趋势，即使单轮勉强没有触发 3 个单句段，也判为漂移
+- 新章节、新 Scene、一次 Decision Gate 结束、一次 Autonomous Player 选择完成，都不能解释这种漂移
+- 对话密集场景可以因为换说话者自然产生较多短段；审计时要把**正常换说话者对白段**从非对话碎段统计中排除，不能误判
+
+修复顺序：
+1. 先保持所有事实、对白内容、行动顺序不变
+2. 把同一连续叙事单元的动作、观察、心理、判断、环境与结果重新组织到少量完整段落
+3. 同一说话者的对白 + 动作 + 神态尽量收在同段
+4. 不跨不同说话者、真实时间跳跃、地点切换或 H1–H5 硬边界强行合并
+5. 重做 Paragraph Merge Scan / Boundary Audit
+6. 只有 `paragraph_style_drift_status=PASS` 后才允许 RELEASE
+
+运行态新增：
+- `paragraph_style_drift_status = PASS | FAIL`
+- `paragraph_profile_loaded = true | false`
+
+Narrative Release Gate 因而升级为：
+
+`NARRATIVE_DRAFT_WITH_PROFILE → Paragraph Merge Scan → Paragraph Boundary Audit → Cross-Turn Paragraph Drift Audit → Director Preflight → RELEASE`
+
+放行必须同时满足：
+- `paragraph_profile_loaded == true`
+- `paragraph_scan_status == PASS`
+- `paragraph_boundary_audit == PASS`
+- `paragraph_style_drift_status == PASS`
+- `narrative_preflight_status == PASS`
+
+**截图式回归样例：**
+- “金属探测门没有响。” / “生物识别灯在脸上扫了一遍。” / “绿色。” / “你没有停下来。”如果处于同一连续动作链且没有真正强强调需求，不能四段分开；应重组成一个连续叙事段
+- “你没有立刻回答。” / “女人从口袋里取出手机。” / “时间戳……”若同处一个连续对话现场，普通叙述应与相邻人物动作/对白自然组合，不能每个动作单独另起一段
+- 不同说话者的“你说 / 她说 / 韩森说”仍按标准小说习惯换段；本修复**不是**把所有对白硬挤成一堵文字墙
 
 ### 6.4 Reader Term Annotation Gate / 读者术语标注闸门
 
@@ -1215,7 +1303,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Narrative Continuation & Paragraphing**：是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮长度是否异常趋同并机械附带选项；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan 与 Paragraph Boundary Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链或无硬理由换段时必须先重写，且只有 `paragraph_scan_status`、`paragraph_boundary_audit`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
+8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
 9. **Reader Annotation Safety**：本轮是否出现对一般读者明显陌生且影响理解的特殊术语却完全未处理；是否反过来过度标注普通词；标记是否放在术语处而解释独立位于正文外；Reader Annotation 是否泄露后台秘密/原作未来、被写进角色知识，或把注释强塞进小说段落
 10. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
 11. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
@@ -1252,7 +1340,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
-- 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；非对话段落边界是否存在仅靠软理由放行的 Paragraph Density Drift；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
+- 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；`narrative_layout_profile` 是否在新 TURN/新章/新 Scene/模式切换后被遗失或重置；是否出现“开局长段、后续越写越碎”的 Cross-Turn Paragraph Style Drift；非对话段落边界是否存在仅靠软理由放行的 Paragraph Density Drift；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
 - Reader Glossary 是否过密/过稀；陌生术语是否首次出现未解释、同一熟悉术语是否反复脚注；注释是否混入正文叙述、改变角色知识或泄露未来/秘密
 
 ### 13.3 分级
@@ -1369,6 +1457,7 @@ autonomous_novel 在以下条件暂停：
 - 从 v3.5.4 迁移到 v3.5.5 时：既有已开场存档不重跑开局、不改变已确认母体或 Canon；若旧状态缺少显式 `adaptation_mode`，只从玩家已经明确确认过的改编方式中映射，无法确定则保留 `unknown`，不得根据后续剧情倒推。尚未进入 Scene 1 的新篇按 v3.5.5 顺序继续：先补齐 THEME/SOURCE，再解析 adaptation
 - 从 `schema_version: 3.5.3` / v3.5.x 迁移到 `schema_version: 3.6.1` 时：默认 `run_mode=interactive`；新增 Autonomous Player、novel_target、Decision Ledger、Long-Term Archive、lifecycle_stage 等字段为空或按当前明确状态初始化，不倒推过去不存在的自动决策；已有 Raw Story Log / Canon / 关系 / 资源 / 时间完全不改写。用户随后启用小说模式时，从当前人物 Canon 与用户明确偏好建立初始 policy。旧档若已超过50/100回合，可在首次需要时依据已确认 Canon + 带来源的 Raw Story Log 回查补建 milestone/archive，但不得从摘要猜造来源
 - 从 v3.6.3 迁移到 v3.6.4 时不改变 `schema_version: 3.6.1`：旧 `export_edition` 可映射到 `content_edition`；缺失的 content edition / batch boundary / artifact policy 只能从用户已明确说过的输出要求、既有交付行为或存档字段中可靠映射，无法确定时保留 unknown 并在下一次真正需要用户可见输出前一次性补问，**禁止默认回填 novel/暂停/每批交付**
+- 从 v3.6.5 迁移到 v3.6.6 时不改变 `schema_version: 3.6.1`：新增 `narrative_layout_profile` 与 paragraph style signature；旧档不重排历史正文，后续正文默认建立 `longform_continuous` 故事级锁并持续继承
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -1410,7 +1499,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、`narrative_layout_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1686,17 +1775,31 @@ Artifact Policy：
 181. 用户说“不要注释/纯净版”时关闭 Reader Annotation，但不改变剧情 Canon；再次开启只影响后续/重新导出的阅读层
 182. v3.6.5 新增 reader glossary / annotation policy 与段落审计语义，不改变持久化 schema_version，仍为 3.6.1
 
-## 21. v3.6.5 运行口径
+### Y. v3.6.6 Persistent Paragraph Style Lock Regression
+183. 新故事进入 Scene 1 时建立 `narrative_layout_profile=longform_continuous`，后续每个 TURN 都先加载该 profile 再生成正文
+184. interactive 连续玩几十轮后，不能因为“不是小说模式”而恢复模型默认的一两句一段
+185. autonomous_novel 跨章节、跨每10章批次、跨 technical checkpoint 后继续时，paragraph profile 必须保持，不重新校准成短段
+186. 新 Scene / 新 Chapter / Decision Gate 前后都不是 paragraph profile reset point
+187. 上一轮长段、下一轮突然出现大量无 H1–H5 理由的一两句非对话段，Cross-Turn Paragraph Drift Audit 必须 FAIL
+188. 连续两轮逐渐碎化，即使单轮没有连续3个单句段，也能通过 rolling drift guard 判定 FAIL
+189. Narrative Renderer 必须在草稿构造阶段生成完整段落单元，不能把“先碎写、后合并”作为默认策略
+190. 截图式“金属探测门没有响 / 生物识别灯扫过 / 绿色 / 你没有停下来”在同一动作链中不得四段分开
+191. 对话换说话者仍正常分段；Cross-Turn Drift Guard 只针对不合理非对话碎段，不把标准对白排版误判为 Bug
+192. 用户明确修改未来段落风格时可以更新 `narrative_layout_profile`，但用户未修改时任何模型默认文风都不能覆盖故事级锁
+193. 上下文压缩只压缩故事内容加载，不删除 `narrative_layout_profile`；恢复存档必须先恢复 profile 再续写
+194. v3.6.6 新增 paragraph profile / style signature 与跨回合漂移审计，不改变持久化 schema_version，仍为 3.6.1
+
+## 21. v3.6.6 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.5 是 **Activation Banner Barrier + Paragraph Boundary Hardening + Reader Term Annotation** 小版本修复：完整继承 v3.6.4 Visible Output Semantics Lock、v3.6.3 Novel Output Contract Gate、v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“普通互动模式开局版本号被吞、段落规则存在但仍频繁碎段”，并新增不会污染角色视角的科幻/奇幻/专业术语读者注释层。
+v3.6.6 是 **Persistent Paragraph Style Lock** 小版本修复：完整继承 v3.6.5 Activation Banner / Paragraph Hardening / Reader Annotation、v3.6.4 Visible Output Semantics Lock 与既有长篇运行规则；本次专门修复“开头能生成大段，后续回合又逐渐恢复模型默认短段落风格”的跨回合排版漂移。长段落连续小说风格现在是故事级状态，而不是每轮临时提醒。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.5 继续使用既有世界状态架构；Reader Glossary/annotation policy 属于阅读辅助扩展，Paragraph Hardening 属于渲染放行规则，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.6 继续使用既有世界状态架构；`narrative_layout_profile` / paragraph style signature 属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
