@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.3 在 v3.6.2 Narrative Release Gate 基础上新增 Novel Output Contract Gate：进入 autonomous_novel 后、Scene 1 正式正文前，必须解析目标长度/章节或回合目标、生成批次、聊天可见方式、最终交付格式以及多目标优先级；已明确的信息直接继承，缺失的关键项一次性补问，禁止在输出合同未解析时直接开写。继续保留 v3.6.2 段落放行闸门、v3.6.1 长篇运行/记忆生命周期以及既有分支、交互审计与 source-first 开局规则。
-version: 3.6.3
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.4 在 v3.6.3 Novel Output Contract Gate 基础上新增 Visible Output Semantics Lock：凡会改变用户最终/中间可见内容、批次是否暂停、Word 如何持续更新或何时交付的字段，都必须显式解析或由用户明确措辞可靠推导；禁止 silent default 隐藏自动选择、把批次擅自变成停顿、提前交付用户只要求最终版的 Word，或在最终导出时强制退回 Novel Edition。继续保留 v3.6.2 Narrative Release Gate、v3.6.1 长篇运行/记忆生命周期以及既有分支、交互审计与 source-first 开局规则。
+version: 3.6.4
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.3 — Novel Output Contract & Narrative Release Gate
+# Complex Tavern Engine v3.6.4 — Visible Output Semantics Lock
 
 ## 0. 性质与真实性边界
 
@@ -279,21 +279,30 @@ generation_cadence:
   mode: continuous_until_checkpoint | chapter_by_chapter | batch_chapters | batch_text
   value: optional
 
+batch_boundary_policy:
+  mode: continue | pause
+
 interim_visibility:
   mode: full_text_in_chat | batch_text_in_chat | progress_only
 
 delivery_surface:
   mode: chat | docx | chat_plus_docx | other
 
-export_edition:
+content_edition:
   mode: novel | interactive | decision_ledger | audit
+
+artifact_update_mode:
+  mode: single_working_file | per_batch_files | final_assembly
+
+artifact_delivery_timing:
+  mode: each_checkpoint | on_request | final_only
 
 target_priority:
   primary: one target
   secondary: advisory unless explicitly hard
 ```
 
-兼容旧字段：`target_turns / target_decisions / target_chapters / target_text_count / hard_cap_turns / hard_cap_text_count` 仍可作为输入别名，解析后归一化到 `novel_output_contract`。
+兼容旧字段：`target_turns / target_decisions / target_chapters / target_text_count / hard_cap_turns / hard_cap_text_count` 仍可作为输入别名，解析后归一化到 `novel_output_contract`；旧 `export_edition` 作为 `content_edition` 的兼容别名读取，但新运行统一写入 `content_edition`。
 
 语义：
 - `target_turns` 统计已正式提交的故事 TURN；TURN 不等于 Decision，因此100回合不要求100次选择
@@ -301,9 +310,15 @@ target_priority:
 - 中文“20万字/30万字/100万字”默认以**纯小说正文可见字符量的近似计数**为目标，不计菜单、Decision Ledger、审计、标题和状态数据；英文等语言若用户明确说 words，则按词数
 - “最多/上限/不超过 X”解析为 hard cap；“大约/左右/目标 X”默认是 soft target；用户明确“必须正好/硬目标”时才使用 hard
 - `generation_cadence=continuous_until_checkpoint` 表示在当前可执行范围内尽可能连续推进，遇到真实技术边界才 checkpoint；它**不代表后台异步运行，也不保证几十万字能在一条消息中全部生成**
-- `delivery_surface=docx` 或 `chat_plus_docx` 表示最终需要 Word 文档；实际创建/更新文件必须以当前工具能力为准，不能在没有文件能力时谎称已生成
-- `interim_visibility=progress_only` 只控制聊天中是否展示整段正文，不等于模型在后台无人触发地持续工作
-- `export_edition` 未指定时默认 `novel`；只有用户明确要求带选择/审计时才切其他 edition
+- `generation_cadence=batch_chapters/batch_text` 只定义批次/检查点粒度，**不自动表示停下来等用户确认**；是否在批次边界暂停只由 `batch_boundary_policy` 决定
+- 用户明确“连续制作/连续跑/不要每批停”时解析为 `batch_boundary_policy=continue`；明确“每批停一下/每批确认后继续”时解析为 `pause`。若采用批次生成但该行为既无法从语义推导、用户也未授权“默认/你决定”，则该项仍属 unresolved
+- `delivery_surface=docx` 或 `chat_plus_docx` 表示需要 Word 文档；实际创建/更新文件必须以当前工具能力为准，不能在没有文件能力时谎称已生成
+- `interim_visibility=progress_only` **只控制聊天中是否展示正文**，绝不等价于 `content_edition=novel`，也不授权系统隐藏 Word 中本应显示的选择
+- `content_edition` 决定用户实际看到的内容版本：`novel`=纯小说；`interactive`=正文 + 每个真实 Decision Gate 的可行行动集合 + Autonomous Player 实际选择 + 随后可观察结果；`decision_ledger`=完整决策档案；`audit`=审计材料
+- `content_edition` 属于**强可见行为字段**：除非用户明确说“默认/你决定”，否则不得静默默认成 `novel`。可从明确措辞推导：“只要纯小说/不要选项”→novel；“要看到选项和自动选择/带选择版”→interactive；“完整决策记录/理由”→decision_ledger；“审计版”→audit
+- 当交付包含 docx 时，`artifact_update_mode` 决定文件如何维护：`single_working_file`=持续更新同一工作 Word；`per_batch_files`=每批独立文件；`final_assembly`=运行中不维护用户可见成品，完结时统一组装
+- `artifact_delivery_timing` 决定什么时候把文件交给用户：`each_checkpoint`=每个约定检查点交付；`on_request`=用户要时才给；`final_only`=只在最终完成时交付。技术 checkpoint 不得擅自覆盖 `final_only` 并提前发工作稿
+- “只在 Word 里修改/同一个 Word 继续写”优先解析为 `single_working_file`；“每批一个 Word”→`per_batch_files`；“最后再打包 Word”→`final_assembly`。若同时出现“同一个 Word 持续修改 + 最终版才给我”，则解析为 `single_working_file + final_only`
 
 目标字数只是总量目标，**绝不是每回合字数配额**。不得为了追字数注水、重复解释、制造事故、强塞恋爱或异常。
 
@@ -311,21 +326,26 @@ target_priority:
 
 当 `run_mode=autonomous_novel` 时，在新篇正式进入 Scene 1 之前，或把既有 interactive 故事首次切换为“有明确长跑目标的小说模式”之前，必须解析足够完整的 `novel_output_contract`。这不是文风偏好，而是决定何时停、如何分批和如何交付的运行合同。
 
-至少解析四类关键项：
+至少解析以下关键项；其中与当前交付无关的条件项可标记 not_applicable：
 1. **Length / Run Target**：主要目标是字数、章节数、TURN、决策数还是自然边界；必须至少有一个 primary target
 2. **Generation Cadence**：尽可能连续到技术 checkpoint / 一章一章 / 每 N 章 / 每 N 万字（或其他明确批次）
-3. **Interim Visibility & Delivery**：聊天里看完整正文、只看每批正文、只看进度；最终是 chat、Word(docx)、chat+Word 或用户指定格式
-4. **Target Priority**：存在多个目标时，明确哪个是主目标、哪些是参考目标、哪些是 hard cap
+3. **Batch Boundary Policy**：采用批次时，批次边界是继续还是暂停；不得把“每 N 章一批”静默等同于“每 N 章停下来”
+4. **Interim Visibility & Delivery Surface**：聊天里看完整正文、只看每批正文、只看进度；交付是 chat、Word(docx)、chat+Word 或用户指定格式
+5. **Content Edition**：用户要纯小说、带真实选择版、决策档案版还是审计版；这是强可见行为字段
+6. **Artifact Policy (when docx)**：Word 是同一工作文件持续更新、每批独立文件还是最终组装，以及每检查点/按需/仅最终何时交付
+7. **Target Priority**：存在多个目标时，明确哪个是主目标、哪些是参考目标、哪些是 hard cap
 
 解析原则：
 - 用户当前消息或既有上下文已经明确的项直接继承，绝不重复询问
 - 用户一句话已经给足，例如“写30万字，50章左右，每5章一批，聊天里给我看，最后再打包 Word”，必须一次解析完成并直接推进
-- 若缺失关键项，**只用一轮紧凑问题把所有缺项一起问完**；不得先问长度、下一轮再问批次、再下一轮才问 Word
+- 若缺失关键项，**只用一轮紧凑问题把所有缺项一起问完**；不得先问长度、下一轮再问批次、再下一轮才问 Word 或 Edition
 - 用户只说“小说模式/自动写小说/开始小说”时，不得因为系统“支持 target 字段”就直接进入正文；这时 Novel Output Contract 为 unresolved
-- 用户明确说“输出参数你决定/其余默认/按默认小说模式”时，允许自动补齐：`primary_target=natural_boundary(当前章或合理短篇边界)`、`generation_cadence=continuous_until_checkpoint`、`interim_visibility=full_text_in_chat`、`delivery_surface=chat`、`export_edition=novel`。这些默认只在用户明确授权“你决定/默认”后使用
-- Word/docx 属于**交付格式**，不是内容版式；Novel/Interactive/Audit Edition 属于**内容版本**，两者必须分开记录
+- **Silent Default Ban / 静默默认禁令**：任何会改变用户可见内容或交付时机的字段（至少包括 content_edition、batch_boundary_policy、artifact_update_mode、artifact_delivery_timing）若既无用户明确措辞可推导、也无“你决定/默认”授权，则不得擅自补默认值；合同保持 unresolved，并在同一轮紧凑补问
+- 用户明确说“输出参数你决定/其余默认/按默认小说模式”时，才允许自动补齐：`primary_target=natural_boundary(当前章或合理短篇边界)`、`generation_cadence=continuous_until_checkpoint`、`batch_boundary_policy=continue`、`interim_visibility=full_text_in_chat`、`delivery_surface=chat`、`content_edition=novel`；无 docx 时 artifact 字段为 not_applicable。这些默认只在用户明确授权后使用
+- Word/docx 属于**交付格式**，Content Edition 属于**用户可见内容版本**，Artifact Policy 属于**文件生命周期/交付时机**；三者必须分开记录，任何一个都不能替代另一个
 - “一次生成”默认解释为 `continuous_until_checkpoint`，不是承诺超过单次输出/上下文/工具上限；如果目标超过技术边界，必须按 1.4.4 checkpoint，后续由用户再次触发继续
-- `progress_only + docx` 允许正文不在聊天中全量铺开，但每次真实技术 checkpoint/文件落盘失败仍必须如实说明当前状态
+- `progress_only + docx` 允许正文不在聊天中全量铺开，但每次真实技术 checkpoint/文件落盘失败仍必须如实说明当前状态；若 `artifact_delivery_timing=final_only`，如实说明状态不等于必须发出中间 Word 链接
+- 合同一旦 resolved，恢复/继续时必须整体继承 content edition、batch boundary policy 与 artifact policy；除非用户明确修改，不得在新执行批次中悄悄回退到默认值
 
 **多目标冲突裁决：**
 - 明确的 hard cap 永远优先于 soft/参考目标
@@ -357,8 +377,11 @@ target_priority:
 2. 原子化提交 Raw Story Log、state、Decision Ledger 与必要 checkpoint
 3. 标记 `technical_checkpoint`
 4. 明确停在可恢复点
+5. 若 `artifact_delivery_timing=final_only`，只报告进度/恢复点，不因技术 checkpoint 擅自交付中间 Word；若用户明确要求恢复副本则按其新指令处理
 
-之后用户再次明确“继续小说模式”即可从该点续跑，并继承既有 `novel_output_contract`；不得声称未调用时仍在后台继续生成。
+**批次边界与技术边界严格区分**：`batch_chapters/batch_text` 到达一个批次，只触发约定的内部检查、持久化或文件更新；只有 `batch_boundary_policy=pause` 或真实技术边界/安全停点才停止当前可执行推进。`batch_boundary_policy=continue` 时不得因为“刚好10章/5万字一批”而主动要求用户确认。
+
+之后用户再次明确“继续小说模式”即可从该点续跑，并继承完整既有 `novel_output_contract`；不得声称未调用时仍在后台继续生成，也不得在恢复时把 content edition / artifact policy / batch policy 重置为默认值。
 ## 2. 规则优先级
 
 出现冲突时按下列优先级裁决：
@@ -803,13 +826,13 @@ Tier 6 完整 Raw Story Log
 16. **Continuity / Long-Run Auditor**：检查本轮状态变更；按第5.8与第14节触发里程碑、长期档案与自动小说审计
 17. **Delta Commit**：只提交发生变化的状态
 18. **Persistence Commit**：在工具可用时，先把最终正文对应的 Raw Story Log 与 Delta/state 原子化提交或按 TURN 幂等提交；autonomous_novel 同步提交必要 Decision Ledger / run state / milestone/archive 变化
-19. **Output / Continue**：仅在持久化尝试完成后输出。interactive 只有 Decision Gate 要求停顿时才给与真实分支数量相称的行动选项并允许自由输入；autonomous_novel 默认把选项与选择留在 Decision Ledger，直接把选择后的自然结果继续写进小说，直到目标/安全停点/技术 checkpoint
+19. **Output / Continue**：仅在持久化尝试完成后输出。interactive 只有 Decision Gate 要求停顿时才给与真实分支数量相称的行动选项并允许自由输入；autonomous_novel 的每个真实 Decision Gate 都必须先写入 Decision Ledger，再按已锁定的 `content_edition` 渲染用户可见内容：novel 隐藏内联菜单但保留自然结果，interactive 在正文对应位置显示可行行动集合 + Autonomous Player 实际选择，并让随后正文呈现可观察结果，decision_ledger/audit 按各自版本输出。不得因为“自动小说”这一运行模式本身再次把 interactive edition 的选择隐藏。之后按 `batch_boundary_policy` 与目标/安全停点/技术 checkpoint 决定继续或暂停
 
 ### 6.1 输出与选项规则
 
 **默认不强制每轮出 ABCD，也不强制每轮在固定长度结束。** 能自然继续且玩家已授权的内容直接继续，哪怕同一连续场景已经写了 1500、3000 字甚至更长；避免“写一小段就菜单”“每回合固定约几百字”“为了计 TURN 强行停顿”等模板化节拍。
 
-interactive 真正停在决策点时，选项只描述玩家可选择的**意图/行动**，不得提前承诺结果、成功率或隐藏信息。autonomous_novel 同样必须先形成真实可行行动集合，但默认不把菜单打进纯小说正文。
+interactive 真正停在决策点时，选项只描述玩家可选择的**意图/行动**，不得提前承诺结果、成功率或隐藏信息。autonomous_novel 同样必须先形成真实可行行动集合；是否把该行动集合与实际自动选择显示给用户，严格由已锁定的 `content_edition` 决定，而不是由 run_mode 决定。即使 `content_edition=interactive`，也只在**真实 Decision Gate** 处显示，不得为了“一章必须有选择”而制造假决策。
 
 错误：
 - “A. 跟上她并发现她隐藏的秘密”
@@ -1133,7 +1156,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - 新篇是否完成 v3.5.5 Opening State Machine；是否遵守“先主题/作品 → 后 adaptation → 再补玩家核心”的依赖顺序；是否在作品未确定时提前锁定架空/分叉模式；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
-- autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、聊天可见方式、最终交付格式、目标优先级是否缺失或漂移；Word/docx 与 Novel/Audit Edition 是否被混为一类
+- autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
 - 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
 
 ### 13.3 分级
@@ -1249,6 +1272,7 @@ autonomous_novel 在以下条件暂停：
 - 从旧 `schema_version: 3.3` 或 v3.5.x 状态迁移到 `schema_version: 3.5.3` 时，只补充缺失的结构字段、默认值与索引（例如 relationship_orientation、年龄占位、Opening 状态字段等）；已发生 Canon、人物关系事实、资源、时间、物品、事件结果与 Raw Story Log 不得因此改写
 - 从 v3.5.4 迁移到 v3.5.5 时：既有已开场存档不重跑开局、不改变已确认母体或 Canon；若旧状态缺少显式 `adaptation_mode`，只从玩家已经明确确认过的改编方式中映射，无法确定则保留 `unknown`，不得根据后续剧情倒推。尚未进入 Scene 1 的新篇按 v3.5.5 顺序继续：先补齐 THEME/SOURCE，再解析 adaptation
 - 从 `schema_version: 3.5.3` / v3.5.x 迁移到 `schema_version: 3.6.1` 时：默认 `run_mode=interactive`；新增 Autonomous Player、novel_target、Decision Ledger、Long-Term Archive、lifecycle_stage 等字段为空或按当前明确状态初始化，不倒推过去不存在的自动决策；已有 Raw Story Log / Canon / 关系 / 资源 / 时间完全不改写。用户随后启用小说模式时，从当前人物 Canon 与用户明确偏好建立初始 policy。旧档若已超过50/100回合，可在首次需要时依据已确认 Canon + 带来源的 Raw Story Log 回查补建 milestone/archive，但不得从摘要猜造来源
+- 从 v3.6.3 迁移到 v3.6.4 时不改变 `schema_version: 3.6.1`：旧 `export_edition` 可映射到 `content_edition`；缺失的 content edition / batch boundary / artifact policy 只能从用户已明确说过的输出要求、既有交付行为或存档字段中可靠映射，无法确定时保留 unknown 并在下一次真正需要用户可见输出前一次性补问，**禁止默认回填 novel/暂停/每批交付**
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -1257,34 +1281,40 @@ autonomous_novel 在以下条件暂停：
 
 完结时用户可要求“导出小说”。流程：
 1. 按 TURN 顺序分批读取 Raw Story Log 原文（无论是 single-log 还是 turn-chunks）
-2. 去除 ABCD 选项、状态栏、审计提示与重复菜单
-3. 按原始场景小说化，不从摘要凭空扩写
+2. 读取已锁定 `content_edition`；若为 interactive / decision_ledger / audit，再按 TURN/SCENE 对齐读取 Decision Ledger、milestone 或 audit 来源
+3. 按所选 Content Edition 渲染，不从摘要凭空扩写；Novel Edition 才去除菜单/Decision Ledger，Interactive Edition 必须保留真实行动集合与 Autonomous Player 实际选择
 4. 每章做事实一致性检查
 5. 合并全书后统一人称、称呼、节奏与转场
 6. 可选择独立的后处理文风适配器；它只允许改变表达，不得新增/删除/改变 Canon、凶手、反转、恋情、死亡、动机或不存在的伏笔
 
-自动小说模式把**内容版本（Edition）**与**文件交付格式（Delivery Surface）**分开处理。内容版本支持四种导出：
+自动小说模式把**用户可见内容版本（Content Edition）**、**文件交付格式（Delivery Surface）**与**文件生命周期（Artifact Policy）**分开处理。Content Edition 支持四种：
 - **Novel Edition**：纯小说正文，不含菜单、Delta、审计、Decision Ledger
-- **Interactive Edition**：正文 + 当时行动集合 + Autonomous Player 实际选择
-- **Decision Ledger Edition**：全部自动决策、依据、后果与必要反事实
+- **Interactive Edition**：完整小说正文 + 每个真实 Decision Gate 当时的可行行动集合 + Autonomous Player 实际选择；选择后的可观察结果继续由正文自然呈现，不暴露 NPC Private State 或后台秘密
+- **Decision Ledger Edition**：完整决策档案，包含决策点、可知信息、行动集合、选择、可公开依据、后果、Delta 与必要反事实；不得把私有思维链当作“依据”输出
 - **Audit Edition**：里程碑、长期档案、连续性检查、Bug与修复记录
 
-四者不得互相冒充。尤其不得用审计/决策摘要替代完整小说正文。
+四者不得互相冒充。尤其不得用审计/决策摘要替代完整小说正文，也不得把 Interactive Edition 在跨批次或最终导出时悄悄降级为 Novel Edition。
 
 交付格式可为：
 - **chat**：正文直接在聊天中交付
-- **docx**：最终整理为 Word 文档；若当前工具支持文件创建，应按 Novel Output Contract 执行；若不支持，不得谎称已经生成文件
-- **chat+docx**：聊天中按约定批次展示，同时最终整理 Word
+- **docx**：Word 文档；若当前工具支持文件创建/更新，应按 Novel Output Contract 的 artifact policy 执行；若不支持，不得谎称已经生成
+- **chat+docx**：聊天中按约定可见性展示，同时维护/交付 Word
 - **other**：用户明确指定的其他当前可支持格式
 
-`delivery_surface` 不改变 Canon；Word 只是载体，不得把“需要 Word”误解为重写剧情。若用户要求最终 Word，导出应以完整 Raw Story Log / Novel Edition 为源，不能拿章节摘要拼出正文。
+Artifact Policy：
+- `single_working_file`：整个长篇持续更新同一份逻辑 Word，不因每10章/每批自动新建“第N批 Word”
+- `per_batch_files`：只有用户明确要求每批独立文件时使用
+- `final_assembly`：运行中以 Raw Story Log/Decision Ledger 为主，最终一次组装成品
+- `each_checkpoint / on_request / final_only` 决定用户何时真正收到文件；`final_only` 时内部可以维护工作文件，但不得在普通批次或技术 checkpoint 自动发出
+
+`delivery_surface`、`content_edition` 与 Artifact Policy 都不改变 Canon；Word 只是载体。最终 Word 必须按**已锁定的 content edition**从完整 Raw Story Log + 所需 Decision Ledger/Audit 来源重建，不能硬编码 Novel Edition，也不能拿章节摘要拼出正文。
 
 压缩 Active Context 永远不等于删除 Raw Story Log。
 
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract`（含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing）` / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1528,19 +1558,34 @@ autonomous_novel 在以下条件暂停：
 154. Novel Output Contract 在恢复小说模式时继承，不会每次“继续小说模式”都重新问一遍
 155. v3.6.3 将 novel_output_contract 作为既有 novel_target/run state 的扩展记录，不改变持久化 schema_version，仍为 3.6.1
 
-## 21. v3.6.3 运行口径
+### W. v3.6.4 Visible Output Semantics Lock Regression
+156. content_edition 属于强可见行为字段；用户未明确、上下文无法可靠推导且未授权“默认/你决定”时，Novel Output Contract 不得 resolved，不能静默回填 Novel Edition
+157. “50万字｜100章｜每10章一批｜连续制作｜聊天只看进度｜只在同一个 Word 修改｜最终版 Word｜我要看到自动选项和选择结果”可一次解析为 text_count primary、chapters secondary、batch_chapters=10、batch_boundary=continue、progress_only、docx、content_edition=interactive、single_working_file、final_only
+158. Interactive Edition 只在真实 Decision Gate 处显示行动集合与 Autonomous Player 实际选择；没有真实决策的章节可直接连续到下一章，不制造“一章一选”
+159. autonomous_novel 的运行流程不得用“自动模式默认隐藏选择”覆盖已锁定的 content_edition=interactive
+160. 最终 Word 按已锁定 content_edition 重建；Interactive/Decision/Audit 不得在最终导出时硬退回 Novel Edition
+161. batch_chapters/batch_text 只定义检查点粒度；batch_boundary_policy=continue 时到达批次边界不得擅自暂停或要求用户确认
+162. artifact_delivery_timing=final_only 时，普通批次和真实 technical checkpoint 都不得自动发中间 Word；可以报告进度与恢复点
+163. single_working_file 时跨批次持续更新同一逻辑 Word，不因“每10章一批”自动新建多份工作稿
+164. progress_only 只影响聊天正文可见性，不改变 Word 的 content edition；docx 也不暗示 Novel Edition
+165. 恢复小说模式必须继承完整 novel_output_contract；v3.6.3 旧档缺失新字段时优先从用户已明确输出要求映射，无法确定只补问一次，不 silent default
+166. 用户中途明确切换“以后纯小说/以后带选择版”时，只改变未来/重新导出的可见 Edition，不改写既有 Canon、Decision Ledger 或已发生选择
+167. “最后给我 Word”与“只在同一个 Word 修改，最终才给我”能被区分：前者可映射 final_assembly+final_only，后者映射 single_working_file+final_only
+168. v3.6.4 只扩展 novel_output_contract 的语义与兼容字段，不改变持久化 schema_version，仍为 3.6.1
+
+## 21. v3.6.4 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.3 是 **Novel Output Contract Gate** 小版本修复：完整继承 v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“进入小说模式后未询问写多长、怎么分批、聊天里怎么看、最终是否 Word、多个目标听谁的”这一整组开局/交付缺口。
+v3.6.4 是 **Visible Output Semantics Lock** 小版本修复：完整继承 v3.6.3 Novel Output Contract Gate、v3.6.2 Narrative Release Gate 与 v3.6.1 Long-Run Novel Engine / Memory Lifecycle；本次专门修复“用户没指定 Edition 时被静默降级成纯小说、自动模式运行流程再次隐藏选择、最终 Word 强制退回 Novel Edition、批次边界被误当暂停点、只要最终版却提前发工作稿、同一 Word 与每批 Word 混淆”等一整类可见输出回退问题。
 
-运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，只是选择默认在后台 Decision Ledger 完成，纯小说正文自然继续。Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
+运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.3 将 `novel_output_contract` 作为既有 `novel_target/run state` 的扩展记录，不改变世界状态架构；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.4 继续将 `novel_output_contract` 作为既有 `novel_target/run state` 的扩展记录，不改变世界状态架构；新增 content edition / batch boundary / artifact policy 语义与兼容映射，不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
-对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
+对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
 核心目标是：
 **让复杂酒馆既能由玩家长期互动，也能在明确授权后让一个受角色人格与知识约束的 Autonomous Player 真正做决定，把世界因果自然积累成几十万乃至百万字长篇；与此同时，原始故事永远可回查，长期记忆不会用摘要冒充事实。**
