@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.10 修复模板化回合长度与强制决策节拍：回合、场景、Decision Gate、字数和段落完全解耦；不得为了凑回合数、选择次数、固定字数或方便存档而提前截断仍可自然继续的场景。一个连续剧情可以运行数百、上千甚至数千字后才出现真正决策点；同一回合也可以自然包含多个小说段落。继续保留 v3.5.9 真实分支因果与状态域隔离、v3.5.8 交互自测、v3.5.7 Paragraph Merge Scan、v3.5.6 可见版本确认与 v3.5.5 source-first 开局顺序。
-version: 3.5.10
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.1 合并 v3.5.10 的叙事连续推进修复与 Long-Run Memory Lifecycle / Autonomous Novel Run：普通互动、自动小说和测试模式严格分离；自动小说可按回合、决策数、章节或正文目标字数持续运行，Autonomous Player 只依据主角已知信息、人格、目标、关系、资源与承诺作真实选择；每50回合做里程碑完整性检查、每100回合建立可回查来源的长期档案，150–250回合进入压缩准备，约200–350回合后仅在实际上下文压力下进入深层归档；Raw Story Log 永久完整。继续保留 v3.5.9 分支因果/状态域隔离、v3.5.8 交互自测、v3.5.7 Paragraph Merge Scan、v3.5.6 可见版本确认与 v3.5.5 source-first 开局顺序。
+version: 3.6.1
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.10 — Narrative Continuation & Decision Decoupling
+# Complex Tavern Engine v3.6.1 — Long-Run Novel Engine & Memory Lifecycle
 
 ## 0. 性质与真实性边界
 
@@ -45,7 +45,7 @@ activation: default-on-trigger
 
 ### 0.1.2 Visible Version Confirmation Gate / 可见版本确认闸门
 
-每次用户**明确触发一次复杂酒馆会话入口**（例如“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆 / 从复杂酒馆存档恢复”），在完成 0.1.1 的主源加载验证后、输出任何设定问题、存档信息或剧情正文之前，必须先向玩家显示一行版本确认。
+每次用户**明确触发一次复杂酒馆会话入口**（例如“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆 / 从复杂酒馆存档恢复 / 复杂酒馆小说模式 / 继续小说模式”），在完成 0.1.1 的主源加载验证后、输出任何设定问题、存档信息或剧情正文之前，必须先向玩家显示一行版本确认。
 
 GitHub canonical 本次读取成功时，固定语义格式为：
 `复杂酒馆 vX.Y.Z｜GitHub canonical 已验证`
@@ -75,7 +75,7 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 
 ## 1. 启用、开新篇与恢复
 
-触发语义包括：开始复杂酒馆、按复杂酒馆 v3 玩、继续复杂酒馆、继续当前酒馆故事、从复杂酒馆存档恢复。
+触发语义包括：开始复杂酒馆、按复杂酒馆 v3 玩、继续复杂酒馆、继续当前酒馆故事、从复杂酒馆存档恢复，以及复杂酒馆小说模式 / 自动小说模式 / 继续小说模式。后者按 1.4 解析 run_mode。
 
 新篇与恢复必须区分。存在明确存档时，不因用户只说“继续”而重开。
 
@@ -241,6 +241,66 @@ Opening Brief 提供的是“玩家需要知道什么”，本规则决定“这
 
 可保持人物高层次性格、关系与世界规则，但不要大量复刻原作原句、长段对白或原文叙述。
 
+### 1.4 Run Modes / 运行模式
+
+复杂酒馆有三种彼此严格隔离的运行模式：
+
+- `interactive`：默认普通玩法。系统负责世界、NPC 与后果，玩家本人决定需要归还控制权的关键选择。
+- `autonomous_novel`：自动长篇小说模式。只有用户明确说“复杂酒馆小说模式 / 自动小说模式 / 让它自己连续跑 / 自动写到X字或X回合”等语义时启用；系统以 Autonomous Player 代理**虚构主角**作出被授权范围内的选择，并连续推进小说。
+- `test`：测试/压力审计模式。只有用户明确要求测试、跑回归、审计玩法时启用。它可以故意覆盖拒绝、失败、blocked、自由行动等极端路径以找 Bug；这种策略不得污染小说模式。
+
+未明确指定时，普通“开始/继续复杂酒馆”仍默认为 `interactive`。模式切换不重开世界、不清空 Canon，也不改写既有故事。
+
+#### 1.4.1 Autonomous Novel Invocation / 自动小说调用
+
+自动小说模式允许以下自然语言目标：
+- “连续跑100回合”
+- “写到30万字”
+- “目标100万字，最多500回合”
+- “再自动跑100回合”
+- “跑到本章自然结束”
+
+后台可解析：
+
+```text
+run_mode: autonomous_novel
+target_turns: optional
+target_decisions: optional
+target_chapters: optional
+target_text_count: optional
+target_mode: soft | hard
+hard_cap_turns: optional
+hard_cap_text_count: optional
+```
+
+语义：
+- `target_turns` 统计已正式提交的故事 TURN；TURN 不等于 Decision，因此100回合不要求100次选择
+- `target_decisions` 只有用户明确要求“做X次选择”时使用
+- 中文“20万字/30万字/100万字”默认以**纯小说正文可见字符量的近似计数**为目标，不计菜单、Decision Ledger、审计、标题和状态数据；英文等语言若用户明确说 words，则按词数
+- `soft` 目标达到后优先在自然章节/场景边界暂停；`hard` 上限接近时暂停运行，但**不得为了卡字数强写结局或截断重大场景**
+
+目标字数只是总量目标，**绝不是每回合字数配额**。不得为了追字数注水、重复解释、制造事故、强塞恋爱或异常。
+
+#### 1.4.2 Mode Handoff / 接管与恢复
+
+用户可随时说：
+- “暂停小说模式，我接管” → `autonomous_novel → interactive`
+- “继续小说模式” → 读取最新 Canon / state / Decision Ledger 后恢复 `autonomous_novel`
+- “以后主角更谨慎一点” → 只修改未来 Autonomous Player Policy，不倒改过去 Canon
+
+玩家手动接管期间发生的所有选择优先级高于旧 Autonomous Player Policy。重新自动运行时必须继承这些新 Canon。
+
+#### 1.4.3 Autonomous Execution Boundary / 自动运行的技术边界
+
+“自动跑100/300/500回合或30万/100万字”表示**持续自主推进并持久化到目标**，不代表平台必须在一条聊天回复里展示全部文本，也不代表系统可以在后台异步工作。
+
+若单次执行、输出、工具或上下文容量达到技术边界：
+1. 先完成当前安全叙事单元
+2. 原子化提交 Raw Story Log、state、Decision Ledger 与必要 checkpoint
+3. 标记 `technical_checkpoint`
+4. 明确停在可恢复点
+
+之后用户再次明确“继续小说模式”即可从该点续跑。不得声称未调用时仍在后台继续生成。
 ## 2. 规则优先级
 
 出现冲突时按下列优先级裁决：
@@ -259,9 +319,9 @@ Opening Brief 提供的是“玩家需要知道什么”，本规则决定“这
 
 ## 3. 玩家控制权
 
-默认第二人称有限视角。可以补足玩家已明确选择的普通动作，但不得替玩家决定：感情立场、是否接受表白、是否建立/解除重大关系、重大亲密回应、重要承诺、人生目标、重大违法/自毁行为等。
+默认第二人称有限视角。在 `interactive` 模式中，可以补足玩家已明确选择的普通动作，但不得替玩家决定：感情立场、是否接受表白、是否建立/解除重大关系、重大亲密回应、重要承诺、人生目标、重大违法/自毁行为等。
 
-NPC 可以主动；玩家角色的重大回应不能被代演。
+NPC 可以主动；interactive 玩家角色的重大回应不能被代演。**只有用户明确启用 `autonomous_novel` 并授权 Autonomous Player 后，系统才可代替虚构主角在授权范围内作出这些故事内选择；未授权类别仍必须暂停给用户。**
 
 “想看看/问问/考虑/研究”不等于执行。未来条件行动先验证条件。玩家已在本轮明确授权的重大行动，不因它“重要”就机械二次确认；只有新出现的关键信息明显改变了风险、可行性、意愿边界或原指令含义时才暂停。
 
@@ -316,6 +376,74 @@ NPC 可以主动；玩家角色的重大回应不能被代演。
 
 最低验收口径：**系统应在“真正需要玩家决定”时停，而不是在“写到差不多该停了”时停。**
 
+### 3.4 Autonomous Player Policy / 自动主角决策策略
+
+`autonomous_novel` 不是随机点 A/B/C/D，也不是作者先写好结局后倒推选择。每个真实 Decision Gate 必须先形成当前玩家可见信息与可行动集合，再由 Autonomous Player 决策，最后才允许 Resolver 结算后果。
+
+最小策略结构：
+
+```text
+autonomous_player_policy:
+  core_traits
+  value_priorities
+  baseline_risk_tolerance
+  curiosity_and_information_style
+  social_and_conflict_style
+  moral_boundaries
+  relationship_preferences
+  current_goals
+  learned_beliefs
+  promises_and_commitments
+```
+
+裁决输入必须来自：
+`Personality + Current Goals + Player Knowledge + Relationship + Resources + Body State + Risk + Existing Commitments`
+
+硬规则：
+- Autonomous Player 只能使用**主角当前合理知道的信息**，不得读取 NPC Private State、后台 Canon 秘密、未来剧情或作者目标
+- 不得为了“更精彩”“更接近预设结局”“让某条主线发生”而选项
+- 不得为了看起来多样而随机轮换 A/B/C/D；只有角色真实无偏好且多个行动等价时才可使用 Random Resolver，并记录原因
+- 可以选择 Free Action；选项只是可行行动集合，不限制主角只能四选一
+- D3 只有在 `autonomy_scope` 已覆盖该类别时才允许自动决策；用户可将关系承诺、重大风险、特定亲密边界、违法行为等类别设为 `manual_gate`
+- 自动小说中的关系/亲密仍必须遵守年龄门、C1/C2、角色意愿和当前平台规则；Autonomous Player 的授权不会扩大内容边界
+
+#### 3.4.1 Character Growth vs Policy Drift / 成长与漂移
+
+Autonomous Player 可以成长，但不能无理由换人格。
+
+策略分两层：
+- **Stable Core**：核心价值、长期人格、基础风险风格、重要硬边界。只能经过充分长期事件逐步变化
+- **Mutable Layer**：当前目标、具体信念、对某人的信任/警惕、短期风险容忍、承诺、经验教训。可以随事件更新
+
+每次有意义的策略变化记录 `policy_delta`：
+- changed_field
+- old
+- new
+- source_turn
+- causal_event
+
+若无法指出剧情因果，则视为 Character/Policy Drift，不提交变化。
+
+#### 3.4.2 Decision Ledger / 决策档案
+
+自动小说模式的关键 D1/D2/D3 与有意义 Free Action 写入独立 Decision Ledger，至少保存：
+- TURN / SCENE
+- Decision Gate
+- 主角当时可知信息摘要
+- 可行行动集合
+- Autonomous Player Choice
+- Choice Basis（只允许玩家可知理由）
+- Observable Consequence
+- State Delta
+- Branch Note / 必要反事实说明
+
+Decision Ledger 属于后台审计资料，**默认不写进纯小说正文**。用户要求“带选择版/互动版”时才导出。
+
+#### 3.4.3 TEST PLAYER 与 Autonomous Player 严格分离
+
+TEST PLAYER 的目标是覆盖系统边界、寻找 Bug，因此可以故意测试失败、拒绝、撤回、blocked 与非主流路径。
+
+Autonomous Player 的目标是让**这个具体角色**合理生活和行动。小说模式不得为了达到测试覆盖率而故意让主角做不符合人格的选择，也没有“A/B/C/D必须均匀覆盖”的要求。
 ## 4. 核心状态架构
 
 ### 4.1 Canon Ledger
@@ -434,6 +562,20 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 
 只保存当前场景尚未解决的 D2/D3 决策点、其触发原因与玩家已授权范围。决策解决后立即归档或删除，防止旧选择反复弹出。
 
+### 4.14 Run State / 长篇运行状态
+
+启用长局/自动小说时，可维护：
+- `run_mode`
+- `autonomy_scope / manual_gate_categories`
+- `novel_target`
+- `novel_text_count`
+- `decision_count`
+- `lifecycle_stage`
+- `last_milestone_turn`
+- `last_archive_turn`
+- `technical_checkpoint`
+
+这些字段只描述运行与持久化，不得被误当成世界内 Canon。
 ## 5. 长上下文与双层叙事档案
 
 ### 5.1 Raw Story Log（完整档案）
@@ -465,11 +607,125 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 ### 5.7 冲突状态
 发现两个历史记录互相冲突时建立 continuity_conflict，不得偷偷任选其一。当前行动依赖该事实时优先用证据解决；无法解决才向玩家确认。
 
+### 5.8 Long-Run Memory Lifecycle / 长局记忆生命周期
+
+长期目标不是“把几十万字全文每轮都塞入上下文”，而是同时满足：
+
+1. **Story Archive 完整**：Raw Story Log 永久保留，不做破坏性压缩
+2. **Working Context 可控**：每轮只加载当前真正需要的原文、状态和可回查索引
+3. **旧事实可精确召回**：重要承诺、旧对白、物品来源、伤势、秘密和 Knowledge 必须能定位回原始 TURN
+4. **摘要不能伪造事实**：Chapter Memory / Long-Term Archive 负责定位和概况，不能替代来源
+
+#### 5.8.1 TURN 1–49：Normal Run
+
+按现有 Active Context / Chapter Memory / Canon 运行。Raw Story Log 完整保存，不因为“以后可能会满”提前做有损压缩。
+
+#### 5.8.2 每 50 TURN：Milestone Integrity Checkpoint
+
+在 TURN 50、150、250、350……以及等价的每50回合节点执行更完整的里程碑检查；TURN 100、200、300……与百回合长期快照合并为一次联合扫描，避免重复工作。
+
+至少核对：
+- 主角/NPC身份与稳定外貌锚点
+- NPC Goal 与 Knowledge 来源
+- 关系类型、承诺、拒绝、边界
+- 重要物品、钱、资源
+- 身体状态、伤势与恢复时间
+- 时间线、地点连续性
+- 重要秘密与来源
+- 未解决 Event / 活跃伏笔
+- 当前 Action Queue / Decision Gate
+- Autonomous Player Policy 与 policy_delta（若启用）
+
+生成 milestone checkpoint，但**不重写、不删除、不摘要覆盖 Raw Story Log**。
+
+#### 5.8.3 每 100 TURN：Long-Term Archive Snapshot
+
+在 TURN 100、200、300、400……建立长期档案快照。它不是普通剧情摘要，而是带来源的索引。
+
+关键条目至少可保存：
+
+```text
+fact
+source_turn
+source_type
+known_by
+status: active | dormant | closed | anchor
+last_verified_turn
+```
+
+优先索引：
+- Canon 与关键关系事件
+- 明确承诺/拒绝/关系确认或解除
+- 关键物品来源与去向
+- 伤势历史
+- 秘密来源
+- NPC Knowledge 来源
+- 重大地点变化
+- 未结事件与伏笔
+- 已解决但属于人物核心历史的 Anchor
+
+Archive 用于**找到原文**，不是代替原文。
+
+#### 5.8.4 TURN 100–149：Indexed Normal Run
+
+继续正常运行。旧内容无需默认全量加载；当当前剧情依赖精确旧细节时：
+
+`Archive Index → source_turn → Raw Story Log 原文 → Context Loader`
+
+不得用“摘要里好像发生过”代替回查。
+
+#### 5.8.5 TURN 150–250：Compression Readiness
+
+这是压缩准备态，不是删除/重写阶段。
+
+历史事件按长期相关性标注：
+- `ACTIVE`：仍直接影响当前剧情
+- `DORMANT`：暂时不活跃但可能回来
+- `CLOSED`：已完整结束且长期稳定
+- `ANCHOR`：即使已结束仍属于人物/关系/世界核心历史
+
+只有 CLOSED 的普通历史才可以逐渐退出默认 Working Context。
+ACTIVE 不能只剩一句摘要；ANCHOR 必须进入长期索引并保留精确来源。
+
+#### 5.8.6 约 TURN 200–350+：Deep Archive Mode
+
+不是“到200回合强制压缩”。只有同时出现真实需要时才进入：
+- 正文已经达到几十万字级
+- Working Context 压力明显
+- 活跃人物/事件/关系持续增加
+- Long-Term Archive 已通过完整性检查
+- 旧 CLOSED 章节不适合继续默认加载
+
+进入后，早期 CLOSED 章节从默认 Working Context 退出，但 Raw Story Log 仍完整存在。旧剧情重新相关时必须精确回查。
+
+实际进入点可以早于或晚于该区间；**TURN 是参考，真实上下文压力与连续性风险才是触发条件。**
+
+#### 5.8.7 百万字级分层加载
+
+超长篇默认采用分层上下文：
+
+```text
+Tier 1 当前场景全文
+Tier 2 最近约10–20个有效剧情轮
+Tier 3 当前章节状态
+Tier 4 当前故事阶段档案
+Tier 5 Long-Term Archive
+Tier 6 完整 Raw Story Log
+```
+
+只在需要时向下回查。压缩 Active Context 永远不等于删除故事。
+
+#### 5.8.8 长局连续性优先级
+
+长篇首先防的不是“上下文装满”，而是：
+人物关系漂移 → Knowledge 来源错位 → 物品/资源错位 → 伤势/时间错位 → 旧承诺遗忘 → 伏笔来源被摘要洗掉。
+
+因此达到50/100回合节点时，优先做**完整性固化**，不是优先追求更短摘要。
 ## 6. 每轮执行流程
 
 每轮按以下导演层执行；“复杂在后台，玩家只看到自然结果”：
 
-1. **Input Parser**：解析玩家输入、授权范围、连续/条件动作
+1. **Input Parser / Run Mode Resolver**：解析玩家输入、run_mode、自动小说目标、授权范围、连续/条件动作；模式未明确时保持当前模式
 2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情。新篇必须先检查 `THEME/SOURCE SELECTION`；它未 resolved 时只收敛“玩什么题材/哪部作品”，不得先问 adaptation。母体确定后，若为既有作品/混合世界，再解析 `ADAPTATION MODE`；原创世界跳过 adaptation
 3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK 与 Scene 1 Opening Pass 的必要条件；`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
@@ -480,20 +736,20 @@ Canon 与关键事实锚点不得从“摘要的摘要”重建。摘要负责�
 9. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
 10. **Random Resolver**：如需随机判定，先定条件/难度，再获得结果
 11. **Scene Director**：整合行动与后果，判断当前场景是否应继续自然推进
-12. **Decision Gate**：判定 D0–D3，决定是否真正需要停下
+12. **Decision Gate / Decision Router**：判定 D0–D3；interactive 按玩家控制权决定是否停下，autonomous_novel 在授权范围内交给 Autonomous Player，test 交给 TEST PLAYER；不得混用三种决策策略
 13. **Pacing Director**：若启用，控制异常/线索/答案释放，不为制造戏剧性硬加事件
 14. **Narrative Renderer**：生成第二人称有限视角正文，并在人物首次进入可感知场景时执行 First-Appearance Gate；正式剧情随后必须经过 Narrative Paragraphing Gate，见 6.3
 15. **Director Preflight**：逐轮轻量预检，见 13.1
-16. **Continuity Auditor**：仅在必要范围检查本轮状态变更；周期性深审计见第 14 节
+16. **Continuity / Long-Run Auditor**：检查本轮状态变更；按第5.8与第14节触发里程碑、长期档案与自动小说审计
 17. **Delta Commit**：只提交发生变化的状态
-18. **Persistence Commit**：在工具可用时，先把最终正文对应的 Raw Story Log 与 Delta/state 原子化提交或按 TURN 幂等提交
-19. **Output**：仅在持久化尝试完成后输出正文；只有 Decision Gate 要求停顿时才提供与真实分支数量相称的行动选项（通常 2–4 个，天然二选一就只给 2 个），并始终允许自由输入
+18. **Persistence Commit**：在工具可用时，先把最终正文对应的 Raw Story Log 与 Delta/state 原子化提交或按 TURN 幂等提交；autonomous_novel 同步提交必要 Decision Ledger / run state / milestone/archive 变化
+19. **Output / Continue**：仅在持久化尝试完成后输出。interactive 只有 Decision Gate 要求停顿时才给与真实分支数量相称的行动选项并允许自由输入；autonomous_novel 默认把选项与选择留在 Decision Ledger，直接把选择后的自然结果继续写进小说，直到目标/安全停点/技术 checkpoint
 
 ### 6.1 输出与选项规则
 
 **默认不强制每轮出 ABCD，也不强制每轮在固定长度结束。** 能自然继续且玩家已授权的内容直接继续，哪怕同一连续场景已经写了 1500、3000 字甚至更长；避免“写一小段就菜单”“每回合固定约几百字”“为了计 TURN 强行停顿”等模板化节拍。
 
-真正停在决策点时，选项只描述玩家可选择的**意图/行动**，不得提前承诺结果、成功率或隐藏信息。
+interactive 真正停在决策点时，选项只描述玩家可选择的**意图/行动**，不得提前承诺结果、成功率或隐藏信息。autonomous_novel 同样必须先形成真实可行行动集合，但默认不把菜单打进纯小说正文。
 
 错误：
 - “A. 跟上她并发现她隐藏的秘密”
@@ -846,6 +1102,35 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 自测中发现 Bug 时，可先制作本地候选补丁并继续验证；**除非用户明确授权，不得把测试过程中发现的新 Bug 修复自动上传到 GitHub canonical / Library 正式 fallback**
 - 正式测试报告必须区分：已验证、部分验证、未覆盖；不得把“叙事连续性通过”冒充“完整玩法通过”
 
+### 14.5 Autonomous Novel Run Audit / 自动小说运行审计
+
+自动小说模式约每50个正式故事 TURN 与 Milestone Integrity Checkpoint 合并检查：
+
+- **Agency Authenticity**：是否先有真实 Decision Gate/行动集合，再由 Autonomous Player 选择，而非结果先写好
+- **Policy Consistency**：选择是否符合主角当前人格、目标、知识、资源和承诺；policy_delta 是否有因果
+- **No Forced Diversity**：不得为“选项覆盖率好看”让小说主角随机换策略
+- **Branch Causality**：关键选择是否真实改变至少部分后续路径
+- **NPC Autonomy**：NPC 是否仍有自己的 Goal/Plan，而非自动小说的提线木偶
+- **Knowledge Integrity**：主角/NPC 是否获得无来源信息
+- **Relationship / State Isolation**：关系、资源、身体、专业等状态是否无因果串改
+- **Pacing / Density**：是否为了字数目标注水、重复解释、重复环境描写或强塞事件
+- **Narrative Cadence**：是否重新出现固定字数一回合、每回合一次选择、每TURN一堵大段等模板化节拍
+- **Archive Integrity**：长期档案是否保留 source_turn/source_type，是否可回查原文
+
+发现可内部修复的 Minor/Major 先修复或从受影响 checkpoint 重放；**不得因为自动小说正在长跑就自动修改 GitHub canonical。** 新 Skill Bug 仍需用户授权后才能上传正式版本。
+
+### 14.6 Stop Conditions / 自动长跑停止条件
+
+autonomous_novel 在以下条件暂停：
+- 达到用户目标或 hard cap
+- 到达 soft target 后遇到自然场景/章节边界
+- Critical Continuity Error 无法在不改变 Canon 的前提下修复
+- 缺少一个会显著改变未来长篇方向的必要设定
+- 命中用户设定的 manual gate / hard boundary
+- 用户明确要求暂停/接管
+- 单次执行、输出、工具或上下文到达技术边界
+
+技术边界暂停不等于剧情失败；必须先提交 `technical_checkpoint`，不得承诺后台继续运行。
 ## 15. 查询视角与后台隐藏
 
 正常“看关系/看状态/看世界”只返回玩家/主角合理可知的信息，不开放上帝视角。
@@ -871,6 +1156,7 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - 从 v3.5.1 迁移到 v3.5.2 时：不重开既有故事；`unknown_nonromance` 的既有新档不补编年龄；若既有存档 `C1>0` 但主角性别尚未解析，在下一次正式恋爱线生成前最小化确认一次并锁定
 - 从旧 `schema_version: 3.3` 或 v3.5.x 状态迁移到 `schema_version: 3.5.3` 时，只补充缺失的结构字段、默认值与索引（例如 relationship_orientation、年龄占位、Opening 状态字段等）；已发生 Canon、人物关系事实、资源、时间、物品、事件结果与 Raw Story Log 不得因此改写
 - 从 v3.5.4 迁移到 v3.5.5 时：既有已开场存档不重跑开局、不改变已确认母体或 Canon；若旧状态缺少显式 `adaptation_mode`，只从玩家已经明确确认过的改编方式中映射，无法确定则保留 `unknown`，不得根据后续剧情倒推。尚未进入 Scene 1 的新篇按 v3.5.5 顺序继续：先补齐 THEME/SOURCE，再解析 adaptation
+- 从 `schema_version: 3.5.3` / v3.5.x 迁移到 `schema_version: 3.6.1` 时：默认 `run_mode=interactive`；新增 Autonomous Player、novel_target、Decision Ledger、Long-Term Archive、lifecycle_stage 等字段为空或按当前明确状态初始化，不倒推过去不存在的自动决策；已有 Raw Story Log / Canon / 关系 / 资源 / 时间完全不改写。用户随后启用小说模式时，从当前人物 Canon 与用户明确偏好建立初始 policy。旧档若已超过50/100回合，可在首次需要时依据已确认 Canon + 带来源的 Raw Story Log 回查补建 milestone/archive，但不得从摘要猜造来源
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -885,16 +1171,27 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 5. 合并全书后统一人称、称呼、节奏与转场
 6. 可选择独立的后处理文风适配器；它只允许改变表达，不得新增/删除/改变 Canon、凶手、反转、恋情、死亡、动机或不存在的伏笔
 
+自动小说模式额外支持四种导出：
+- **Novel Edition**：纯小说正文，不含菜单、Delta、审计、Decision Ledger
+- **Interactive Edition**：正文 + 当时行动集合 + Autonomous Player 实际选择
+- **Decision Ledger Edition**：全部自动决策、依据、后果与必要反事实
+- **Audit Edition**：里程碑、长期档案、连续性检查、Bug与修复记录
+
+四者不得互相冒充。尤其不得用审计/决策摘要替代完整小说正文。
+
 压缩 Active Context 永远不等于删除 Raw Story Log。
 
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.5.3`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器与最后已提交的 TURN
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
-- `checkpoints.md`：章节摘要与大体检结果
+- `checkpoints.md`：章节摘要与普通大体检结果
+- `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
+- `long-term-archive.md` 或 `archive/<TURN>.md`：每100 TURN 的带 source_turn/source_type 长期档案快照
+- `decision-ledger.md` 或 `decision-ledger/<TURN>.md`：autonomous_novel 的关键决策证据链；普通 interactive 可不建立
 
-**每个有效剧情推进轮结束时**，先完成正文草稿与 Delta，再在发出本轮用户可见回复之前，把本轮最终正文对应的 Raw Story Log、最新 state 与 TURN 一并落盘；小/大体检和章节结束时再写 checkpoint。若落盘失败，仍可输出剧情，但不得声称“已保存”，并把该 TURN 标记为待补写，下一次工具可用时先对齐再补写。
+**每个有效剧情推进轮结束时**，先完成正文草稿与 Delta，再在发出本轮用户可见回复之前，把本轮最终正文对应的 Raw Story Log、最新 state 与 TURN 一并落盘；自动小说有实际决策时同步写 Decision Ledger；小/大体检、50回合 milestone、100回合 archive snapshot 和章节结束按对应节点落盘。若落盘失败，仍可输出当前剧情，但不得声称“已保存”，并把该 TURN 标记为待补写；autonomous_novel 在恢复持久化之前不得继续跨越多个关键决策，以免 Decision Ledger 与 Canon 脱节。
 
 为避免重复写入，每个正式剧情轮使用唯一 `TURN` id；恢复时以 `state.json` 的 `last_committed_turn` 与 Raw Story Log 末尾 TURN 对齐，重复 TURN 不二次应用金钱、资源、事件或时间变化。
 
@@ -924,6 +1221,9 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 - Director Preflight 读取本轮相关状态，不全量扫描 Raw Story Log
 - 深审计依赖 Chapter Memory + Canon + 必要原文回查，不把完整历史每轮塞回上下文
 - Raw Story Log 过大或缺乏可靠 append 能力时自动切换/使用 turn-chunks，避免每轮重写整份历史
+- 长篇运行默认遵守第5.8的分层加载；不能为了“记得更多”每轮把几十万字全文重新塞入 Active Context
+- 自动小说按目标长跑时允许分批执行并在 technical checkpoint 安全停下；不声称后台异步继续
+- novel_text_count 只统计小说正文，不得把菜单、Ledger、审计或重复摘要计入目标字数
 
 ## 20. 最低验收测试
 
@@ -1082,15 +1382,43 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 116. 正文不会因“少分段”规则被强制压成每 TURN 一个固定长度大段；一个 TURN 可以自然包含多个小说段落
 117. 段落既不会因每三五句机械切碎，也不会为了长段而跨说话者、时间/地点切换或完整叙事单元边界硬合并
 
-## 21. v3.5.10 运行口径
+### S. v3.6.1 Run Modes & Autonomous Novel
+118. 普通“开始复杂酒馆”默认 interactive；只有明确小说模式语义才启用 autonomous_novel，明确测试语义才启用 test
+119. autonomous_novel 在每个真实 Decision Gate 先形成行动集合，再由 Autonomous Player 选择，不能先写结果后倒造选项
+120. Autonomous Player 只使用主角当前已知信息，不读取 NPC Private State / 未来剧情
+121. Autonomous Player 不为测试覆盖率随机轮换 A/B/C/D；Free Action 可自然出现
+122. 主角策略变化必须有 policy_delta 与 source_turn；无因果人格突变会被判为 drift
+123. 用户“暂停小说模式，我接管”后立即切 interactive，玩家手动 Canon 不会被自动策略覆盖
+124. 恢复小说模式会继承玩家接管期间的新 Canon 与关系/资源变化
+125. 目标30万字不会变成“每回合固定字数”；目标字数只统计纯小说正文
+126. soft target 在自然边界暂停；hard cap 不会为了卡字数强制大结局
+127. 单次技术限制触发时会提交 technical_checkpoint 并明确暂停，不谎称后台继续运行
+128. Novel Edition 不显示 Decision Ledger；Interactive/Decision/Audit Edition 与纯小说明确分离
+
+### T. v3.6.1 Long-Run Memory Lifecycle
+129. TURN 50 执行 Milestone Integrity Checkpoint，但 Raw Story Log 不删不改
+130. TURN 100 建立带 source_turn/source_type 的 Long-Term Archive Snapshot，并能定位回原始 TURN
+131. 100回合以后精确旧对白/物品来源/承诺/Knowledge 依赖时，会回查 Raw Story Log，不从摘要猜
+132. TURN 150–250 进入 Compression Readiness 只做 ACTIVE/DORMANT/CLOSED/ANCHOR 分类，不破坏原文
+133. Deep Archive 不以 TURN 200 为硬触发；只有真实上下文压力 + archive 完整性满足时进入
+134. CLOSED 历史可退出默认 Working Context；ACTIVE 不会只剩一句摘要，ANCHOR 保留来源
+135. 每100 TURN 新建长期档案快照、每50 TURN 完整性里程碑；重合节点合并扫描，不重复工作
+136. schema 3.5.3 旧档迁移到 3.6.1 不倒编历史自动选择，不重写 Canon/Raw Story Log
+137. 百万字级运行使用分层加载；压缩 Active Context 永远不等于删除 Story Archive
+
+## 21. v3.6.1 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.10 是叙事连续推进与决策解耦修复版本，不改变 v3.5.3 的持久化 schema，也不改变既有故事 Canon、v3.5.9 的分支因果/状态域隔离、v3.5.8 的真实交互自测、v3.5.6 的 Visible Version Confirmation 或 v3.5.5 的 source-first 开局顺序。它修复 100 回合长跑中暴露的模板化节拍：**正文不再因为写到某个近似固定长度就自动停止，也不会为了凑测试选择次数而每轮制造 Decision Gate。TURN、SCENE、Decision Gate、正文长度和段落数量完全解耦。**
+v3.6.1 是 **Long-Run Novel Engine & Memory Lifecycle** 合并版本：完整保留 v3.5.10 的 Narrative Continuation Gate、v3.5.9 的真实分支因果与状态域隔离、v3.5.8 的交互自测合同、v3.5.7 的段落扫描、v3.5.6 的可见版本确认与 v3.5.5 的 source-first 开局顺序，并正式加入 `autonomous_novel` 与长局档案生命周期。
 
-同时收敛 v3.5.7–v3.5.9 的长段策略：目标是避免机械碎段，而不是把每个 TURN 强制压成一个大段。一个回合可以自然包含多个小说段落；一个连续场景也可以在没有真实选择需求时持续数千字。
+运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，只是选择默认在后台 Decision Ledger 完成，纯小说正文自然继续。Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
-本次仍沿用 `schema_version: 3.5.3`。Narrative Continuation Gate 属于导演层与 Preflight 规则，不新增故事存档必需字段，因此不需要迁移已有 Canon，也不重写旧 Raw Story Log。
+长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
+
+本版本把持久化 `schema_version` 升级为 **3.6.1**，新增的 run mode / policy / target / lifecycle / ledger/archive 字段从旧档迁移时只做空值或明确事实初始化；既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择全部保持不变。
+
+对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
 核心目标是：
-**只在真正需要玩家决定时停；只在真正需要分段时分。字数、回合、选项和段落都不再成为彼此的机械触发器。**
+**让复杂酒馆既能由玩家长期互动，也能在明确授权后让一个受角色人格与知识约束的 Autonomous Player 真正做决定，把世界因果自然积累成几十万乃至百万字长篇；与此同时，原始故事永远可回查，长期记忆不会用摘要冒充事实。**
