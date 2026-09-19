@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.3 修复运行层三处一致性问题：第 6 节每轮执行流程恢复严格 1–19 顺序；Opening Gate 同步 v3.5.2 的 PLAYER CORE / AGE-RELATIONSHIP / Scene 1 Opening Pass 逻辑；持久化 schema_version 统一升级到 3.5.3，并明确从旧 3.3/3.5.x 状态迁移时只补结构字段、不改既有 Canon。继续保留 v3.5.2 的开局与叙事规则。
-version: 3.5.3
+description: 通用、纯文字、长局持续世界互动叙事引擎。用于新开/继续复杂酒馆剧情；v3.5.4 新增 Canonical Load Verification Gate：每次明确触发复杂酒馆且 GitHub 可访问时，必须在当前运行中真实读取 canonical 文件并从文件 frontmatter 获取版本，禁止仅凭记忆、摘要、旧上下文或缓存声称“已加载最新版”；读取失败时只能明确使用 fallback，不能假装已验证最新版。继续保留 v3.5.3 的运行修复与 v3.5.2 的开局/叙事规则。
+version: 3.5.4
 status: stable-default
 canonical_repository: 1948666760dty-sys/solo-breach
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.5.3 — Runtime Fix
+# Complex Tavern Engine v3.5.4 — Canonical Load Guard
 
 ## 0. 性质与真实性边界
 
@@ -28,6 +28,20 @@ activation: default-on-trigger
 - GitHub 暂时不可访问时，可以使用 Library / 本地 fallback，但不得声称已经验证为 GitHub 最新版。
 - 用户明确指定旧版或特定版本时，才允许覆盖“默认最新版”规则。
 - 更新正式版本时，先更新 GitHub canonical，再同步 Library fallback，并保持版本号一致。
+
+### 0.1.1 Canonical Load Verification Gate / 主源加载验证闸门
+
+当用户明确触发“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等语义，且 GitHub canonical 可访问时，**正式执行前必须在当前运行/当前窗口中真实读取一次 canonical 文件**。这一步属于启动流程本身，不得用模型记忆、聊天摘要、旧窗口中的读取结果、Library 副本、缓存版本号或“我记得规则”代替。
+
+硬规则：
+- 只有当前运行已经真实读取 `1948666760dty-sys/solo-breach/skills/complex-tavern/SKILL.md`，并从该文件 frontmatter 取得 `version` 后，才允许说“已载入最新版 / 已按 vX.Y.Z 启动 / 当前 canonical 是 vX.Y.Z”。
+- 未执行上述读取时，不得先声称“已经加载最新版”再按记忆中的规则运行。
+- GitHub 读取成功后，以**本次实际读取到的文件内容**覆盖模型对旧规则的记忆、摘要或先前窗口经验；发生冲突时 canonical 当前内容优先。
+- GitHub 读取失败或工具不可用时，可以按 0.1 使用 Library / 本地 fallback，但必须明确标记为“fallback，未验证 GitHub 最新版”；不得把 fallback 冒充为已验证 canonical。
+- 用户只说“开始复杂酒馆”时，不需要额外询问是否读取；系统应自动先完成加载验证，再继续 Opening State Machine 或存档恢复。
+- Director Preflight 在首个用户可见剧情输出前额外检查：本轮是否完成主源加载验证、所声称版本是否来自本次实际读取、正文渲染是否违反当前版本的 Opening / Paragraphing 等规则。若违反，先内部重写，不把错误草稿发给玩家。
+
+建议运行态记录（仅后台）：`skill_source`、`skill_version`、`canonical_verified_this_run`。其中 `canonical_verified_this_run` 只有在当前运行真实读取 GitHub canonical 后才可为 `true`。
 
 当 Files/Library 等持久化工具可用时，优先用它保存/读取存档、Raw Story Log 与章节检查点；工具不可用时仍可在当前对话内按同一规则运行，但不得声称已持久保存到外部。
 
@@ -894,11 +908,19 @@ Director Preflight 每轮都会执行；小体检约每 5 个有效剧情推进�
 78. 从 schema 3.3 或旧 v3.5.x 状态迁移到 3.5.3 时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源
 79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
 
-## 21. v3.5.3 运行口径
+### L. v3.5.4 Canonical Load Guard
+80. 新窗口首次触发“开始复杂酒馆”时，会先真实读取 GitHub canonical，再声明版本或进入开局流程
+81. 仅凭模型记忆、聊天摘要、旧窗口读取结果或 Library 副本，不会声称“已加载 GitHub 最新版”
+82. GitHub 读取失败时可以使用 fallback，但会明确标记“未验证 GitHub 最新版”，不会伪装成 canonical 已确认
+83. 本次真实读取到的 canonical 规则与旧记忆冲突时，以本次文件内容为准；首个剧情输出前 Preflight 会拦截旧版 Opening UI、碎片化段落等已被新版本禁止的行为
+
+## 21. v3.5.4 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.5.3 是运行层一致性修复版，不改变 v3.5.2 的开局体验与叙事行为。本次只修三类底层合同：执行流程 1–19 唯一顺序、Opening Gate 与最新版开局状态机统一、持久化 schema_version 升级到 3.5.3 并定义旧状态迁移。
+v3.5.4 是启动可靠性小版本，不改变 v3.5.3 的持久化 schema，也不改变 v3.5.2/v3.5.3 已有的开局体验、叙事规则与 Canon。它新增一条更高优先级的运行合同：**不能把“记得最新版”当成“已经加载最新版”**。每次明确触发复杂酒馆且 GitHub 可访问时，必须先在当前运行真实读取 canonical，再声明版本并执行；若读取失败，只能以未验证 fallback 身份继续。
+
+本次仍沿用 `schema_version: 3.5.3`，因为没有新增需要写入存档的必需结构字段；`skill_source / skill_version / canonical_verified_this_run` 属于运行态验证信息，不要求迁移既有故事 Canon。
 
 核心目标是：
-**让“规则写对了”同时等于“执行流程也按同一套规则运行”，并让旧档恢复不会因 schema 漂移产生歧义。**
+**让“使用最新版”成为一次可验证的启动动作，而不是依赖记忆或口头声明，从源头避免规则文件已经修复、实际输出却仍按旧习惯运行。**
