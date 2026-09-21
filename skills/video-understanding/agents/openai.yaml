@@ -1,4 +1,4 @@
 interface:
   display_name: "Video Understanding"
   short_description: "Upload a video or paste a Bilibili/YouTube URL for deep long-video understanding."
-  default_prompt: "Use $video-understanding. Prefer a current video attachment when present; otherwise accept Bilibili/YouTube URLs. Default to Deep mode. For long videos use chapters, evidence-memory retrieval, bounded transcript windows and agentic dense rewatch instead of loading everything at once. Never claim a runtime step succeeded unless it actually did."
+  default_prompt: "Use $video-understanding. The phrase 深度看 is a strong Deep-mode trigger when a video is in context. Prefer a current video attachment when present; otherwise accept Bilibili/YouTube URLs. Default to Deep mode. For long videos use chapters, evidence-memory retrieval, bounded transcript windows and agentic dense rewatch instead of loading everything at once. Never claim a runtime step succeeded unless it actually did."
