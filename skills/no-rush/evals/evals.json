@@ -1007,6 +1007,70 @@
       "expected_action": "clarify",
       "level": "Q2",
       "reason": "notification preference is user-owned"
+    },
+    {
+      "name": "coding_language_user_owned",
+      "request": "做一个以后我自己维护的桌面工具。",
+      "context": "Python and TypeScript stacks are both viable; user maintenance comfort is unknown.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "maintenance preference materially affects long-term usability"
+    },
+    {
+      "name": "school_assignment_format_known",
+      "request": "按老师给的模板把答案整理进去。",
+      "context": "Template is attached and complete.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "format is retrievable and already specified"
+    },
+    {
+      "name": "image_aspect_ratio_material",
+      "request": "给我做一套以后长期用的头像框模板。",
+      "context": "Square-only vs multi-aspect output materially changes template system.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "output format affects reusable design"
+    },
+    {
+      "name": "temporary_label_text",
+      "request": "按确认的界面做demo。",
+      "context": "One button label is unspecified and can be changed without structural impact.",
+      "expected_action": "execute",
+      "level": "Q3",
+      "reason": "minor reversible copy should not block"
+    },
+    {
+      "name": "backup_policy",
+      "request": "做一个自动整理我本地文件的工具。",
+      "context": "Move/rename only vs delete duplicates is unspecified.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "destructive risk requires user-owned policy"
+    },
+    {
+      "name": "existing_answer_in_conversation",
+      "request": "继续把部署方案写完。",
+      "context": "Earlier in the same task user already chose local-only deployment.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "known information must not be re-asked"
+    },
+    {
+      "name": "unknown_factual_spec_with_search",
+      "request": "按这个公开API的最新限额给我设计调用策略。",
+      "context": "Web/API docs can be queried.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "fresh factual value should be retrieved, not asked of user"
+    },
+    {
+      "name": "relationship_of_q2_to_95",
+      "request": "给我做一个完整的长期日程面板。",
+      "context": "Goal/scope are clear, but compact vs detailed presentation is a high-value user preference.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "95% is not satisfied merely because a default UI can be guessed"
     }
   ],
   "question_scan_contract": {
