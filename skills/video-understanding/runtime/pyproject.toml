@@ -1,6 +1,6 @@
 [project]
 name = "video-understanding-runtime"
-version = "0.2.0"
+version = "0.2.1"
 description = "Local read/fetch MCP runtime for Bilibili and YouTube video understanding."
 requires-python = ">=3.11,<3.14"
 dependencies = [
