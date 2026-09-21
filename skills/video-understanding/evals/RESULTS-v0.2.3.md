@@ -97,14 +97,24 @@ However, the repository-level GitHub Actions audit successfully installed the fu
 
 A real speech transcription/model inference on the target Windows machine remains required before stable release.
 
+A second GitHub Actions audit then exercised real faster-whisper model inference on Linux:
+- run id: `35668408072`
+- faster-whisper: 1.2.1
+- model: `tiny.en`
+- generated speech: espeak-ng
+- actual decoded/transcribed output: `this is a video on the old test.`
+- inference smoke: PASS
+
+This verifies model download + CTranslate2 inference + transcription end-to-end in CI, but it does not replace the target Windows/GPU smoke test.
+
 ## GitHub Actions audit
 
 Permanent workflow:
 `.github/workflows/video-understanding-audit.yml`
 
-Audit run:
-- run id: `35668142940`
-- result: SUCCESS
+Audit runs:
+- run id: `35668142940` — SUCCESS (compile/install/preflight/media-health/MCP)
+- run id: `35668408072` — SUCCESS (same checks + real faster-whisper inference)
 
 All steps passed:
 1. checkout
