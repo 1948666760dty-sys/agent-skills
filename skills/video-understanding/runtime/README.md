@@ -23,6 +23,15 @@ This is the executable reference Runtime for `skills/video-understanding/SKILL.m
 
 All tools are semantically read/fetch operations. Local cache writes are implementation details; the tools do not modify the source platform or user content.
 
+## Windows quick start
+
+From the Runtime directory:
+
+1. Run `scripts\\install_windows.ps1` once.
+2. Run `scripts\\run_windows.ps1` whenever you want ChatGPT to use the local Runtime.
+3. With the server running, `.venv\\Scripts\\python.exe scripts\\mcp_smoke.py` verifies MCP connectivity and the five tool names.
+4. Follow `TUNNEL_SETUP.md` to connect the private local server to ChatGPT.
+
 ## Local defaults
 
 - MCP: Streamable HTTP on `127.0.0.1:8765/mcp`.
