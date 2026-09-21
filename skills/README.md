@@ -36,7 +36,7 @@
 ## 不着急 / No-Rush
 
 - Canonical path: `skills/no-rush/SKILL.md`
-- Current version: `2.3.0`
+- Current version: `2.4.0`
 - Status: `stable-default`
 - Source of truth: GitHub canonical file above. Local/Library copies are fallback only.
 - Loading rule: when GitHub access is available, fetch the canonical file before running No-Rush so the latest version is used.
@@ -46,13 +46,14 @@
 - Understanding gate unchanged: >=95% executes directly; <95% resolves retrievable facts first and asks only key ambiguities. The marker is confirmation of activation, not proof of understanding or completion.
 - No hard model/mode exclusions: unknown effort, Instant, Medium, High, Extra High, automatic Thinking, GPT-5.6 Sol, GPT-6 Pro, etc. do not by themselves disable No-Rush.
 - Explicit disable: “这次不用不着急 / 这次关闭不着急” disables only the current task; “关闭不着急 / 暂停不着急” disables it for the current conversation until “开启不着急 / 恢复不着急”.
-- Pipeline: Understanding Gate → Current Task Brief → Execution → Final Check.
+- Pipeline: Understanding Gate → Current Task Brief → Execution → Final Check → Closing Status Report.
+- Closing status: on every delivery, staged delivery, or execution pause while No-Rush is enabled, end with four visible fields in this order: 已完成 / 未完成 / 存在问题 / 需要你确认. Empty fields must say 无. Only genuine user decisions belong in 需要你确认.
 - Latest-wins rule: newer explicit requirements supersede conflicting older requirements; superseded requirements must not reappear.
 - Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
 - Overrides: “直接做”, “别猜”, “严格不着急”.
 - Tests: `skills/no-rush/evals/evals.json`.
 - Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. The checker validates observed activation/action labels, marker placement/count and strict JSON; key-question quality still requires reading the actual replies. Scenario definitions alone are not a passing run.
-- Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.3.0 makes status visible on 100% of user turns; v2.2.0 introduced the earlier complexity-based marker; v2.1.0 removed the obsolete Extra High-only gate).
+- Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.4.0 adds the mandatory four-field closing status report; v2.3.0 makes status visible on 100% of user turns; v2.2.0 introduced the earlier complexity-based marker; v2.1.0 removed the obsolete Extra High-only gate).
 
 
 ## Cut Coach / 减脂教练
