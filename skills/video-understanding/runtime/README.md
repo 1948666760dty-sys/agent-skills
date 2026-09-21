@@ -1,4 +1,4 @@
-# Video Understanding Runtime v0.1.0
+# Video Understanding Runtime v0.1.1
 
 This is the executable reference Runtime for `skills/video-understanding/SKILL.md`.
 
