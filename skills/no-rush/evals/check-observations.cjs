@@ -32,6 +32,10 @@ for (const c of cases) {
       assert.ok(o.messages.length >= 2, 'must simulate progress and final');
       assert.ok(!o.messages.at(-1).includes('不着急 ✓') && !o.messages.at(-1).includes('不着急 ✗'), 'duplicate final status marker');
     }
+    if (c.observed_contract.question_required) {
+      const joined = o.messages.join('\n');
+      assert.ok(/[?？]/.test(joined), 'clarification case must visibly ask at least one question');
+    }
     if (c.name === 'strict_json_output') {
       assert.equal(o.messages.length, 2, 'strict JSON case must use separate status and payload messages');
       const result = JSON.parse(o.messages.at(-1));
