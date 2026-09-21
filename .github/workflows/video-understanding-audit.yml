@@ -20,7 +20,7 @@ jobs:
       - name: Install FFmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
 
       - name: Install runtime
         run: |
@@ -70,6 +70,25 @@ jobs:
           )
           assert c["status"] == "COMPLETE"
           print("media-health smoke passed")
+          PY
+
+      - name: faster-whisper inference smoke
+        working-directory: skills/video-understanding/runtime
+        run: |
+          espeak-ng -w /tmp/asr-smoke.wav "this is a video audio test"
+          python - <<'PY'
+          from faster_whisper import WhisperModel
+          model = WhisperModel("tiny.en", device="cpu", compute_type="int8")
+          segments, info = model.transcribe(
+              "/tmp/asr-smoke.wav",
+              language="en",
+              beam_size=1,
+              vad_filter=False,
+          )
+          text = " ".join(segment.text.strip() for segment in segments if segment.text.strip())
+          print(f"language={info.language} text={text!r}")
+          assert text, "faster-whisper returned no speech text"
+          assert "test" in text.lower() or "video" in text.lower(), text
           PY
 
       - name: MCP server smoke
