@@ -1,4 +1,4 @@
-# Video Understanding Runtime Contract v0.2.0
+# Video Understanding Runtime Contract v0.2.1
 
 ## 1. Scope
 
@@ -176,11 +176,14 @@ Partial success is allowed and must be labelled.
 
 ## 13. Performance
 
-No fixed SLA.
+No fixed SLA and no default speed target.
 
-60-minute captioned video 5–15 minutes is an optimization target, not a guarantee.
+Quality-first is the default:
+- a 60-minute video may take around 60 minutes to process;
+- no-caption or visual-heavy videos may take longer than their playback duration;
+- longer runtime is acceptable when it materially improves transcript completeness, visual coverage, rewatch depth, number/name verification, or evidence traceability.
 
-Longer/no-caption/visual-heavy videos can take materially longer.
+Only explicit user requests for quick/fast/simple analysis should activate aggressive speed optimizations.
 
 ## 14. Stable Gate
 
