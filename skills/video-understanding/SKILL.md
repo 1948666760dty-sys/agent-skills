@@ -1,38 +1,46 @@
 ---
 name: video-understanding
 display_name: Video Understanding / 视频理解
-description: 面向 ChatGPT 的统一长视频理解 Skill。用户只需发送 Bilibili/B站或 YouTube 链接（包括 b23.tv、BV/av/ep/ss、youtube.com、youtu.be、YouTube Shorts），即可自动识别平台并进入视频理解流程。默认 Deep/效果优先：字幕优先、无字幕本地 ASR、场景检测、关键帧、OCR、音画时间轴对齐、重点区间二次回看、证据化总结与后续问答。快速模式仅在用户明确说“快速看/简单总结”时启用。
-version: 0.1.1
+description: 上传优先、长视频友好的多模态视频理解 Skill。支持当前聊天中的视频附件，以及 Bilibili/B站和 YouTube URL。默认 Deep/效果优先：字幕/ASR、PySceneDetect 场景检测、自适应关键帧、章节化长视频、Evidence Memory、音画时间轴、Agentic Rewatch、证据化总结与后续问答。快速模式仅在用户明确要求快速/字幕优先时启用。
+version: 0.2.0
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/video-understanding/SKILL.md
-activation: semantic-auto-url
-supported_platforms: [bilibili, youtube]
+activation: semantic-auto-upload-or-url
+supported_inputs: [video_attachment, bilibili, youtube]
 ---
 
-# Video Understanding v0.1.1
+# Video Understanding v0.2.0
 
-## 0. 目标
+## 0. 定位
 
-用户体验必须尽量接近：
+v0.2.0 从“URL 解析器”升级为 **Upload-First Agentic Video Understanding**。
+
+默认优先级：
 
 ```text
-用户：<一个 B站或 YouTube 链接>
-→ 自动识别
-→ 自动分析
-→ 当前聊天直接返回结果
+理解质量 > 证据完整 > 速度 > 资源节省
 ```
 
-用户不需要：
-- 指定平台；
-- 写命令；
-- 选择字幕工具；
-- 手动下载视频；
-- 手动上传帧；
-- 提供 job_id；
-- 再发一句“开始”。
+入口优先级：
 
-默认优先级：**理解质量 > 处理速度 > 资源节省**。
+```text
+当前聊天已上传视频
+> Bilibili URL
+> YouTube URL
+```
+
+用户只需：
+- 上传视频；或
+- 发送一个支持的 URL。
+
+不要求用户：
+- 手动切视频；
+- 手动抽帧；
+- 自己跑 Whisper；
+- 自己操作 job_id；
+- 自己决定章节范围；
+- 长视频手工分段后重复上传。
 
 ---
 
@@ -41,543 +49,565 @@ supported_platforms: [bilibili, youtube]
 唯一规范主源：
 
 - Repo: `1948666760dty-sys/agent-skills`
-- Path: `skills/video-understanding/SKILL.md`
+- Skill: `skills/video-understanding/SKILL.md`
+- Runtime: `skills/video-understanding/runtime/`
+- Runtime contract: `skills/video-understanding/references/runtime-contract.md`
 
-本 Skill 是路由、分析与交付规范，不等于可执行的视频 Runtime。
+必须区分：
+1. Skill 规则存在；
+2. Runtime 代码存在；
+3. 当前宿主是否能访问视频附件/URL；
+4. 某次 ASR/视觉/回看是否真实成功。
 
-真正完成以下动作需要宿主 Runtime/MCP：
-- 获取视频元数据；
-- 获取字幕；
-- 下载或读取音视频；
-- Whisper/faster-whisper；
-- FFmpeg/OpenCV 场景检测；
-- 关键帧；
-- OCR；
-- 缓存；
-- 长任务状态管理。
-
-若 Runtime 未接入，不得声称“已经看完视频”。应明确区分：
-- Skill 已加载；
-- URL 已识别；
-- Runtime 是否真正成功执行；
-- 哪些证据实际取得。
-
-Runtime 契约见：
-`skills/video-understanding/references/runtime-contract.md`
+不得因为 Skill 已加载就声称“已经看完视频”。
 
 ---
 
 ## 2. 自动触发
 
-### 2.1 裸链接强触发
+### 2.1 上传视频强触发
 
-用户消息只包含或主要包含以下任一种内容时，默认自动触发：
+当当前对话包含视频附件，且用户表达以下任一语义时自动触发：
+- “看一下”
+- “总结”
+- “这个讲了什么”
+- “深度看”
+- “分析这个视频”
+- “帮我理解”
+- “试试看”
+- 直接上传视频后继续询问其中内容
+
+若用户只上传视频而无其他明显意图，默认解释为：
+**请理解并概括这个视频。**
+
+宿主已经能直接读取/挂载附件时，不得反过来要求用户提供 URL。
+
+### 2.2 URL 强触发
 
 Bilibili：
-- `bilibili.com/video/...`
-- `b23.tv/...`
-- `BV...`
-- `av...`
-- `ep...`
-- `ss...`
+- bilibili.com
+- b23.tv
+- BV / av / ep / ss
 
 YouTube：
-- `youtube.com/watch?v=...`
-- `youtu.be/...`
-- `youtube.com/shorts/...`
-- 合法的 YouTube share URL
+- youtube.com/watch
+- youtu.be
+- youtube.com/shorts
 
-即使用户没有写“总结”“分析”“帮我看”，**单独一个支持的视频地址也视为“请理解这个视频”**。
+单独一个支持 URL 默认视为视频理解请求。
 
-### 2.2 语义触发
+### 2.3 后续问答
 
-以下语义同样触发：
-- “看一下这个视频”
-- “这个讲了什么”
-- “帮我总结”
-- “深度看”
-- “视频里他说的靠谱吗”
-- “帮我看 18 分钟那里”
-- “这个 B站/YouTube 视频什么意思”
-- 在同一视频上下文中的后续问题
+同一视频上下文中的：
+- “19分钟那个表格”
+- “第二种方法”
+- “他这里说的靠谱吗”
+- “前后有没有矛盾”
 
-### 2.3 不触发
-
-以下情况不自动把链接当视频分析任务：
-- 用户明确说“只帮我复制/改写这个链接”；
-- 用户仅询问该网站本身；
-- 链接不是支持平台的视频；
-- 用户明确要求其他操作且视频理解与任务无关。
+继续使用当前 Video Capsule / cache，不重新完整处理。
 
 ---
 
 ## 3. 默认模式
 
-### 3.1 Deep（默认）
-
-除非用户明确要求快，否则：
+### Deep（默认）
 
 ```yaml
 mode: deep
 priority: quality
-visual_analysis: true
-ocr: true
-second_pass: true
-timestamps: true
+transcript: full
+scene_detection: adaptive
+visual_overview: true
+host_vision_ocr: true
+chapters: true
+video_memory: true
+agentic_rewatch: true
 evidence_labels: true
-audience_signals:
-  bilibili: optional
 ```
 
-### 3.2 Quick（显式）
+### Quick（用户显式要求）
 
-只有用户明确说：
-- “快速看一下”
+触发：
+- “快速看”
 - “简单总结”
+- “只看字幕”
 - “不用看画面”
-- “只读字幕”
 
-才使用 Quick。
-
-Quick 优先字幕，减少视觉抽帧与二次回看。
+Quick 可以减少视觉覆盖与二次回看，但仍必须如实标记证据来源。
 
 ---
 
-## 4. 平台路由
+## 4. 输入路由
 
-### 4.1 Bilibili
+### A. 当前聊天视频附件
 
-优先链：
+若宿主直接提供可读视频文件：
+1. 读取附件；
+2. Preflight；
+3. 有可信字幕则使用字幕；
+4. 否则本地/宿主 ASR；
+5. Deep 时执行场景分析和关键帧；
+6. 建立 Chapters + Evidence Memory；
+7. 全局理解后自动回看重点。
+
+若通过 MCP Runtime 处理上传文件：
+- 只能使用宿主已 materialize 到受控 upload inbox 的文件；
+- Runtime 不允许任意读取电脑文件；
+- 默认允许目录是 `~/.video-understanding/inbox`；
+- 额外目录必须显式配置 `VIDEO_UPLOAD_ROOTS`。
+
+若宿主没有向 MCP 暴露视频附件字节或受控本地路径，不能虚构“已传给 Runtime”。
+
+### B. Bilibili
 
 ```text
-规范化 URL / BV / av / ep / ss / b23
-→ 元数据与分P
+URL/短链/ID
+→ 元数据/分P
 → 人工字幕
 → AI字幕
-→ 无字幕则本地 ASR
-→ 视频视觉分析
-→ 可选弹幕热点
+→ 无字幕本地 ASR
+→ Deep 视觉
+→ 可选弹幕
 ```
 
-设计参考 BiliLens 思路，但本 Skill 不复制外部实现代码。
-
-必须保留：
-- canonical video id；
-- 当前分P；
-- 视频长度；
-- 标题/作者；
-- 字幕来源；
-- 获取时间；
-- 弹幕若参与分析，必须和作者观点分开。
-
-### 4.2 YouTube
-
-优先链：
+### C. YouTube
 
 ```text
-规范化 URL / video id / Shorts
+URL/Shorts
 → 元数据
 → 人工字幕
 → 自动字幕
-→ 无字幕则本地 ASR
-→ 视频视觉分析
+→ 无字幕本地 ASR
+→ Deep 视觉
 ```
-
-不得因为自动字幕存在就默认视为高可信文本；专名、数字、型号、外语、口音仍需交叉检查。
 
 ---
 
-## 5. 音频与字幕
+## 5. Preflight
 
-字幕优先级：
+上传/获取视频后先确认：
+- 时长；
+- 分辨率；
+- FPS；
+- 文件大小（若可得）；
+- 字幕来源；
+- ASR 是否需要；
+- 是否可做视觉分析；
+- 长视频 tier。
+
+Preflight 不需要用户参与。
+
+---
+
+## 6. 长视频策略
+
+长视频不是“把更多 token 一次塞进去”，而是**分层取证**。
+
+### 6.1 自适应 Tier
+
+参考 Runtime：
+
+| 时长 | Tier | 全局 baseline | 章节窗口 | Memory 窗口 |
+|---|---|---:|---:|---:|
+| ≤5 min | short | ~6s | ~2min | ~90s |
+| 5–30 min | standard | ~12s | ~4min | ~2min |
+| 30–90 min | long | ~20s | ~6min | ~3min |
+| 90–180 min | very_long | ~30s | ~10min | ~5min |
+| >180 min | ultra_long | ~45s | ~15min | ~7min |
+
+这些是 Runtime 默认策略，不是固定 SLA；场景切换仍会额外贡献代表帧。
+
+### 6.2 长视频处理流程
+
+```text
+完整字幕/ASR
+↓
+结构章节 Chapters
+↓
+重叠 Evidence Memory
+↓
+PySceneDetect AdaptiveDetector
+↓
+自适应全局关键帧
+↓
+第一遍 Global Pass
+↓
+发现核心/可疑/低置信度区间
+↓
+Search Memory / Transcript Window
+↓
+Dense Agentic Rewatch
+↓
+最终综合
+```
+
+### 6.3 上下文保护
+
+30 分钟以上默认不得把完整字幕和所有帧一次性注入模型。
+
+先使用：
+- Chapters；
+- Evidence Memory；
+- 主题/问题检索；
+- 时间窗口。
+
+再读取相关：
+- transcript；
+- overview frames；
+- dense rewatch frames。
+
+因此 1～3 小时视频在架构上可以处理，不依赖单次超长上下文。
+
+### 6.4 超长视频
+
+>3 小时仍允许处理，但应：
+- 更稀疏全局覆盖；
+- 更多依赖章节索引；
+- 按问题/主题检索；
+- 必要时多轮局部 rewatch。
+
+不得承诺任意长度都能在固定时间完成。
+
+真正上限仍受：
+- 宿主上传大小；
+- 本地磁盘；
+- 下载速度；
+- ASR速度；
+- GPU/CPU；
+- Runtime/会话超时。
+
+---
+
+## 7. ASR
+
+优先级：
 
 ```text
 人工字幕
-> 平台 AI/自动字幕
-> 本地 ASR
+> 平台自动/AI字幕
+> faster-whisper
 ```
 
-若使用 ASR：
-- 默认本地 `faster-whisper` 或兼容实现；
-- 不因免费目标自动调用收费 ASR API；
-- 标注 ASR 风险：人名、品牌、型号、数字、缩写、多人重叠、方言/口音；
-- 对重要数字和专名优先结合画面 OCR 复核。
+上传文件若宿主未提供可信字幕，默认 ASR。
 
-不得把标题、简介或评论猜成视频正文。
+参考 Runtime 使用 faster-whisper >=1.2.1。当前 faster-whisper 仍支持 batched inference、VAD 与本地运行；不得因为 CUDA 尝试失败就声称 GPU ASR 成功。
+
+ASR 高风险：
+- 人名；
+- 型号；
+- 数字；
+- 缩写；
+- 方言/口音；
+- 多人重叠。
+
+关键数字必须尽量结合画面复核。
 
 ---
 
-## 6. Deep 视觉流程
+## 8. 场景检测与全局视觉
 
-目标不是逐帧暴力读取，而是“先粗看全片，再回看重点”。
+v0.2.0 参考 Runtime 使用 **PySceneDetect AdaptiveDetector**，而不是 v0.1 的简单直方图阈值。
 
-### 6.1 第一遍：全局覆盖
+要求：
+- 自动 downscale；
+- 快运动场景尽量减少误切；
+- scene representative frame；
+- baseline frame；
+- 长视频控制 overview 总帧预算；
+- 不因场景过多而无限保存帧。
 
-```text
-场景切换检测
-+ 基础时间采样
-+ 字幕语义锚点
-→ 候选关键帧
-```
-
-建议初始策略（Runtime 可动态调整）：
-- 明显 scene cut：取代表帧；
-- 长时间无 scene cut：每 8–15 秒补一张；
-- PPT / 网页 / 代码 / 表格 / 商品参数 / 游戏 UI / 数据图：提高采样密度；
-- 单纯 talking head：可降低采样密度。
-
-禁止写死“固定每 N 秒”作为唯一规则。
-
-### 6.2 OCR
-
-对可能承载事实信息的画面执行 OCR：
-- PPT；
-- 图表；
-- 参数；
-- 价格；
-- 代码；
-- 网页；
-- UI；
-- 字幕外文字；
-- 标题卡；
-- 数据表。
-
-OCR 文本必须携带时间戳和帧来源。
-
-### 6.3 第一轮理解
-
-综合：
-- 完整字幕/ASR；
-- 第一遍关键帧；
-- OCR；
-- 元数据。
-
-找出：
-- 核心段落；
-- 高信息密度段落；
-- 关键实验/演示；
-- 重要数据；
-- 视觉与口述可能冲突的位置；
-- 需要回看的不确定点。
-
-### 6.4 第二遍：Agentic Rewatch
-
-Deep 默认启用。
-
-模型为每个重点区间生成 rewatch window，例如：
-
-```json
-{
-  "start": "18:40",
-  "end": "21:10",
-  "reason": "核心实验结果与关键图表",
-  "sampling": "dense"
-}
-```
-
-Runtime 对这些区间：
-- 提高抽帧密度；
-- 重新 OCR；
-- 必要时局部音频重转写；
-- 重新综合。
-
-第二遍结束后才能形成最终 Deep 结论。
+若 PySceneDetect 失败：
+→ baseline fallback；
+→ 明确 warning；
+→ 不把 fallback 冒充 scene-aware 成功。
 
 ---
 
-## 7. 音画时间轴对齐
+## 9. Evidence Timeline
 
-统一内部模型：
-
-```text
-NormalizedVideo
-├─ source
-├─ metadata
-├─ transcript[]
-├─ frames[]
-├─ ocr[]
-├─ audience[]
-├─ chapters[]
-├─ rewatch_windows[]
-└─ analysis
-```
-
-所有重要元素尽量携带：
-- start/end 或 timestamp；
+每个证据尽量包含：
+- timestamp/start/end；
 - source；
 - confidence；
-- platform-specific id。
+- evidence type。
 
-重要结论尽量能追溯到：
-- 字幕时间戳；
-- 画面时间戳；
-- OCR 时间戳；
-- 元数据。
+证据类型必须分离：
+
+1. speaker/subtitle
+2. visual
+3. host-vision OCR
+4. platform metadata
+5. audience/danmaku
+6. model inference
+7. external verification
+
+作者声称 ≠ 已证实事实。
 
 ---
 
-## 8. 证据类型必须分开
+## 10. Chapters
 
-最终分析不可混为一谈：
+Runtime Chapters 默认只是**结构导航窗口**，不能把未经模型处理的固定时间窗伪装成“语义章节”。
 
-1. **视频作者口述/字幕**
-2. **视频画面直接展示**
-3. **平台元数据**
-4. **观众弹幕/互动信号**
-5. **模型综合推断**
-6. **外部事实核查**（若用户要求且宿主允许）
+结构章节可以包含：
+- start/end；
+- transcript segment count；
+- preview；
+- characters；
+- title=null；
+- summary=null。
+
+宿主模型完成第一遍理解后，可以生成语义标题/摘要。
+
+---
+
+## 11. Video Memory
+
+每个视频构建重叠 transcript Evidence Chunks。
+
+后续问题：
+
+```text
+问题
+→ search Video Memory
+→ 得到候选时间窗口
+→ transcript 验证
+→ 重要视觉问题 dense rewatch
+→ 回答
+```
+
+v0.2.0 参考 Runtime 使用免费本地 lexical/BM25-like 检索，不要求额外 embedding API。
+
+检索结果只能作为候选证据，不能代替最终核验。
+
+---
+
+## 12. Agentic Rewatch
+
+Deep 必须允许二次回看。
+
+第一遍发现：
+- 数字；
+- 表格；
+- 实验；
+- 代码；
+- 价格；
+- 前后冲突；
+- 字幕不确定；
+- 画面信息明显高于口述；
+- 用户直接问某个时间点。
+
+则生成 rewatch window，再调用高密度帧。
 
 例如：
 
-“作者声称 X” ≠ “X 是事实”。
-
-“弹幕大量质疑 X” ≠ “X 已被证伪”。
-
----
-
-## 9. 默认输出
-
-默认中文。
-
-### 9.1 顶部状态
-
-至少包含：
-- 标题；
-- 平台；
-- 时长；
-- 内容来源：人工字幕 / 自动字幕 / ASR；
-- 视觉分析是否成功；
-- OCR 是否使用；
-- 是否完成二次回看。
-
-### 9.2 正文
-
-默认结构：
-
-1. **30 秒摘要**
-2. **核心结论**
-3. **完整时间轴**
-4. **关键画面/演示**
-5. **重要数字、参数、专名**
-6. **作者观点与证据**
-7. **画面与口述是否一致**
-8. **不确定、矛盾或值得核查的点**
-9. **最值得看的原视频时间段**
-10. **可继续问的问题方向**
-
-“这个视频值不值得完整看”只能基于用户目的作条件化说明，不应伪装成普遍客观结论。
+```json
+{
+  "start_seconds": 1120,
+  "end_seconds": 1270,
+  "reason": "关键实验结果/图表",
+  "density": "dense"
+}
+```
 
 ---
 
-## 10. 后续问答与缓存
+## 13. Video Capsule
 
-同一 canonical video 应尽量缓存：
-- metadata；
-- transcript；
-- frame index；
-- OCR；
-- rewatch windows；
-- analysis summary。
+分析完成后维护轻量 Capsule：
 
-用户后续问：
-- “19 分钟那个表格什么意思？”
-- “第二个方法靠谱吗？”
-- “作者有没有前后矛盾？”
+```text
+Video ID
+Input kind
+Duration/Tier
+Transcript source
+Chapters
+Topics
+Claims
+Important numbers
+Important frames
+Uncertainties
+Rewatch history
+Evidence memory
+```
 
-优先复用已缓存视频模型，不从头完整跑一遍。
-
-如果问题需要原先未采样画面，可局部 rewatch。
-
----
-
-## 11. 性能目标
-
-目标示例：
-
-> 常规 60 分钟视频，在已有可用字幕、网络和 Runtime 正常时，Deep 尽量在约 5–15 分钟量级内完成。
-
-这是**性能目标，不是 SLA**。
-
-不得保证“60 分钟视频一定 10 分钟完成”。
-
-影响因素包括：
-- 字幕是否存在；
-- 下载速度；
-- 视频码率/分辨率；
-- 是否需要完整 ASR；
-- scene 数量；
-- OCR 数量；
-- rewatch 次数；
-- 宿主视觉分析吞吐。
-
-用户当前偏好：慢一点可以，效果优先。
+后续问答优先复用 Capsule/cache。
 
 ---
 
-## 12. 免费优先
+## 14. Runtime Tools v0.2
 
-默认不要求额外付费 API Key。
+参考 MCP Runtime 当前工具：
 
-优先：
-- 平台字幕；
-- yt-dlp / 平台公开接口或兼容提取器；
-- FFmpeg；
-- OpenCV；
+1. `start_video_analysis` — B站/YouTube URL
+2. `start_uploaded_video_analysis` — 受控 inbox 中的上传文件
+3. `wait_video_analysis`
+4. `get_video_manifest`
+5. `get_video_transcript`
+6. `get_video_chapters`
+7. `search_prepared_video`
+8. `inspect_video_window`
+
+长任务内部 start/wait 不得交给用户操作。
+
+推荐长视频宿主序列：
+
+```text
+start
+→ wait
+→ manifest
+→ chapters
+→ transcript/windows
+→ overview frames
+→ first-pass synthesis
+→ search_prepared_video
+→ dense rewatch
+→ final synthesis
+```
+
+---
+
+## 15. 默认输出
+
+中文默认：
+
+1. 30 秒摘要
+2. 核心结论
+3. 章节/完整时间轴
+4. 关键画面
+5. 重要数字、参数、专名
+6. 作者观点与证据
+7. 画面与口述是否一致
+8. 矛盾/不确定/待核查
+9. 最值得看的时间段
+10. 后续可问方向
+
+顶部必须真实标记：
+- 输入：上传 / B站 / YouTube
+- 时长/Tier
+- transcript source
+- visual success
+- OCR = host_vision 或实际本地 OCR
+- second-pass 是否真实执行
+
+---
+
+## 16. 性能目标
+
+用户偏好：**慢一点无所谓，效果优先。**
+
+参考目标：
+- 60 分钟已有字幕视频：希望落在约 5–15 分钟量级；
+- 无字幕 + 完整 ASR + 重视觉视频：允许更慢；
+- 90–180 分钟：允许明显超过 15 分钟；
+- >180 分钟：不设固定完成时间保证。
+
+这是优化目标，不是 SLA。
+
+---
+
+## 17. 免费优先
+
+默认：
+- yt-dlp / Bilibili public APIs；
 - faster-whisper；
-- 本地 OCR（如 PaddleOCR）；
-- 宿主 ChatGPT 已有的理解能力。
+- PySceneDetect；
+- OpenCV；
+- host ChatGPT vision；
+- 本地 lexical Video Memory。
 
-若某项必须调用额外付费服务，必须先说明，不能静默产生额外费用。
-
----
-
-## 13. 登录、Cookie 与隐私
-
-默认匿名提取。
-
-若登录内容/字幕必须依赖本地浏览器 Cookie：
-1. 先说明原因；
-2. 只有用户明确同意才读取；
-3. 不在聊天中要求粘贴原始 Cookie；
-4. 不打印/保存完整 Cookie；
-5. 缓存和临时文件遵守最小化原则。
+不得静默调用额外收费模型 API。
 
 ---
 
-## 14. Runtime / MCP 对外体验
+## 18. 隐私与本地文件安全
 
-即使后端内部实现采用：
-
-```text
-start_analysis
-→ poll/status
-→ get_result
-```
-
-对用户必须保持：
-
-```text
-贴一次 URL
-→ 系统自动完成内部流程
-→ 返回结果
-```
-
-不得要求用户：
-- 再输入 job id；
-- 自己轮询；
-- 自己运行 ffmpeg；
-- 自己下载字幕；
-- 自己选择解析器。
-
-若宿主环境支持单个阻塞式工具，可使用 `analyze_video`。
-
-若宿主工具有时长限制，可内部自动使用任务式 API，但对用户隐藏任务编排细节。
+- 不要求用户在聊天粘 raw cookie；
+- 读取浏览器登录态前必须明确授权；
+- MCP 上传入口不得接受任意电脑路径；
+- 默认仅 `~/.video-understanding/inbox`；
+- `VIDEO_UPLOAD_ROOTS` 必须由用户/部署者显式设置；
+- 不把本地视频公开上传到第三方，除非用户明确选择相关服务。
 
 ---
 
-## 15. 与 No-Rush
+## 19. 失败降级
 
-No-Rush 是上层控制层：
+- 字幕失败 → ASR
+- 场景检测失败 → baseline visual fallback
+- 视觉失败但 transcript 成功 → transcript-only partial
+- ASR失败但烧录字幕可视觉读取 → visual-caption partial
+- 全部正文证据失败 → 不根据标题猜内容
+- 上传文件被宿主删除 → follow-up visual rewatch 要求重新 materialize/re-upload
+- 超长视频 → 内部分块，不要求用户手工切片
+
+---
+
+## 20. 与 No-Rush
 
 ```text
 No-Rush
-→ Video Understanding Router
-→ Runtime
-→ Evidence/Quality Gate
-→ Final Delivery
+→ Upload/URL Router
+→ Preflight
+→ Runtime/Evidence Pipeline
+→ Long-video Memory
+→ Agentic Rewatch
+→ Quality Gate
+→ Final
 → No-Rush Closing Report
 ```
 
-不得因为视频任务较长而绕开 No-Rush 的真实性检查。
+---
+
+## 21. 验收标准
+
+Stable 前至少：
+
+1. 当前聊天上传短视频真实分析 >= 2
+2. 上传 30–90 分钟视频 >= 1
+3. 上传或 URL 90–180 分钟视频 >= 1
+4. B站 >= 3
+5. YouTube >= 3
+6. 无人工字幕 >= 2
+7. 视觉信息关键视频 >= 2
+8. PySceneDetect 成功路径 >= 2
+9. scene fallback >= 1
+10. Video Memory 后续问答 >= 3
+11. dense rewatch >= 3
+12. 任意本地路径读取被拒绝测试 >= 1
+13. inbox 上传成功 >= 1
+14. 宿主无法 materialize attachment 时不假装 Runtime 已获取
+15. 1～3 小时视频不一次性灌入完整 transcript + frames
+16. 失败步骤不冒充成功
+17. 不默认产生额外 API 费用
 
 ---
 
-## 16. Quality Gate
+## 22. 当前状态
 
-最终交付前至少检查：
+当前版本：`0.2.0 release-candidate`
 
-- URL 是否解析到正确视频；
-- B站分P是否正确；
-- 视频时长是否合理；
-- 字幕来源是否标注；
-- Deep 模式是否真正尝试视觉分析；
-- 关键数字是否有来源；
-- ASR 高风险专名是否复核；
-- 重要结论是否可追溯；
-- 画面/作者/观众/模型推断是否分层；
-- second pass 状态是否真实；
-- 缓存是否对应 canonical video；
-- 不得把失败的视觉/ASR说成成功。
+已经实现到参考 Runtime：
+- Bilibili / YouTube；
+- uploaded-file inbox adapter；
+- faster-whisper；
+- PySceneDetect AdaptiveDetector；
+- adaptive long-video sampling；
+- structural chapters；
+- overlapping Evidence Memory；
+- local lexical retrieval；
+- overview frames；
+- dense rewatch；
+- MCP ImageContent。
 
----
-
-## 17. 失败降级
-
-### A. 字幕失败但视频可取
-→ 本地 ASR。
-
-### B. 视频视觉下载失败但字幕成功
-→ 可以输出“字幕理解版”，明确视觉未完成。
-
-### C. ASR 与视觉都失败
-→ 不得根据标题猜正文。
-
-### D. 登录限制
-→ 说明需要授权；没有授权就保持匿名降级。
-
-### E. 超长视频或宿主执行限制
-→ 允许分段内部处理与合并，但不要求用户手工分段。
-
----
-
-## 18. 验收标准
-
-正式稳定版至少要求：
-
-1. 裸 B站 URL 自动触发；
-2. 裸 YouTube URL 自动触发；
-3. b23.tv 可规范化；
-4. YouTube Shorts 可规范化；
-5. 默认 Deep；
-6. “快速看”切 Quick；
-7. 人工字幕优先；
-8. 自动字幕次优先；
-9. 无字幕自动 ASR；
-10. Deep 有真实视觉帧；
-11. OCR 有时间戳；
-12. 有 scene-aware 抽帧；
-13. 有重点区间二次回看；
-14. 重要结论有 evidence type；
-15. follow-up 可复用缓存；
-16. 用户不需要 job id；
-17. 用户不需要二次发送“开始”；
-18. 失败时不假装成功；
-19. 不默认产生额外 API 费用；
-20. 用真实 B站和 YouTube 视频各完成至少 3 个端到端 smoke test 后，才能从 release-candidate 升为 stable。
-
----
-
-## 19. 当前发布状态
-
-当前版本：`0.1.1 release-candidate`
-
-已经定义：
-- 自动触发；
-- 双平台路由；
-- Deep/Quick；
-- 字幕/ASR；
-- scene-aware 视觉；
-- OCR；
-- Agentic Rewatch；
-- evidence model；
-- 缓存；
-- MCP/Runtime 边界；
-- 质量门与验收标准。
-
-尚未因为“规范文件已存在”而宣称 Runtime 已可用。
+尚未声称：
+- Windows 实机所有依赖已跑通；
+- ChatGPT 自定义 MCP 自动获得手机/聊天附件字节；
+- 1～3 小时端到端性能已经实测；
+- Stable。
 
 ### Changelog
 
-- **0.1.1（2026-09-22）**：加入真实参考 Runtime 的 5 工具编排契约；明确长任务 start/wait 对用户隐藏；v0.1 OCR 改为宿主 ChatGPT 直接读取 MCP ImageContent，避免声称未实现的本地 OCR。
-
-- **0.1.0（2026-09-22）**：首个 Bilibili + YouTube 统一视频理解候选版；裸链接自动触发；默认 Deep/效果优先；加入字幕→ASR fallback、场景关键帧、OCR、音画时间轴对齐、Agentic Rewatch、缓存和 MCP Runtime 契约。
+- **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
+- **0.1.1（2026-09-22）**：对齐首版 MCP Runtime。
+- **0.1.0（2026-09-22）**：Bilibili + YouTube 首版。
