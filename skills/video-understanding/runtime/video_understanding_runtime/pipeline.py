@@ -19,8 +19,14 @@ from .long_video import (
     sampling_profile,
     search_evidence,
 )
+from .media_health import (
+    attempt_repair,
+    completion_guard,
+    file_fingerprint,
+    inspect_media,
+)
 
-SCHEMA_VERSION = "0.2"
+SCHEMA_VERSION = "0.2.3"
 DEFAULT_CACHE = Path(
     os.environ.get("VIDEO_UNDERSTANDING_CACHE", Path.home() / ".video-understanding")
 )
@@ -299,7 +305,13 @@ def _download_media(
 def _transcribe(
     media: Path,
 ) -> tuple[list[dict[str, Any]], str, list[str]]:
-    from faster_whisper import WhisperModel
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError as exc:
+        raise VideoRuntimeError(
+            "ASR_UNAVAILABLE",
+            "faster-whisper is not installed in this runtime.",
+        ) from exc
 
     model_name = os.environ.get("VIDEO_WHISPER_MODEL", "small")
     requested_device = os.environ.get(
@@ -427,16 +439,7 @@ def _validated_upload_path(value: str) -> Path:
 
 
 def _fingerprint_local_file(path: Path) -> str:
-    stat = path.stat()
-    digest = hashlib.sha256()
-    digest.update(str(stat.st_size).encode("ascii"))
-    digest.update(path.name.encode("utf-8", errors="ignore"))
-    with path.open("rb") as handle:
-        digest.update(handle.read(1024 * 1024))
-        if stat.st_size > 1024 * 1024:
-            handle.seek(max(0, stat.st_size - 1024 * 1024))
-            digest.update(handle.read(1024 * 1024))
-    return digest.hexdigest()[:24]
+    return file_fingerprint(path)
 
 
 def _scene_candidates(
@@ -623,6 +626,9 @@ def _build_manifest(
     started: float,
     warnings: list[str],
     uploaded_absolute_path: Path | None = None,
+    media_health: dict[str, Any] | None = None,
+    source_fingerprint: str | None = None,
+    repair: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     duration = float(source.get("duration_seconds") or 0)
     frame_index: list[dict[str, Any]] = []
@@ -630,21 +636,94 @@ def _build_manifest(
     profile = sampling_profile(duration)
     visual = False
 
+    if media_health is None and video_path is not None:
+        try:
+            media_health = inspect_media(
+                video_path,
+                transcript_source=transcript_source,
+                transcript=transcript,
+                mode=mode,
+            )
+        except Exception as exc:
+            warnings.append(
+                f"Media health inspection failed: {exc}"
+            )
+
     if mode == "deep" and video_path is not None:
-        frame_index, scene_index, profile, scene_warnings = _extract_scene_index(
-            video_path,
-            duration,
-            session_dir,
-        )
-        warnings.extend(scene_warnings)
-        visual = bool(frame_index)
+        try:
+            frame_index, scene_index, profile, scene_warnings = _extract_scene_index(
+                video_path,
+                duration,
+                session_dir,
+            )
+            warnings.extend(scene_warnings)
+            visual = bool(frame_index)
+        except Exception as exc:
+            warnings.append(
+                f"Visual index extraction failed; preserving other evidence: {exc}"
+            )
 
     chapters = build_chapters(transcript, duration)
     evidence_chunks = build_evidence_chunks(transcript, duration)
 
+    if media_health is not None:
+        probe = media_health.get("probe", {})
+        audio_state = media_health.get("audio", {})
+        video_state = media_health.get("video", {})
+        completion = completion_guard(
+            mode=mode,
+            duration_seconds=float(
+                probe.get("duration_seconds")
+                or duration
+                or 0.0
+            ),
+            video_present=bool(
+                probe.get("video_present", video_path is not None)
+            ),
+            visual_coverage_ratio=float(
+                video_state.get("visual_coverage_ratio")
+                or 0.0
+            ),
+            audio_present=bool(
+                probe.get("audio_present", False)
+            ),
+            audio_decodable=audio_state.get(
+                "audio_decodable"
+            ),
+            transcript_source=transcript_source,
+            transcript=transcript,
+        )
+        media_health["completion"] = completion
+    else:
+        completion = {
+            "status": (
+                "PARTIAL"
+                if transcript or frame_index
+                else "FAILED"
+            ),
+            "visual_coverage_ratio": None,
+            "transcript_coverage_ratio": None,
+            "audio_present": None,
+            "audio_decodable": None,
+            "speech_transcribed": (
+                transcript_source == "asr"
+                and bool(transcript)
+            ),
+            "transcript_source": transcript_source,
+            "reasons": [
+                "media health coverage was unavailable"
+            ],
+        }
+
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "session_id": sid,
+        "identity": {
+            "session_id": sid,
+            "source_fingerprint": (
+                source_fingerprint or sid
+            ),
+        },
         "mode": mode,
         "created_at_unix": int(time.time()),
         "source": source,
@@ -653,16 +732,39 @@ def _build_manifest(
             "asr_language": asr_language,
             "visual": visual,
             "ocr": "host_vision",
-            "second_pass": "available_on_demand" if visual else False,
+            "second_pass": (
+                "available_on_demand"
+                if visual
+                else False
+            ),
             "audience": bool(source.get("audience")),
+            "audio_present": completion.get(
+                "audio_present"
+            ),
+            "audio_decodable": completion.get(
+                "audio_decodable"
+            ),
+            "speech_transcribed": completion.get(
+                "speech_transcribed"
+            ),
         },
+        "completion": completion,
+        "media_health": media_health,
+        "repair": repair,
         "long_video": {
             "profile": profile,
             "chapter_count": len(chapters),
-            "evidence_chunk_count": len(evidence_chunks),
+            "evidence_chunk_count": len(
+                evidence_chunks
+            ),
             "strategy": (
                 "chaptered_retrieval_and_agentic_rewatch"
-                if profile["tier"] in {"long", "very_long", "ultra_long"}
+                if profile["tier"]
+                in {
+                    "long",
+                    "very_long",
+                    "ultra_long",
+                }
                 else "global_overview_and_agentic_rewatch"
             ),
         },
@@ -673,18 +775,28 @@ def _build_manifest(
         "frame_index": frame_index,
         "runtime": {
             "video_relative_path": (
-                str(video_path.relative_to(session_dir)).replace("\\", "/")
+                str(
+                    video_path.relative_to(
+                        session_dir
+                    )
+                ).replace("\\", "/")
                 if video_path is not None
                 and uploaded_absolute_path is None
-                and video_path.is_relative_to(session_dir)
+                and video_path.is_relative_to(
+                    session_dir
+                )
                 else None
             ),
             "video_absolute_path": (
                 str(uploaded_absolute_path)
-                if uploaded_absolute_path is not None
+                if uploaded_absolute_path
+                is not None
                 else None
             ),
-            "prepare_ms": round((time.monotonic() - started) * 1000),
+            "prepare_ms": round(
+                (time.monotonic() - started)
+                * 1000
+            ),
         },
         "warnings": warnings,
     }
@@ -706,45 +818,76 @@ def prepare_video(
 
     if not force and _manifest_path(sid).is_file():
         existing = load_manifest(sid)
-        if existing.get("schema_version") == SCHEMA_VERSION and (
-            mode == "quick"
-            or existing.get("acquisition", {}).get("visual")
-        ):
-            return _public_prepare_result(existing, cached=True)
+        if existing.get("schema_version") == SCHEMA_VERSION:
+            return _public_prepare_result(
+                existing,
+                cached=True,
+            )
 
     warnings: list[str] = []
     source = (
-        _bilibili_source(value, session_dir, include_audience)
+        _bilibili_source(
+            value,
+            session_dir,
+            include_audience,
+        )
         if platform == "bilibili"
-        else _youtube_source(value, session_dir)
+        else _youtube_source(
+            value,
+            session_dir,
+        )
     )
-    warnings.extend(source.pop("warnings", []))
+    warnings.extend(
+        source.pop("warnings", [])
+    )
 
-    transcript = source.pop("transcript_segments", [])
-    transcript_source = source.pop("transcript_source", "none")
+    transcript = source.pop(
+        "transcript_segments",
+        [],
+    )
+    transcript_source = source.pop(
+        "transcript_source",
+        "none",
+    )
     asr_language = None
 
     if not transcript:
-        audio = _download_media(
-            source["canonical_url"],
-            session_dir,
-            "audio",
-        )
-        transcript, asr_language, asr_warnings = _transcribe(audio)
-        warnings.extend(asr_warnings)
-        transcript_source = "asr"
-        warnings.append(
-            "ASR may be wrong on names, numbers, jargon, accents, "
-            "or overlapping speech."
-        )
+        try:
+            audio = _download_media(
+                source["canonical_url"],
+                session_dir,
+                "audio",
+            )
+            (
+                transcript,
+                asr_language,
+                asr_warnings,
+            ) = _transcribe(audio)
+            warnings.extend(asr_warnings)
+            transcript_source = "asr"
+            warnings.append(
+                "ASR may be wrong on names, numbers, jargon, "
+                "accents, or overlapping speech."
+            )
+        except Exception as exc:
+            transcript = []
+            transcript_source = "none"
+            warnings.append(
+                f"ASR unavailable/failed; continuing with visual evidence: {exc}"
+            )
 
     video_path = None
     if mode == "deep":
-        video_path = _download_media(
-            source["canonical_url"],
-            session_dir,
-            "video",
-        )
+        try:
+            video_path = _download_media(
+                source["canonical_url"],
+                session_dir,
+                "video",
+            )
+        except Exception as exc:
+            warnings.append(
+                f"Video acquisition failed; preserving transcript evidence: {exc}"
+            )
 
     manifest = _build_manifest(
         sid=sid,
@@ -757,8 +900,19 @@ def prepare_video(
         session_dir=session_dir,
         started=started,
         warnings=warnings,
+        source_fingerprint=_session_id(
+            "canonical:"
+            + str(
+                source.get("canonical_id")
+                or source.get("canonical_url")
+                or value
+            )
+        ),
     )
-    return _public_prepare_result(manifest, cached=False)
+    return _public_prepare_result(
+        manifest,
+        cached=False,
+    )
 
 
 def prepare_uploaded_video(
@@ -769,25 +923,112 @@ def prepare_uploaded_video(
     """Prepare a host-materialized/uploaded local video from a restricted inbox."""
     started = time.monotonic()
     path = _validated_upload_path(file_path)
-    fingerprint = _fingerprint_local_file(path)
-    sid = _session_id("upload:" + fingerprint)
+    fingerprint = _fingerprint_local_file(
+        path
+    )
+    sid = _session_id(
+        "upload:" + fingerprint
+    )
     session_dir = _session_dir(sid)
 
     if not force and _manifest_path(sid).is_file():
         existing = load_manifest(sid)
-        absolute = existing.get("runtime", {}).get("video_absolute_path")
-        if (
-            existing.get("schema_version") == SCHEMA_VERSION
-            and absolute
-            and Path(absolute).is_file()
-            and (
-                mode == "quick"
-                or existing.get("acquisition", {}).get("visual")
+        if existing.get(
+            "schema_version"
+        ) == SCHEMA_VERSION:
+            return _public_prepare_result(
+                existing,
+                cached=True,
             )
-        ):
-            return _public_prepare_result(existing, cached=True)
 
-    probe = _probe_video(path)
+    warnings: list[str] = []
+    original_health: dict[str, Any] | None = None
+    repair: dict[str, Any] | None = None
+    analysis_path = path
+
+    try:
+        original_health = inspect_media(
+            path,
+            transcript_source="none",
+            transcript=[],
+            mode=mode,
+        )
+        probe = original_health["probe"]
+    except Exception as exc:
+        probe = _probe_video(path)
+        warnings.append(
+            f"Full media health inspection failed: {exc}"
+        )
+
+    if (
+        mode == "deep"
+        and original_health is not None
+        and float(
+            original_health.get(
+                "video",
+                {},
+            ).get(
+                "visual_coverage_ratio",
+                0.0,
+            )
+        ) < 0.98
+    ):
+        try:
+            repair = attempt_repair(
+                path,
+                session_dir / "repair",
+                original_health=original_health,
+            )
+            if repair.get("adopted"):
+                analysis_path = Path(
+                    str(
+                        repair[
+                            "repaired_path"
+                        ]
+                    )
+                )
+                improved = float(
+                    repair.get(
+                        "best_visual_coverage_ratio",
+                        0.0,
+                    )
+                )
+                video_state = dict(
+                    original_health.get(
+                        "video",
+                        {},
+                    )
+                )
+                video_state[
+                    "visual_coverage_ratio"
+                ] = improved
+                video_state[
+                    "decoded_until_seconds"
+                ] = round(
+                    improved
+                    * float(
+                        probe.get(
+                            "duration_seconds"
+                        )
+                        or 0.0
+                    ),
+                    6,
+                )
+                video_state[
+                    "video_decodable"
+                ] = improved >= 0.98
+                original_health[
+                    "video"
+                ] = video_state
+            else:
+                warnings.append(
+                    "Repair attempts did not materially improve the original visual timeline."
+                )
+        except Exception as exc:
+            warnings.append(
+                f"Repair attempt failed; preserving partial original evidence: {exc}"
+            )
+
     source = {
         "platform": "upload",
         "input_kind": "uploaded_file",
@@ -795,36 +1036,75 @@ def prepare_uploaded_video(
         "canonical_url": None,
         "title": path.name,
         "author": None,
-        "duration_seconds": float(probe["duration_seconds"]),
+        "duration_seconds": float(
+            probe.get(
+                "duration_seconds",
+                0.0,
+            )
+        ),
         "part": None,
         "file": probe,
     }
 
-    transcript, asr_language, asr_warnings = _transcribe(path)
-    warnings = list(asr_warnings)
+    transcript: list[dict[str, Any]] = []
+    asr_language = None
+    transcript_source = "none"
+    try:
+        (
+            transcript,
+            asr_language,
+            asr_warnings,
+        ) = _transcribe(path)
+        warnings.extend(asr_warnings)
+        transcript_source = "asr"
+        warnings.append(
+            "Uploaded-file ASR may contain errors in names, "
+            "numbers, jargon, accents, or overlapping speech."
+        )
+    except Exception as exc:
+        warnings.append(
+            f"Audio is not the same as transcription: ASR unavailable/failed, "
+            f"while media health is preserved separately. Detail: {exc}"
+        )
+
     warnings.append(
-        "Uploaded-file v0.2 uses local ASR unless the host separately provides "
-        "a trusted embedded/sidecar subtitle track."
-    )
-    warnings.append(
-        "The cached session references the allowed local upload path; if the host "
-        "deletes that file, later visual rewatch will require re-upload/materialization."
+        "The cached session references the allowed local upload path; "
+        "if the host deletes that file, later visual rewatch may require "
+        "re-upload/materialization."
     )
 
+    use_absolute = (
+        mode == "deep"
+        and analysis_path == path
+    )
     manifest = _build_manifest(
         sid=sid,
         mode=mode,
         source=source,
         transcript=transcript,
-        transcript_source="asr",
+        transcript_source=transcript_source,
         asr_language=asr_language,
-        video_path=path if mode == "deep" else None,
+        video_path=(
+            analysis_path
+            if mode == "deep"
+            else None
+        ),
         session_dir=session_dir,
         started=started,
         warnings=warnings,
-        uploaded_absolute_path=path if mode == "deep" else None,
+        uploaded_absolute_path=(
+            path
+            if use_absolute
+            else None
+        ),
+        media_health=original_health,
+        source_fingerprint=fingerprint,
+        repair=repair,
     )
-    return _public_prepare_result(manifest, cached=False)
+    return _public_prepare_result(
+        manifest,
+        cached=False,
+    )
 
 
 def _public_prepare_result(
@@ -832,73 +1112,212 @@ def _public_prepare_result(
     cached: bool,
 ) -> dict[str, Any]:
     source = manifest["source"]
-    long_video = manifest.get("long_video", {})
+    long_video = manifest.get(
+        "long_video",
+        {},
+    )
+    completion = manifest.get(
+        "completion",
+        {},
+    )
+    status = str(
+        completion.get(
+            "status",
+            "PARTIAL",
+        )
+    ).lower()
     return {
-        "status": "complete",
+        "status": status,
         "cached": cached,
         "session_id": manifest["session_id"],
+        "source_fingerprint": (
+            manifest.get(
+                "identity",
+                {},
+            ).get(
+                "source_fingerprint"
+            )
+        ),
+        "completion": completion,
         "platform": source.get("platform"),
-        "input_kind": source.get("input_kind"),
-        "canonical_id": source.get("canonical_id"),
-        "canonical_url": source.get("canonical_url"),
+        "input_kind": source.get(
+            "input_kind"
+        ),
+        "canonical_id": source.get(
+            "canonical_id"
+        ),
+        "canonical_url": source.get(
+            "canonical_url"
+        ),
         "title": source.get("title"),
         "author": source.get("author"),
-        "duration_seconds": source.get("duration_seconds"),
+        "duration_seconds": source.get(
+            "duration_seconds"
+        ),
         "part": source.get("part"),
-        "transcript_source": manifest.get("acquisition", {}).get(
-            "transcript_source"
+        "transcript_source": (
+            manifest.get(
+                "acquisition",
+                {},
+            ).get(
+                "transcript_source"
+            )
         ),
-        "transcript_segments": len(manifest.get("transcript", [])),
+        "audio_present": completion.get(
+            "audio_present"
+        ),
+        "audio_decodable": completion.get(
+            "audio_decodable"
+        ),
+        "speech_transcribed": completion.get(
+            "speech_transcribed"
+        ),
+        "transcript_segments": len(
+            manifest.get(
+                "transcript",
+                [],
+            )
+        ),
+        "visual_coverage_ratio": completion.get(
+            "visual_coverage_ratio"
+        ),
+        "transcript_coverage_ratio": completion.get(
+            "transcript_coverage_ratio"
+        ),
         "visual_ready": bool(
-            manifest.get("acquisition", {}).get("visual")
+            manifest.get(
+                "acquisition",
+                {},
+            ).get(
+                "visual"
+            )
         ),
-        "frame_count": len(manifest.get("frame_index", [])),
-        "chapter_count": long_video.get("chapter_count", 0),
-        "evidence_chunk_count": long_video.get(
-            "evidence_chunk_count",
+        "frame_count": len(
+            manifest.get(
+                "frame_index",
+                [],
+            )
+        ),
+        "chapter_count": long_video.get(
+            "chapter_count",
             0,
         ),
-        "long_video_tier": long_video.get("profile", {}).get("tier"),
-        "second_pass": manifest.get("acquisition", {}).get(
-            "second_pass"
+        "evidence_chunk_count": (
+            long_video.get(
+                "evidence_chunk_count",
+                0,
+            )
         ),
-        "warnings": manifest.get("warnings", []),
-        "prepare_ms": manifest.get("runtime", {}).get("prepare_ms"),
+        "long_video_tier": (
+            long_video.get(
+                "profile",
+                {},
+            ).get(
+                "tier"
+            )
+        ),
+        "second_pass": (
+            manifest.get(
+                "acquisition",
+                {},
+            ).get(
+                "second_pass"
+            )
+        ),
+        "repair": manifest.get("repair"),
+        "warnings": manifest.get(
+            "warnings",
+            [],
+        ),
+        "prepare_ms": (
+            manifest.get(
+                "runtime",
+                {},
+            ).get(
+                "prepare_ms"
+            )
+        ),
     }
 
 
 def public_manifest(session_id: str) -> dict[str, Any]:
     manifest = load_manifest(session_id)
     source = manifest["source"]
-    transcript = manifest.get("transcript", [])
+    transcript = manifest.get(
+        "transcript",
+        [],
+    )
     return {
-        "schema_version": manifest.get("schema_version"),
+        "schema_version": manifest.get(
+            "schema_version"
+        ),
         "session_id": session_id,
+        "identity": manifest.get("identity"),
         "mode": manifest.get("mode"),
         "source": {
             "platform": source.get("platform"),
-            "input_kind": source.get("input_kind"),
-            "canonical_id": source.get("canonical_id"),
-            "canonical_url": source.get("canonical_url"),
+            "input_kind": source.get(
+                "input_kind"
+            ),
+            "canonical_id": source.get(
+                "canonical_id"
+            ),
+            "canonical_url": source.get(
+                "canonical_url"
+            ),
             "title": source.get("title"),
             "author": source.get("author"),
-            "duration_seconds": source.get("duration_seconds"),
+            "duration_seconds": source.get(
+                "duration_seconds"
+            ),
             "part": source.get("part"),
             "file": source.get("file"),
         },
-        "acquisition": manifest.get("acquisition"),
-        "long_video": manifest.get("long_video"),
-        "transcript_segments": len(transcript),
+        "acquisition": manifest.get(
+            "acquisition"
+        ),
+        "completion": manifest.get(
+            "completion"
+        ),
+        "media_health": manifest.get(
+            "media_health"
+        ),
+        "repair": manifest.get("repair"),
+        "long_video": manifest.get(
+            "long_video"
+        ),
+        "transcript_segments": len(
+            transcript
+        ),
         "transcript_characters": sum(
-            len(x.get("text", "")) for x in transcript
+            len(x.get("text", ""))
+            for x in transcript
         ),
-        "chapter_count": len(manifest.get("chapters", [])),
+        "chapter_count": len(
+            manifest.get("chapters", [])
+        ),
         "evidence_chunk_count": len(
-            manifest.get("evidence_chunks", [])
+            manifest.get(
+                "evidence_chunks",
+                [],
+            )
         ),
-        "scene_count": len(manifest.get("scene_index", [])),
-        "frame_count": len(manifest.get("frame_index", [])),
-        "warnings": manifest.get("warnings", []),
+        "scene_count": len(
+            manifest.get(
+                "scene_index",
+                [],
+            )
+        ),
+        "frame_count": len(
+            manifest.get(
+                "frame_index",
+                [],
+            )
+        ),
+        "warnings": manifest.get(
+            "warnings",
+            [],
+        ),
     }
 
 
