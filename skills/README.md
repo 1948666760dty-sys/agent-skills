@@ -18,20 +18,19 @@
 ## Video Understanding / 视频理解
 
 - Canonical path: `skills/video-understanding/SKILL.md`
-- Current version: `0.1.1`
+- Current version: `0.2.0`
 - Status: `release-candidate`
-- Activation: semantic auto-trigger; a bare supported Bilibili or YouTube URL is sufficient.
-- Platforms v0.1: Bilibili/B站 (`bilibili.com`, `b23.tv`, BV/av/ep/ss) and YouTube (`youtube.com`, `youtu.be`, Shorts).
-- Default mode: **Deep / quality-first**. Quick is used only when the user explicitly requests a quick/subtitle-only summary.
-- Deep pipeline: metadata → human/platform subtitles → local ASR fallback → scene-aware keyframes → OCR → audio/visual alignment → first-pass synthesis → agentic rewatch of important intervals → evidence-aware final report.
-- User experience contract: paste one URL and receive the result in the same chat; internal job IDs, polling, downloader commands, and frame extraction must not be pushed onto the user.
-- Free-first: prefer platform captions, yt-dlp/platform adapters, FFmpeg/OpenCV, local faster-whisper and local OCR; do not silently add paid API usage.
-- Runtime: reference executable code now lives at `skills/video-understanding/runtime/`; it exposes start/wait/manifest/transcript/frame-inspection MCP tools. It is still release-candidate until real Windows + ChatGPT smoke tests pass.
+- Activation: current-chat video attachment or supported Bilibili/YouTube URL.
+- Core direction: **Upload-First + Long-Video Agentic Understanding**.
+- Inputs: video attachment when the host can access/materialize it; Bilibili/B站; YouTube.
+- Long-video tiers: short / standard / long / very_long / ultra_long. 1–3 hour videos use chaptered retrieval and bounded evidence windows instead of one-shot full-context loading.
+- Runtime: `skills/video-understanding/runtime/`.
+- Runtime v0.2: faster-whisper >=1.2.1, PySceneDetect >=0.7.1 AdaptiveDetector, adaptive overview frames, structural chapters, overlapping Evidence Memory, local lexical retrieval, dense rewatch, MCP ImageContent.
+- MCP tools: URL start, uploaded-file start, wait, manifest, transcript, chapters, search memory, inspect frames.
+- Upload security: MCP local-file reads are restricted to `~/.video-understanding/inbox` or explicit `VIDEO_UPLOAD_ROOTS`; arbitrary local path access is rejected.
 - Runtime contract: `skills/video-understanding/references/runtime-contract.md`.
-- Runtime implementation: `skills/video-understanding/runtime/` (Python MCP + yt-dlp + faster-whisper + OpenCV + vendored BiliBiliVideoParser MIT extractor).
-- Regression cases: `skills/video-understanding/evals/evals.json` (25 cases).
-- OpenAI metadata: `skills/video-understanding/agents/openai.yaml`.
-- Stable gate: at least 3 real Bilibili + 3 real YouTube end-to-end smoke tests, including long video, missing-human-subtitle, visual-heavy and follow-up/reuse scenarios.
+- Regression cases: `skills/video-understanding/evals/evals.json` (38 cases).
+- Stable gate: real short upload + 30–90m + 90–180m tests, Bilibili/YouTube, ASR fallback, scene success/fallback, memory retrieval, rewatch and upload-path security.
 
 ## 不着急 / No-Rush
 
