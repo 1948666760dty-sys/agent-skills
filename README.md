@@ -7,7 +7,7 @@
 | 分类 | Skill | 当前版本 | 用途 |
 | --- | --- | --- | --- |
 | 互动叙事 | [复杂酒馆 / Complex Tavern](skills/complex-tavern/SKILL.md) | 3.6.6 | 纯文字互动故事、持续世界与长篇小说 |
-| 互动叙事 | [Qwen Romance / 千问成人言情扩展](skills/qwen-romance/SKILL.md) | 0.1.0 RC | 仅本地 Qwen 的恋爱、成熟关系与长篇关系连续性扩展；GPT/OpenAI 硬禁用 |
+| 互动叙事 | [Qwen Romance / 千问成人言情扩展](skills/qwen-romance/SKILL.md) | 0.2.0 RC | 仅本地 Qwen 的恋爱、成熟关系与自适应长输出扩展；GPT/OpenAI 硬禁用 |
 | 工作流程 | [不着急 / No-Rush](skills/no-rush/SKILL.md) | 2.2.0 | 理解需求、跟踪任务与交付检查 |
 | 饮食记录 | [减脂教练 / Cut Coach](skills/cut-coach/SKILL.md) | 1.1.0 | 饮食记录、营养估算和阶段报告 |
 

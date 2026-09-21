@@ -1,6 +1,6 @@
 {
   "skill": "qwen-romance",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "release-candidate",
   "purpose": "Regression scenarios for the Qwen-only fail-closed model gate, GPT isolation, intensity separation, adult gates, pacing, continuity, and Complex Tavern extension behavior. These scenarios define expected behavior; a real local-Qwen smoke test is still required before claiming runtime compatibility.",
   "cases": [
