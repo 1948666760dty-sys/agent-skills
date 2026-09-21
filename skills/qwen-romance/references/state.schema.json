@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/1948666760dty-sys/agent-skills/skills/qwen-romance/references/state.schema.json",
+  "title": "Qwen Romance State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["gate", "romance"],
+  "properties": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local", "model_family", "enabled", "active"],
+      "properties": {
+        "local": {"type": "boolean"},
+        "provider": {"type": "string"},
+        "runtime": {"type": "string"},
+        "model_id": {"type": "string"},
+        "model_family": {"type": "string", "enum": ["qwen", "non_qwen", "unknown"]},
+        "enabled": {"type": "boolean"},
+        "active": {"type": "boolean"}
+      }
+    },
+    "romance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_intensity", "max_intensity", "pacing", "story_weight"],
+      "properties": {
+        "current_intensity": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
+        "max_intensity": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
+        "pacing": {"type": "string", "enum": ["very_slow", "slow", "natural", "fast", "user_driven"]},
+        "story_weight": {"type": "number", "minimum": 0, "maximum": 1},
+        "max_major_routes": {"type": "integer", "minimum": 0, "maximum": 10}
+      }
+    },
+    "adult_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "age_verified": {"type": "boolean"},
+        "age_band": {"type": "string", "enum": ["under_14", "14_17", "18_plus", "unknown"]},
+        "consent_state": {"type": "string", "enum": ["clear", "uncertain", "withdrawn", "not_applicable"]},
+        "capacity_state": {"type": "string", "enum": ["normal", "uncertain", "incapable", "not_applicable"]},
+        "adult_layer_active": {"type": "boolean"}
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["a", "b", "stage"],
+        "properties": {
+          "a": {"type": "string"},
+          "b": {"type": "string"},
+          "stage": {"type": "string"},
+          "attraction": {"type": "number", "minimum": 0, "maximum": 100},
+          "trust": {"type": "number", "minimum": 0, "maximum": 100},
+          "emotional_closeness": {"type": "number", "minimum": 0, "maximum": 100},
+          "physical_comfort": {"type": "number", "minimum": 0, "maximum": 100},
+          "romance_eligible": {"type": "boolean"},
+          "boundaries": {"type": "array", "items": {"type": "string"}},
+          "important_memories": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"gate": {"properties": {"active": {"const": true}}}}},
+      "then": {"properties": {"gate": {"properties": {"local": {"const": true}, "model_family": {"const": "qwen"}, "enabled": {"const": true}}}}}
+    }
+  ]
+}
