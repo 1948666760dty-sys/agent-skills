@@ -1,0 +1,22 @@
+{
+  "skill": "qwen-romance",
+  "version": "0.2.0",
+  "purpose": "Long Output Controller regression contract. These are rule-level cases; they do not replace a real local-Qwen smoke test.",
+  "cases": [
+    {"name":"interactive_long_under_min_open_scene","context":{"gate":"qwen_active","mode":"long","first_chunk_chars":1200,"scene":"open"},"expect":["auto_continue"]},
+    {"name":"novel_very_long_single_call_limit","context":{"gate":"qwen_active","mode":"very_long","chunk":1,"finish":"length","scene":"open"},"expect":["continue_chunk_2"]},
+    {"name":"seam_overlap_removed","context":{"gate":"qwen_active","chunk_2_overlap":true},"expect":["overlap_removed"]},
+    {"name":"seam_summary_restart_rejected","context":{"gate":"qwen_active","chunk_2":"summary_restart"},"expect":["regenerate_seam"]},
+    {"name":"r4_max_meal_not_forced_adult","context":{"gate":"qwen_active","max":"R4","scene":"meal","adult_request":false},"expect":["long_output_allowed","adult_layer_not_forced"]},
+    {"name":"gpt_controller_not_loaded","context":{"local":false,"provider":"openai","family":"gpt","enabled":true},"expect":["controller_not_loaded","loaded_modules_zero"]},
+    {"name":"local_qwen_controller_available","context":{"local":true,"provider":"local","family":"qwen","enabled":true},"expect":["controller_available"]},
+    {"name":"unknown_model_fail_closed","context":{"local":true,"provider":"local","family":"unknown","enabled":true},"expect":["controller_not_loaded","gate_inactive"]},
+    {"name":"paragraph_style_lock_preserved","context":{"gate":"qwen_active","chunk_1_style":"long_paragraph","chunk_2_style":"fragmented"},"expect":["regenerate_style_drift"]},
+    {"name":"relationship_event_committed_once","context":{"gate":"qwen_active","event_id":"first_confession_001","chunks":3},"expect":["one_commit"]},
+    {"name":"explicit_short_request_overrides_default","context":{"gate":"qwen_active","default":"long","user":"这次写短点"},"expect":["mode_short"]},
+    {"name":"explicit_long_request_promotes_task","context":{"gate":"qwen_active","default":"normal","user":"一次多写一点"},"expect":["mode_long"]},
+    {"name":"dynamic_budget_preserves_context_reserve","context":{"gate":"qwen_active","context_window":16384,"prompt_tokens":15000,"reserve_ratio":0.15},"expect":["no_overflow","budget_clamped"]},
+    {"name":"natural_stop_below_soft_min_allowed","context":{"gate":"qwen_active","mode":"long","story_chars":500,"scene":"naturally_complete"},"expect":["natural_stop","no_filler"]},
+    {"name":"open_scene_below_soft_min_continues","context":{"gate":"qwen_active","mode":"long","story_chars":500,"scene":"open"},"expect":["do_not_stop_early"]}
+  ]
+}

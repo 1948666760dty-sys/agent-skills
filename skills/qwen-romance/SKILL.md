@@ -2,14 +2,14 @@
 name: qwen-romance
 display_name: Qwen Romance / 千问成人言情扩展
 description: 仅供本地 Qwen/千问系列模型加载的恋爱、成熟成人关系与长篇关系连续性 Skill。通过 fail-closed Model Gate 限定为 local=true 且 family=qwen；GPT/OpenAI 与其他非 Qwen 模型必须完全禁用。适用于独立言情、复杂酒馆互动模式与小说模式；重点管理关系阶段、亲密推进、人物一致性、关系记忆和长篇续写，不把“允许较高尺度”误当成“自动成人化”。
-version: 0.1.0
+version: 0.2.0
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/qwen-romance/SKILL.md
 activation: qwen-local-only-fail-closed
 ---
 
-# Qwen Romance v0.1.0
+# Qwen Romance v0.2.0
 
 ## 0. 定位
 
@@ -968,13 +968,108 @@ qwen_romance:
   audit:
     enabled: true
     interval_chapters: 10
+
+  output:
+    enabled: true
+
+    interactive:
+      mode: long
+      soft_min_chars: 2500
+      preferred_chars: 4000
+      hard_target_ceiling_chars: 6500
+
+    autonomous_novel:
+      mode: very_long
+      soft_min_chars: 5000
+      preferred_chars: 8000
+      hard_target_ceiling_chars: 12000
+
+    very_long:
+      soft_min_chars: 7000
+      preferred_chars: 10000
+      hard_target_ceiling_chars: 16000
+
+    continuation:
+      enabled: true
+      max_internal_chunks: 4
+      seamless_merge: true
+      overlap_detection: true
+      premature_closure_guard: true
+
+    token_budget:
+      dynamic: true
+      safety_reserve_ratio: 0.15
 ```
 
 如果 Model Gate 不通过，上述所有配置都不生效。
 
 ---
 
-## 24. Debug
+## 24. Long Output Controller（仅本地 Qwen）
+
+0.2.0 增加 Long Output Controller，用于把一次用户可见回复与模型内部调用明确分开：
+
+```text
+Prompt Composer → Qwen Generation → Long Output Controller
+  → Continuation Decision → (必要时继续) → Seam Audit → Visible Reply
+```
+
+它只允许在 Model Gate 已经确认 `local=true AND family=qwen` 时加载。GPT/OpenAI、其他模型和未知模型的加载路径必须保持 `loaded_modules=0`，不得注入本节规则。
+
+### 24.1 长度档位与用户指令
+
+面向用户的长度使用中文字符数；底层预算必须使用运行时实际 tokenizer，或明确标注为近似值，不能假设“一字一 token”。支持 `short`、`normal`、`long`、`very_long` 四档。未指定时，互动模式使用 `long`，自主小说模式使用 `very_long`。
+
+用户说“写长一点”“多写一点”“这次写长”“一次多生成”“继续多写一点”时，仅提升当前任务一档（`normal→long`、`long→very_long`），不得改变全局默认。`/length short|normal|long|very_long` 只改变当前可见回复。
+
+`soft_min_chars` 是场景仍有足够未完成叙事时的软下限，`preferred_chars` 是正常目标，`hard_target_ceiling_chars` 是一般单次可见回复的上限。普通问答或天然结束的场景可以低于软下限，不得为了凑数灌水。
+
+### 24.2 Chunk 与 Visible Reply
+
+一次用户操作可以执行 1～4 个内部 Chunk，最终合并成一个 Visible Reply。Chunk 1/2/3 不得因为 API 调用结束而擅自总结或制造章节结尾；只有真实到达 Scene Completion、用户要求暂停、合理上限或明确 Decision Gate 才允许停止。未自然完成的技术断点不能伪装成故事大结局。
+
+每次自动续接必须携带当前场景状态、角色状态、关系状态、开放行动、最近 1～3 段以及 `narrative_layout_profile`，并使用以下语义约束：
+
+```text
+CONTINUE DIRECTLY FROM PREVIOUS TEXT.
+Do not summarize or restart the scene. Do not repeat previous paragraphs.
+Preserve POV, tense, character state, romance state and paragraph style.
+Do not prematurely conclude the scene merely because this is another call.
+```
+
+关系变化先记录为 `temporary_delta`，全部 Chunk 通过 Seam Audit 后再一次性提交；带有稳定 `event_id` 的重大关系事件只能提交一次。
+
+### 24.3 Continuation Decision 与提前收尾防护
+
+长度不足且场景仍有未完成事件、刚出现剧情钩子、句子/动作未闭合，或命中“这一章就此”“至于未来”“一切仍在继续”等人为收尾语言时，优先继续或重写末尾。长度不能单独决定停止。
+
+自然停止至少满足下列一项：场景自然完成、到达明确 Decision Gate、用户明确暂停、自然章节结点，或达到当前 Visible Reply 的合理上限。`very_long` 允许在上下文安全时使用 2～4 个内部 Chunk，但不保证无限生成。
+
+### 24.4 动态 Token Budget Manager
+
+每个 Chunk 生成前计算：
+
+```text
+available = context_window - prompt_tokens - safety_reserve
+max_new_tokens = min(requested_profile_tokens, available)
+safety_reserve = max(min_reserve, context_window * safety_reserve_ratio)
+```
+
+若预算不足，先压缩低重要度 Working Context；不得删除 Canon、重大关系事件、核心角色状态、Hard Exclusions、Age Gate、Romance State 或重要伏笔。若仍不足，应返回可见的容量错误或降低当前档位，不能越过上下文限制硬发请求。
+
+不同运行时的参数名必须通过适配器探测或现有接口契约决定：Ollama 常见 `num_predict`，llama.cpp 常见 `n_predict`，LM Studio 的 OpenAI-compatible 接口常见 `max_tokens`；这些只是适配提示，不能凭记忆覆盖实际运行时支持的字段。
+
+### 24.5 Seam Audit 与去重
+
+合并前检查 Chunk 边界的 300～800 字符重叠，删除重复句/段；拒绝重新介绍人物、重复上一动作、总结前文、POV/时态漂移、时间倒退、关系状态倒退和段落风格突变。重复或断裂无法修复时，应重生成当前 Chunk，而不是静默交付破碎正文。只统计有效正文，不统计审计、摘要、状态 JSON 或内部分析。
+
+### 24.6 运行时接入边界
+
+本仓库是 Skill 规范仓库，不包含实际 Qwen 推理 Runtime。`references/long-output-contract.md` 提供可移植契约和伪代码；实际接入必须在本地 Qwen 项目的 Prompt Composer/Generation Adapter 中完成，并由该项目提供 tokenizer、context window、停止原因和关系状态提交接口。本次规则更新本身不声称已经运行本地 Qwen。
+
+---
+
+## 25. Debug
 
 开发模式可输出内部诊断：
 
@@ -1004,7 +1099,7 @@ loaded_modules=0
 
 ---
 
-## 25. Audit
+## 26. Audit
 
 建议每 10 章或明显关系转折后检查：
 
@@ -1025,7 +1120,7 @@ Audit 不写进小说正文。
 
 ---
 
-## 26. Fail-Closed Rules
+## 27. Fail-Closed Rules
 
 以下任一情况发生，优先降低能力而不是猜：
 
@@ -1047,7 +1142,7 @@ relationship continuity uncertain
 
 ---
 
-## 27. 禁止行为
+## 28. 禁止行为
 
 不得：
 - 作用于 GPT/OpenAI；
@@ -1068,7 +1163,7 @@ relationship continuity uncertain
 
 ---
 
-## 28. 验收标准
+## 29. 验收标准
 
 正式启用至少满足：
 
@@ -1091,13 +1186,16 @@ relationship continuity uncertain
 17. 关系线长期连续；
 18. Context 压缩不删除高重要度事件；
 19. Complex Tavern GPT 路径无行为变化；
-20. 真实 Qwen Runtime 上线前完成至少一次 Ollama/llama.cpp/LM Studio 中实际使用环境的 smoke test。
+20. Long Output Controller 只在本地 Qwen 上加载；GPT/OpenAI 和未知模型 `loaded_modules=0`；
+21. `short` / `normal` / `long` / `very_long` 档位、动态 token reserve、最大内部 Chunk 数和 Seam Audit 均可配置；
+22. 场景未完成且低于软下限时不得提前收尾，天然结束时不得用填充凑长度；
+23. 真实 Qwen Runtime 上线前完成至少一次 Ollama/llama.cpp/LM Studio 中实际使用环境的 smoke test。
 
 ---
 
-## 29. 发布口径
+## 30. 发布口径
 
-当前版本：`0.1.0 release-candidate`
+当前版本：`0.2.0 release-candidate`
 
 原因：
 - 规则、Model Gate、状态结构和回归用例已经定义；
@@ -1107,5 +1205,7 @@ relationship continuity uncertain
 完成真实本地 Qwen smoke test 后，若核心用例通过，可升级为 `1.0.0 stable-default`。
 
 ### Changelog
+
+- **0.2.0（2026-09-21）**：新增 Qwen-only Long Output Controller 规范、Adaptive Length、Multi-Chunk Visible Reply、动态 Token Budget、提前收尾防护、Seam/Overlap Audit、段落风格锁与关系事件去重契约；本仓库仍不包含真实推理 Runtime，未将规范验证冒充为本地 Qwen smoke test。
 
 - **0.1.0（2026-09-21）**：首个 Qwen-only Romance Extension 候选版。新增 fail-closed Model Gate、GPT 硬隔离、关系状态、max/current 双层尺度、成年/同意/能力 Gate、人物一致性、慢热控制、Romance Memory Capsule、长篇关系弧、Complex Tavern 零侵入扩展协议与回归验收要求。

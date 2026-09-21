@@ -17,7 +17,7 @@
 ## Qwen Romance / 千问成人言情扩展
 
 - Canonical path: `skills/qwen-romance/SKILL.md`
-- Current version: `0.1.0`
+- Current version: `0.2.0`
 - Status: `release-candidate`
 - Activation: **仅当 `local=true AND model_family=qwen AND enabled=true` 时允许启用；其他情况 fail closed。**
 - GPT/OpenAI isolation: GPT、OpenAI、GPT-OSS、其他非 Qwen 模型与未知模型身份均必须保持 INACTIVE；GPT 路径不得注入本 Skill 正文或状态，`loaded_modules=0`。
@@ -26,10 +26,12 @@
 - Adult gates: R3/R4 需要明确 18+、clear consent 与正常 capacity；年龄未知或状态不确定时不升级。
 - Complex Tavern integration: 零侵入扩展；先加载 Complex Tavern，再由宿主 Model Gate 决定是否附加 Qwen Romance。GPT 路径保持原行为。
 - Runtime contract: `skills/qwen-romance/references/runtime-contract.md`.
+- Long-output contract: `skills/qwen-romance/references/long-output-contract.md`.
+- Long-output behavior: adaptive `short` / `normal` / `long` / `very_long`, multi-Chunk Visible Reply, automatic continuation, dynamic token budget, seam/overlap audit, and premature-closure guard. Defaults apply only after the local-Qwen Model Gate.
 - State schema: `skills/qwen-romance/references/state.schema.json`.
-- Regression cases: `skills/qwen-romance/evals/evals.json`（25 个场景）。
+- Regression cases: `skills/qwen-romance/evals/evals.json`（25 个基础场景）与 `skills/qwen-romance/evals/long-output-cases.json`（15 个长输出场景），合计 40 个。
 - Static checker: `python skills/qwen-romance/evals/static_check.py`.
-- Release note: 当前为 RC；规则与静态检查已建立，但在真实本地 Qwen Runtime 完成 smoke test 前不得声称已经验证实际模型兼容性。
+- Release note: 当前为 0.2.0 RC；规则与静态检查已建立，但在真实本地 Qwen Runtime 完成 smoke test 前不得声称已经验证实际模型兼容性。
 
 ## 不着急 / No-Rush
 
