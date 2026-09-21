@@ -14,6 +14,24 @@
 - Source of truth: GitHub copy above. Library/local copies are backups only.
 - Runtime: pure text; image generation is disabled by default.
 
+
+## Video Understanding / 视频理解
+
+- Canonical path: `skills/video-understanding/SKILL.md`
+- Current version: `0.1.0`
+- Status: `release-candidate`
+- Activation: semantic auto-trigger; a bare supported Bilibili or YouTube URL is sufficient.
+- Platforms v0.1: Bilibili/B站 (`bilibili.com`, `b23.tv`, BV/av/ep/ss) and YouTube (`youtube.com`, `youtu.be`, Shorts).
+- Default mode: **Deep / quality-first**. Quick is used only when the user explicitly requests a quick/subtitle-only summary.
+- Deep pipeline: metadata → human/platform subtitles → local ASR fallback → scene-aware keyframes → OCR → audio/visual alignment → first-pass synthesis → agentic rewatch of important intervals → evidence-aware final report.
+- User experience contract: paste one URL and receive the result in the same chat; internal job IDs, polling, downloader commands, and frame extraction must not be pushed onto the user.
+- Free-first: prefer platform captions, yt-dlp/platform adapters, FFmpeg/OpenCV, local faster-whisper and local OCR; do not silently add paid API usage.
+- Runtime boundary: this repository currently defines the Skill and runtime contract, not a completed executable MCP backend. Do not claim a video was actually watched until a connected Runtime reports success.
+- Runtime contract: `skills/video-understanding/references/runtime-contract.md`.
+- Regression cases: `skills/video-understanding/evals/evals.json` (25 cases).
+- OpenAI metadata: `skills/video-understanding/agents/openai.yaml`.
+- Stable gate: at least 3 real Bilibili + 3 real YouTube end-to-end smoke tests, including long video, missing-human-subtitle, visual-heavy and follow-up/reuse scenarios.
+
 ## Qwen Romance / 千问成人言情扩展
 
 - Canonical path: `skills/qwen-romance/SKILL.md`
