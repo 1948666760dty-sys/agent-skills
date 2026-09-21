@@ -21,7 +21,7 @@ Optional local MCP check in another terminal:
 
 `.venv\Scripts\python.exe scripts\mcp_smoke.py`
 
-The smoke test should list five tools.
+The smoke test should list eight tools.
 
 ## 2. Create an OpenAI-hosted tunnel
 
@@ -66,11 +66,14 @@ In ChatGPT developer-mode app creation:
 1. Choose Tunnel as the connection type.
 2. Select the tunnel (or use its tunnel id if the UI allows).
 3. Scan tools.
-4. Verify these five tools appear:
+4. Verify these eight tools appear:
    - start_video_analysis
+   - start_uploaded_video_analysis
    - wait_video_analysis
    - get_video_manifest
    - get_video_transcript
+   - get_video_chapters
+   - search_prepared_video
    - inspect_video_window
 5. Keep the app read/fetch only.
 
@@ -91,3 +94,10 @@ Internally ChatGPT should:
 Current ChatGPT custom-app selection is message-scoped. A normal unrelated chat is not guaranteed to invoke this custom app merely because a URL was pasted. The reliable target is: select/mention the Video Understanding app for that message, then only paste the URL as the message body.
 
 If a future ChatGPT product surface allows an app/agent to stay permanently bound to a conversation, this limitation can be relaxed without changing the Runtime.
+
+
+## Upload inbox
+
+The MCP upload tool is restricted to `~/.video-understanding/inbox` by default.
+A remote ChatGPT MCP connection does not automatically expose mobile/chat attachments as local files.
+Use the upload tool only when another trusted host layer has deliberately materialized the attachment into the inbox.
