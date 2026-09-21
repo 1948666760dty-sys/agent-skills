@@ -1,4 +1,4 @@
-# Video Understanding Runtime v0.2.1
+# Video Understanding Runtime v0.2.2
 
 Executable reference Runtime for `skills/video-understanding/SKILL.md`.
 
@@ -122,6 +122,14 @@ Uploaded videos are not duplicated automatically because multi-hour files can be
 - `VIDEO_WHISPER_MODEL`
 - `VIDEO_WHISPER_DEVICE`
 - `VIDEO_UPLOAD_ROOTS`
+
+## Mobile / native attachment policy
+
+The Skill treats a current-chat mobile video upload as a first-class input. If the host can directly inspect/process the attachment, it does not need the MCP upload adapter at all.
+
+Mobile does not imply Quick mode. A 60-minute mobile upload may use roughly 60–120 minutes or longer of processing when the host supports sustained execution.
+
+This is a processing budget, not a background-service promise: closing/leaving a chat is not guaranteed to keep a long native task running unless the host explicitly provides such an execution model.
 
 ## Quality-first runtime policy
 
