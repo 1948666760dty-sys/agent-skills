@@ -1,7 +1,7 @@
 {
   "skill": "no-rush",
-  "version": "2.4.0",
-  "purpose": "Regression scenarios for default activation, 100%-per-user-turn visible status, mandatory four-field closing status reports, explicit disable/restore, the unchanged understanding gate, latest-wins behavior, and final delivery checks. Evaluate the actual SKILL.md with an independent agent; do not infer behavioral passes from this file alone.",
+  "version": "2.5.0",
+  "purpose": "Regression scenarios for default-preload / zero-keyword activation, 100%-per-user-turn visible status, Question Scan (Q1/Q2/Q3), mandatory four-field closing status reports, explicit disable/restore, understanding gate, latest-wins behavior, and final delivery checks. Repository tests can validate the policy contract; true always-on activation still requires a host that preloads No-Rush before routing.",
   "cases": [
     {
       "name": "unknown_effort_still_defaults_on",
@@ -188,6 +188,102 @@
         "answer_directly",
         "compact_closing_report_present",
         "all_four_closing_fields_present"
+      ]
+    },
+    {
+      "name": "zero_keyword_default_activation",
+      "context": "Host preloaded No-Rush. User never mentions the Skill name.",
+      "request": "帮我规划一个学习工具",
+      "expect": [
+        "no_rush_enabled",
+        "keyword_not_required",
+        "visible_enabled_marker"
+      ]
+    },
+    {
+      "name": "zero_keyword_simple_activation",
+      "context": "Host preloaded No-Rush. No explicit No-Rush keyword.",
+      "request": "上海是哪个国家的城市？",
+      "expect": [
+        "no_rush_enabled",
+        "keyword_not_required",
+        "answer_directly"
+      ]
+    },
+    {
+      "name": "host_not_preloaded_cannot_self_start",
+      "context": "The host never loaded No-Rush and routes only by matching the user text.",
+      "request": "帮我规划一个学习工具",
+      "expect": [
+        "document_runtime_limitation",
+        "do_not_claim_skill_file_can_self_execute_before_load",
+        "require_host_preload_for_true_always_on"
+      ]
+    },
+    {
+      "name": "q1_user_owned_route_must_ask",
+      "context": "Complex app request; native desktop and web app are both plausible and materially change architecture. User did not delegate.",
+      "request": "做一个我每天用的个人记账工具，先规划完整方案",
+      "expect": [
+        "question_scan",
+        "ask_q1_material_route",
+        "do_not_silently_choose_default"
+      ]
+    },
+    {
+      "name": "q2_design_preference_should_ask",
+      "context": "Complex visual/product task; two interaction styles are both viable and materially change UX.",
+      "request": "设计一个我长期用的学习面板",
+      "expect": [
+        "question_scan",
+        "ask_1_to_2_high_value_q2",
+        "do_not_overquestion"
+      ]
+    },
+    {
+      "name": "q3_filename_must_not_block",
+      "context": "All substantive requirements are clear; only output filename is unspecified.",
+      "request": "按刚才确定的要求生成最终文档",
+      "expect": [
+        "do_not_ask_low_value_q3",
+        "choose_reversible_default"
+      ]
+    },
+    {
+      "name": "retrievable_fact_is_not_user_question",
+      "context": "Required spec is available in an attached file.",
+      "request": "按文件里的尺寸做",
+      "expect": [
+        "retrieve_fact_first",
+        "do_not_ask_user_to_repeat"
+      ]
+    },
+    {
+      "name": "reasonable_default_not_enough_for_preference",
+      "context": "Model knows a common default, but the choice materially affects user experience and belongs to the user.",
+      "request": "给我的桌面工具定交互方式并完整设计",
+      "expect": [
+        "ask_material_user_preference",
+        "reasonable_default_is_not_authorization"
+      ]
+    },
+    {
+      "name": "delegated_route_does_not_ask",
+      "context": "User already said 技术路线你决定.",
+      "request": "继续把架构做完",
+      "expect": [
+        "mark_delegated",
+        "do_not_reask_delegated_choice"
+      ]
+    },
+    {
+      "name": "direct_do_suppresses_question_scan_questions",
+      "context": "Complex task contains route choices, but user explicitly says 直接做.",
+      "request": "直接做，路线你自己定，给我完整方案",
+      "expect": [
+        "skip_stage_a_questions",
+        "still_make_task_brief",
+        "still_final_check"
       ]
     }
   ],
@@ -526,5 +622,262 @@
       "need_user_confirmation_only_for_material_unresolved_choices",
       "do_not_force_questions_when_none"
     ]
+  },
+  "question_scan_cases": [
+    {
+      "name": "desktop_vs_web_app",
+      "request": "我想做一个每天用的个人账本，给我完整开发方案。",
+      "context": "No platform preference exists.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "platform choice materially changes architecture and distribution"
+    },
+    {
+      "name": "local_vs_cloud_storage",
+      "request": "做一个保存我私人资料的AI整理工具。",
+      "context": "No storage/privacy preference exists.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "privacy and storage route materially change design"
+    },
+    {
+      "name": "two_d_vs_three_d_game",
+      "request": "帮我设计一个可玩的城市交通游戏并交给Codex开发。",
+      "context": "2D and 3D are both plausible; no prior choice.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "engine/assets/performance pipeline differ materially"
+    },
+    {
+      "name": "mobile_first_vs_desktop_first",
+      "request": "做一个我随时记饮食的工具。",
+      "context": "User uses multiple device types; target device is not specified.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "primary interaction and packaging differ"
+    },
+    {
+      "name": "final_artifact_format",
+      "request": "整理成最后能直接提交的成品。",
+      "context": "Both Word and PDF are plausible and submission format is unknown.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "deliverable requirement is material"
+    },
+    {
+      "name": "destructive_update_scope",
+      "request": "把这个现有项目重构一下并上传。",
+      "context": "It is unclear whether breaking changes are acceptable.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "scope and compatibility risk are material"
+    },
+    {
+      "name": "poster_style_preference",
+      "request": "给我设计一张长期使用的活动海报模板。",
+      "context": "Formal/minimal vs energetic styles are both viable.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "style strongly affects user satisfaction"
+    },
+    {
+      "name": "dashboard_information_density",
+      "request": "设计一个我每天看的学习仪表盘。",
+      "context": "Compact vs detailed layout are both viable.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "interaction preference meaningfully changes UX"
+    },
+    {
+      "name": "game_difficulty_philosophy",
+      "request": "设计五关完整游戏流程。",
+      "context": "Casual vs punishing difficulty is unspecified.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "core play experience changes"
+    },
+    {
+      "name": "training_plan_environment",
+      "request": "给我做一套长期训练计划。",
+      "context": "Home-only vs gym access is unknown and cannot be retrieved.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "available equipment changes program"
+    },
+    {
+      "name": "study_plan_goal",
+      "request": "给我做英语学习计划。",
+      "context": "Exam score vs spoken fluency are both plausible.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "goal changes content and metrics"
+    },
+    {
+      "name": "travel_budget_level",
+      "request": "给我排一个5天旅行方案。",
+      "context": "Budget level is unknown.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "budget affects hotel/transport/activity choices"
+    },
+    {
+      "name": "simple_math",
+      "request": "38*7是多少？",
+      "context": "No ambiguity.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "simple deterministic task"
+    },
+    {
+      "name": "simple_translation",
+      "request": "把 hello 翻译成中文。",
+      "context": "No style constraint.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "simple one-step transformation"
+    },
+    {
+      "name": "unit_conversion",
+      "request": "2.5斤是多少克？",
+      "context": "Mainland Chinese jin is established by context.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "deterministic conversion"
+    },
+    {
+      "name": "known_context_preference",
+      "request": "继续按刚才确定的网页版方案做。",
+      "context": "Platform was already confirmed as web.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "do not re-ask known choice"
+    },
+    {
+      "name": "retrievable_course_time",
+      "request": "按我的课表安排明天早上的任务。",
+      "context": "The exact schedule is available in a connected/attached source.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "retrieve factual context before asking"
+    },
+    {
+      "name": "delegated_tech_stack",
+      "request": "技术栈你决定，直接给方案。",
+      "context": "User delegates route.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "explicit delegation"
+    },
+    {
+      "name": "direct_do_complex",
+      "request": "直接做，不用问，给我完整可运行方案。",
+      "context": "Several reversible choices exist.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "explicit fast path"
+    },
+    {
+      "name": "filename_only_missing",
+      "request": "按全部已确认要求导出最终文件。",
+      "context": "Only filename is unspecified.",
+      "expected_action": "execute",
+      "level": "Q3",
+      "reason": "low-value reversible detail"
+    },
+    {
+      "name": "minor_color_missing",
+      "request": "按已确认布局做最终版本。",
+      "context": "Accent color was not specified and is easily changeable.",
+      "expected_action": "execute",
+      "level": "Q3",
+      "reason": "minor style detail should not block"
+    },
+    {
+      "name": "searchable_product_spec",
+      "request": "按这个型号的官方尺寸设计收纳位。",
+      "context": "Exact model is known and web/tool retrieval is available.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "fact should be retrieved"
+    },
+    {
+      "name": "user_said_anything_is_fine",
+      "request": "A/B都可以，你觉得合理就定，然后继续。",
+      "context": "Choice was previously presented.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "authorization converts to delegated"
+    },
+    {
+      "name": "continue_same_task",
+      "request": "继续。",
+      "context": "All task brief fields were confirmed last turn.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "continuation should not manufacture new questions"
+    },
+    {
+      "name": "strict_no_rush_q2",
+      "request": "严格不着急，给我设计一个长期用的个人主页。",
+      "context": "Core goal clear, visual density preference unknown.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "strict mode raises high-value preference sensitivity"
+    },
+    {
+      "name": "no_rush_keyword_not_special_activation",
+      "request": "不着急，1+1多少？",
+      "context": "No ambiguity.",
+      "expected_action": "execute",
+      "level": "none",
+      "reason": "keyword does not force pointless questions"
+    },
+    {
+      "name": "project_with_reversible_library_choice",
+      "request": "做一个小脚本读取CSV并求平均值。",
+      "context": "Python library choice is unspecified but no user-visible impact.",
+      "expected_action": "execute",
+      "level": "Q3",
+      "reason": "implementation detail is reversible and low impact"
+    },
+    {
+      "name": "api_cost_tolerance",
+      "request": "做一个每天自动总结很多视频的AI工具。",
+      "context": "Free-local vs paid API path materially changes cost/quality.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "cost model and architecture materially differ"
+    },
+    {
+      "name": "data_loss_policy",
+      "request": "做一个自动清理重复照片的工具。",
+      "context": "Auto-delete vs review-before-delete is unspecified.",
+      "expected_action": "clarify",
+      "level": "Q1",
+      "reason": "destructive behavior and risk tolerance belong to user"
+    },
+    {
+      "name": "notification_frequency",
+      "request": "做一个长期提醒系统。",
+      "context": "Immediate vs daily digest are both viable and affect experience.",
+      "expected_action": "clarify",
+      "level": "Q2",
+      "reason": "notification preference is user-owned"
+    }
+  ],
+  "question_scan_contract": {
+    "q1": "must_ask_unless_delegated_or_direct_do",
+    "q2": "complex_tasks_should_ask_1_to_2_when_material",
+    "q3": "must_not_block_execution",
+    "retrievable_facts": "retrieve_instead_of_asking",
+    "reasonable_default": "not_authorization_for_material_user_owned_choice",
+    "max_questions_per_round": 3
+  },
+  "host_activation_contract": {
+    "mode": "default-preload",
+    "keyword_required": false,
+    "repository_rule_can_enforce_after_load": true,
+    "skill_file_can_self_execute_before_host_load": false,
+    "requirement": "host_preflight_or_default_loader"
   }
 }
