@@ -147,12 +147,18 @@ def _youtube_source(value: str, session_dir: Path) -> dict[str, Any]:
     requested = info.get("requested_subtitles") or {}
     source = "none"
     if segments:
-        automatic = info.get("automatic_captions") or {}
+        manual_tracks = info.get("subtitles") or {}
+        automatic_tracks = info.get("automatic_captions") or {}
         selected_langs = set(requested)
-        if any(lang in automatic for lang in selected_langs):
+        # The same language can exist in both manual and automatic catalogs.
+        # Prefer the manual catalog when yt-dlp selected that language so we do
+        # not downgrade a human subtitle merely because an auto track also exists.
+        if any(lang in manual_tracks for lang in selected_langs):
+            source = "human"
+        elif any(lang in automatic_tracks for lang in selected_langs):
             source = "platform_auto"
         else:
-            source = "human"
+            source = "platform_auto"
 
     return {
         "platform": "youtube",
