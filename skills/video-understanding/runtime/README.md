@@ -1,82 +1,143 @@
-# Video Understanding Runtime v0.1.1
+# Video Understanding Runtime v0.2.0
 
-This is the executable reference Runtime for `skills/video-understanding/SKILL.md`.
+Executable reference Runtime for `skills/video-understanding/SKILL.md`.
 
-## What it does
+## v0.2 headline
 
-- Bilibili native metadata/subtitle extraction, including b23 short-link resolution and multi-part selection metadata.
-- YouTube metadata plus manual/automatic caption retrieval.
-- Local faster-whisper fallback when no usable subtitle exists.
-- Local video-only download for visual work.
-- Scene-aware overview frame indexing plus 12-second baseline coverage.
-- Dense on-demand frame extraction for agentic rewatch.
-- Streamable HTTP MCP server that returns real JPEG `ImageContent` blocks so the host ChatGPT model can inspect the frames directly.
-- Internal long-job flow: start → wait → evidence retrieval. The end user should only need to paste a video URL.
+The Runtime is now **Upload-First + Long-Video aware**.
 
-## Tools
+Inputs:
+- Bilibili URL
+- YouTube URL
+- uploaded/local video materialized into a restricted inbox
 
-- `start_video_analysis`
-- `wait_video_analysis`
-- `get_video_manifest`
-- `get_video_transcript`
-- `inspect_video_window`
+Long videos are not pushed into one huge model context. The Runtime builds:
+- adaptive scene overview
+- structural chapter windows
+- overlapping Evidence Memory
+- local retrieval candidates
+- bounded transcript windows
+- dense visual rewatch windows
 
-All tools are semantically read/fetch operations. Local cache writes are implementation details; the tools do not modify the source platform or user content.
+## Current MCP tools
+
+1. `start_video_analysis`
+2. `start_uploaded_video_analysis`
+3. `wait_video_analysis`
+4. `get_video_manifest`
+5. `get_video_transcript`
+6. `get_video_chapters`
+7. `search_prepared_video`
+8. `inspect_video_window`
+
+The end user should never operate job IDs or polling.
+
+## Long-video tiers
+
+| Duration | Tier | Baseline | Chapter window | Evidence window |
+|---|---|---:|---:|---:|
+| <=5 min | short | ~6s | ~2m | ~90s |
+| 5–30 min | standard | ~12s | ~4m | ~2m |
+| 30–90 min | long | ~20s | ~6m | ~3m |
+| 90–180 min | very_long | ~30s | ~10m | ~5m |
+| >180 min | ultra_long | ~45s | ~15m | ~7m |
+
+PySceneDetect scene representatives are additional to baseline coverage.
+
+## Scene detection
+
+v0.2 uses:
+- PySceneDetect 0.7.x
+- AdaptiveDetector
+- SceneManager auto-downscale
+- baseline fallback if scene detection fails
+
+This replaces the v0.1 fixed histogram-difference detector.
+
+## ASR
+
+- faster-whisper >=1.2.1
+- local
+- VAD enabled
+- `VIDEO_WHISPER_DEVICE=auto` tries CUDA, then CPU int8
+- URL platform subtitles remain preferred when available
+
+## Upload inbox security
+
+The MCP uploaded-file tool is deliberately not an arbitrary file reader.
+
+Default allowed directory:
+
+`~/.video-understanding/inbox`
+
+Windows example:
+
+`C:\Users\<you>\.video-understanding\inbox`
+
+Additional allowed roots may be explicitly configured with:
+
+`VIDEO_UPLOAD_ROOTS`
+
+The Runtime rejects a path outside allowed roots.
+
+A ChatGPT attachment only uses this MCP path if the host actually materializes/copies the attachment into an allowed root. The Skill must not invent a local path.
 
 ## Windows quick start
 
-From the Runtime directory:
+1. Run `scripts\install_windows.ps1` once.
+2. Run `scripts\run_windows.ps1`.
+3. Run `.venv\Scripts\python.exe scripts\mcp_smoke.py`.
+4. Confirm all 8 tools appear.
+5. Follow `TUNNEL_SETUP.md` if connecting the local MCP to ChatGPT Web.
 
-1. Run `scripts\\install_windows.ps1` once.
-2. Run `scripts\\run_windows.ps1` whenever you want ChatGPT to use the local Runtime.
-3. With the server running, `.venv\\Scripts\\python.exe scripts\\mcp_smoke.py` verifies MCP connectivity and the five tool names.
-4. Follow `TUNNEL_SETUP.md` to connect the private local server to ChatGPT.
+## Recommended long-video host loop
 
-## Local defaults
+```text
+start + wait
+→ manifest
+→ chapters
+→ first bounded transcript windows
+→ overview frames
+→ first-pass understanding
+→ search_prepared_video(question/topic)
+→ exact transcript window
+→ dense visual rewatch
+→ final answer
+```
 
-- MCP: Streamable HTTP on `127.0.0.1:8765/mcp`.
-- Cache: `~/.video-understanding`.
-- Whisper model: `small`.
-- Whisper device: `auto` (try CUDA, then CPU).
-- Visual source: video-only stream capped around 720p when available.
-- Overview scene probe: every 3 seconds.
-- Baseline coverage: every 12 seconds.
-- Returned image width: up to 960 px.
+For 1–3 hour videos, do not request the full transcript and all frames in one model turn.
 
-Environment overrides:
+## Cache
+
+Default:
+`~/.video-understanding`
+
+URL video cache can keep downloaded video evidence.
+
+Uploaded videos are not duplicated automatically because multi-hour files can be large; the manifest references the allowed materialized source path. If the source file is later deleted, transcript/memory may remain but visual rewatch requires re-materialization.
+
+## Environment
+
 - `VIDEO_UNDERSTANDING_CACHE`
 - `VIDEO_WHISPER_MODEL`
 - `VIDEO_WHISPER_DEVICE`
-
-## Important boundary
-
-The Runtime prepares evidence; the host ChatGPT model performs the final multimodal reasoning.
-
-Recommended host sequence:
-
-1. start the job;
-2. keep calling wait internally until complete;
-3. retrieve transcript windows;
-4. inspect overview frames;
-5. identify important/uncertain intervals;
-6. call `inspect_video_window(..., density="dense")` for those intervals;
-7. synthesize the final answer with evidence labels.
-
-The user should never need to see or operate the internal job id.
-
-## ChatGPT connection
-
-ChatGPT does not directly connect to localhost. Run this MCP locally and connect it through OpenAI Secure MCP Tunnel, or deploy the MCP endpoint remotely. Keep the Runtime private unless you intentionally expose it.
+- `VIDEO_UPLOAD_ROOTS`
 
 ## Current limitations
 
-- v0.1 is anonymous/public-content first.
-- Browser-cookie workflows are deliberately not automatic.
-- OCR is currently performed by the host vision model from returned frame images; a dedicated local OCR stage is planned.
-- Long-video throughput has not yet been benchmarked on the user's machine.
-- YouTube/Bilibili extraction can break when upstream sites change.
-- No real end-to-end smoke test is claimed until the Runtime is actually installed and run.
+- release-candidate: real Windows 30–90m and 90–180m end-to-end benchmarks have not yet passed.
+- ChatGPT custom MCP does not automatically receive arbitrary chat attachments; host/materialization support is required for the MCP upload adapter.
+- host vision performs OCR in v0.2; there is no dedicated local OCR stage yet.
+- URL extraction can change when upstream Bilibili/YouTube behavior changes.
+- multi-hour video speed depends strongly on subtitles, GPU, storage and scene complexity.
 
 ## Third-party
 
-The Bilibili-native extractor is vendored from AntaresGG/BiliBiliVideoParser under the MIT License. See `THIRD_PARTY_NOTICES.md` and the vendored LICENSE.
+Bilibili-native extractor:
+AntaresGG/BiliBiliVideoParser (MIT), vendored with license preserved.
+
+PySceneDetect:
+BSD-3-Clause upstream dependency.
+
+faster-whisper:
+MIT upstream dependency.
