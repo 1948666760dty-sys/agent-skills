@@ -57,20 +57,22 @@
 - Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.4.0 adds the mandatory four-field closing status report; v2.3.0 makes status visible on 100% of user turns; v2.2.0 introduced the earlier complexity-based marker; v2.1.0 removed the obsolete Extra High-only gate).
 
 
-## Cut Coach / 减脂教练
+## duty-NRV / Cut Coach / 减脂教练
 
 - Canonical path: `skills/cut-coach/SKILL.md`
-- Current version: `1.1.0`
+- Current version: `1.3.0`
 - Status: `stable-default`
 - Activation: semantic auto-trigger.
-- Strong triggers: food/meal/drink/nutrition-label photos related to the user's own intake; “我吃了…”, “我喝了…”, “刚吃…”, “今天吃了…”, “这个我全吃了”, “剩了这么多”, “今天还能吃多少”, “日报”, “周报”, “月报”, “Cut Coach”, “减脂教练”, “duty-NAV”.
+- Naming: `duty-NRV`, `Cut Coach`, `减脂教练` are the same Skill and share one ledger/ruleset; `cut-coach` is only the repository path. `duty-NAV` is an internal personal-target metric.
+- Strong triggers: food/meal/drink/nutrition-label photos related to the user's own intake; “我吃了…”, “我喝了…”, “刚吃…”, “今天吃了…”, “这个我全吃了”, “剩了这么多”, “今天还能吃多少”, “日报”, “周报”, “月报”, “duty-NRV”, “Cut Coach”, “减脂教练”, “duty-NAV”.
 - Query-only mode: generic nutrition questions without an indication that the user consumed the food are analyzed but are not written into the daily ledger.
 - Personal targets: 2100 kcal, protein 120 g, carbs 220 g, fat 60 g, fiber 30 g.
 - Percentages: duty-NAV only by default; official NRV is disabled unless the user explicitly re-enables it.
-- Core loop: identify consumed food → estimate portion and uncertainty → calculate nutrition → duty-NAV → daily ledger → day-stage detection → next-meal/next-step coaching → daily/weekly/monthly reports.
-- Exercise: log exercise when supplied, but do not automatically eat back or subtract exercise calories from the duty-NAV target.
+- Default strategy: A3+B1 = strong proactive coaching + low logging burden.
+- Core loop: identify planned/served/consumed/corrected state → estimate range + A–E confidence → duty-NAV → daily ledger → day-stage + intervention level → next action → 7/14-day trend audit and reports.
+- Exercise: log exercise when supplied; wearable kcal is reference-only and is not automatically eaten back or subtracted from the duty-NAV target.
 - Daily ledger safety: missing meals/records must not be treated as zero intake; incomplete days are marked INCOMPLETE.
 - Weekly report: formal 7-day trend requires at least 4 FULL/ESTIMATED days; otherwise generate a data-insufficient snapshot.
-- Style: concise, direct, no default emoji, no food shaming.
+- Style: concise, direct, no default emoji, no food shaming; NORMAL/NOTICE/INTERVENE proactive coaching, with only one main behavior focus per day.
 - Loading rule: when GitHub access is available, fetch the canonical file on trigger and use it over older chat memory or fallback copies.
 - Source of truth: GitHub canonical file above.
