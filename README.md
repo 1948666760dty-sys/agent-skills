@@ -13,11 +13,14 @@
 ## 不着急 / No-Rush
 
 - Canonical path: `skills/no-rush/SKILL.md`
-- Current version: `2.1.0`
+- Current version: `2.2.0`
 - Status: `stable-default`
 - Source of truth: GitHub canonical file above. Local/Library copies are fallback only.
 - Loading rule: when GitHub access is available, fetch the canonical file before running No-Rush so the latest version is used.
 - Activation: enabled by default. No model-name or thinking-effort check is required.
+- Visible confirmation: `不着急 ✓` appears before the first normal response/progress update for medium/high-complexity work, project planning, Skill edits, multi-step tasks, and understanding/feasibility assessment. Simple chat, calculation, and one-step Q&A stay silent but enabled.
+- Deduplication: once per task, including progress, clarification, continuation, and final delivery; a new task resets the marker. Explicit disable suppresses it. Strict output formats take priority when there is no suitable progress message.
+- Understanding gate unchanged: >=95% executes directly; <95% resolves retrievable facts first and asks only key ambiguities. The marker is confirmation of activation, not proof of understanding or completion.
 - No hard model/mode exclusions: unknown effort, Instant, Medium, High, Extra High, automatic Thinking, GPT-5.6 Sol, GPT-6 Pro, etc. do not by themselves disable No-Rush.
 - Explicit disable: “这次不用不着急 / 这次关闭不着急” disables only the current task; “关闭不着急 / 暂停不着急” disables it for the current conversation until “开启不着急 / 恢复不着急”.
 - Pipeline: Understanding Gate → Current Task Brief → Execution → Final Check.
@@ -25,6 +28,8 @@
 - Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
 - Overrides: “直接做”, “别猜”, “严格不着急”.
 - Tests: `skills/no-rush/evals/evals.json`.
+- Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. The checker validates observed activation/action labels, marker placement/count and strict JSON; key-question quality still requires reading the actual replies. Scenario definitions alone are not a passing run.
+- Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.2.0 adds the lightweight marker; v2.1.0 removed the obsolete Extra High-only gate).
 
 
 ## Cut Coach / 减脂教练
