@@ -13,6 +13,8 @@
 
 ## 如何使用
 
+需要真正执行本 Skill 的本地运行层见：[qwen-romance-runtime](https://github.com/1948666760dty-sys/qwen-romance-runtime)。本仓库继续只维护规则与规范；Runtime 仓库单独维护 Adapter、Token Budget、多 Chunk、SQLite 状态、取消和 Web UI。
+
 打开所需 Skill 的链接，将文件内容交给支持自定义指令或 Skill 的 AI 助手；具体安装方式取决于所用客户端。把文件上传到 GitHub 本身不代表已经安装或启用。
 
 需要直接读取文件时使用以下地址：

@@ -27,6 +27,7 @@
 - Complex Tavern integration: 零侵入扩展；先加载 Complex Tavern，再由宿主 Model Gate 决定是否附加 Qwen Romance。GPT 路径保持原行为。
 - Runtime contract: `skills/qwen-romance/references/runtime-contract.md`.
 - Long-output contract: `skills/qwen-romance/references/long-output-contract.md`.
+- Executable runtime: [qwen-romance-runtime](https://github.com/1948666760dty-sys/qwen-romance-runtime)（规则层与运行层分离；Runtime 的真实适配器和 Live 测试不放入本仓库）。
 - Long-output behavior: adaptive `short` / `normal` / `long` / `very_long`, multi-Chunk Visible Reply, automatic continuation, dynamic token budget, seam/overlap audit, and premature-closure guard. Defaults apply only after the local-Qwen Model Gate.
 - State schema: `skills/qwen-romance/references/state.schema.json`.
 - Regression cases: `skills/qwen-romance/evals/evals.json`（25 个基础场景）与 `skills/qwen-romance/evals/long-output-cases.json`（15 个长输出场景），合计 40 个。
