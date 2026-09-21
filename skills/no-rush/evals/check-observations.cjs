@@ -18,16 +18,23 @@ for (const c of cases) {
     assert.equal(o.action, c.observed_contract.action, 'understanding gate');
     assert.ok(Array.isArray(o.messages) && o.messages.length > 0, 'missing replies');
     assert.ok(o.messages.every(x => typeof x === 'string' && x.trim()), 'empty reply');
-    const count = o.messages.reduce((n, s) => n + s.split('不着急 ✓').length - 1, 0);
-    assert.equal(count, c.observed_contract.marker_count, 'marker count');
-    if (count) assert.ok(o.messages[0].trimStart().startsWith('不着急 ✓'), 'marker must precede first prose/progress');
+    const onCount = o.messages.reduce((n, s) => n + s.split('不着急 ✓').length - 1, 0);
+    const offCount = o.messages.reduce((n, s) => n + s.split('不着急 ✗').length - 1, 0);
+    const count = onCount + offCount;
+    assert.equal(count, c.observed_contract.marker_count, 'status marker count');
+    if (count) {
+      const expected = o.no_rush_enabled ? '不着急 ✓' : '不着急 ✗';
+      const opposite = o.no_rush_enabled ? '不着急 ✗' : '不着急 ✓';
+      assert.ok(o.messages[0].trimStart().startsWith(expected), 'correct status marker must precede first prose/progress');
+      assert.equal(o.messages.reduce((n, s) => n + s.split(opposite).length - 1, 0), 0, 'opposite status marker must not appear');
+    }
     if (c.expect.includes('no_marker_in_final')) {
       assert.ok(o.messages.length >= 2, 'must simulate progress and final');
-      assert.ok(!o.messages.at(-1).includes('不着急 ✓'), 'duplicate final marker');
+      assert.ok(!o.messages.at(-1).includes('不着急 ✓') && !o.messages.at(-1).includes('不着急 ✗'), 'duplicate final status marker');
     }
     if (c.name === 'strict_json_output') {
-      assert.equal(o.messages.length, 1);
-      const result = JSON.parse(o.messages[0]);
+      assert.equal(o.messages.length, 2, 'strict JSON case must use separate status and payload messages');
+      const result = JSON.parse(o.messages.at(-1));
       assert.deepEqual(Object.keys(result), ['steps']);
       assert.ok(Array.isArray(result.steps) && result.steps.length > 0);
     }
