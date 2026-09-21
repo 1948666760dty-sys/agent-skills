@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import concurrent.futures
+import hashlib
 import threading
 import time
 import uuid
@@ -53,6 +54,12 @@ def _finish_job(
         job = _jobs[job_id]
         if error is None:
             job["status"] = "complete"
+            if result is not None:
+                result = dict(result)
+                result["task_id"] = job_id
+                result["request_fingerprint"] = job.get(
+                    "request_fingerprint"
+                )
             job["result"] = result
         else:
             if isinstance(error, VideoRuntimeError):
@@ -112,9 +119,16 @@ def _new_job(
     mode: str,
 ) -> str:
     job_id = uuid.uuid4().hex
+    request_fingerprint = hashlib.sha256(
+        f"{source_kind}:{source}".encode(
+            "utf-8"
+        )
+    ).hexdigest()[:24]
     with _jobs_lock:
         _jobs[job_id] = {
             "job_id": job_id,
+            "task_id": job_id,
+            "request_fingerprint": request_fingerprint,
             "status": "running",
             "source": source,
             "source_kind": source_kind,
@@ -152,8 +166,14 @@ def start_video_analysis(
         include_audience,
         force,
     )
+    with _jobs_lock:
+        job = dict(_jobs[job_id])
     return {
         "job_id": job_id,
+        "task_id": job_id,
+        "request_fingerprint": job.get(
+            "request_fingerprint"
+        ),
         "status": "running",
         "instruction": (
             "Call wait_video_analysis with this job_id. "
@@ -189,8 +209,14 @@ def start_uploaded_video_analysis(
         mode,
         force,
     )
+    with _jobs_lock:
+        job = dict(_jobs[job_id])
     return {
         "job_id": job_id,
+        "task_id": job_id,
+        "request_fingerprint": job.get(
+            "request_fingerprint"
+        ),
         "status": "running",
         "instruction": (
             "Call wait_video_analysis with this job_id. "
@@ -233,17 +259,35 @@ def wait_video_analysis(
             if job.get("status") == "complete":
                 return {
                     "job_id": job_id,
+                    "task_id": job.get(
+                        "task_id"
+                    ),
+                    "request_fingerprint": job.get(
+                        "request_fingerprint"
+                    ),
                     "status": "complete",
                     "result": job.get("result"),
                 }
             if job.get("status") == "failed":
                 return {
                     "job_id": job_id,
+                    "task_id": job.get(
+                        "task_id"
+                    ),
+                    "request_fingerprint": job.get(
+                        "request_fingerprint"
+                    ),
                     "status": "failed",
                     "error": job.get("error"),
                 }
             return {
                 "job_id": job_id,
+                "task_id": job.get(
+                    "task_id"
+                ),
+                "request_fingerprint": job.get(
+                    "request_fingerprint"
+                ),
                 "status": "running",
                 "elapsed_seconds": round(
                     time.time()
