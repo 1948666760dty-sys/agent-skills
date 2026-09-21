@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -83,29 +82,13 @@ def main() -> int:
         "corrupt sample must be PARTIAL",
     )
 
-    previous = os.environ.get(
-        "VIDEO_REPAIR_TRANSCODE_MAX_SECONDS"
-    )
-    os.environ[
-        "VIDEO_REPAIR_TRANSCODE_MAX_SECONDS"
-    ] = "0"
-    try:
-        with tempfile.TemporaryDirectory() as temp:
-            repair = attempt_repair(
-                args.corrupt_video,
-                Path(temp),
-                original_health=corrupt,
-            )
-    finally:
-        if previous is None:
-            os.environ.pop(
-                "VIDEO_REPAIR_TRANSCODE_MAX_SECONDS",
-                None,
-            )
-        else:
-            os.environ[
-                "VIDEO_REPAIR_TRANSCODE_MAX_SECONDS"
-            ] = previous
+    with tempfile.TemporaryDirectory() as temp:
+        repair = attempt_repair(
+            args.corrupt_video,
+            Path(temp),
+            original_health=corrupt,
+        )
+
 
     assert_true(
         repair["adopted"] is False,
@@ -123,6 +106,32 @@ def main() -> int:
         < 0.02,
         "repair scoring must use original timeline duration",
     )
+
+    kinds = {
+        item.get("kind"): item
+        for item in repair.get("attempts", [])
+    }
+    assert_true(
+        "remux" in kinds,
+        "corrupt sample should exercise tolerant remux",
+    )
+    assert_true(
+        "h264_transcode" in kinds,
+        "short corrupt sample should exercise H.264 transcode",
+    )
+    for kind in ("remux", "h264_transcode"):
+        item = kinds[kind]
+        if item.get("command_succeeded"):
+            preserved = float(
+                item.get(
+                    "preserved_original_timeline_ratio",
+                    0.0,
+                )
+            )
+            assert_true(
+                abs(preserved - cov) < 0.02,
+                f"{kind} must be scored against original timeline",
+            )
 
     synthetic = [
         {"start": 0.0, "end": 29.8, "text": "ok"}
