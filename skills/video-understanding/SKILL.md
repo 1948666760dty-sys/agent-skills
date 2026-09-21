@@ -2,7 +2,7 @@
 name: video-understanding
 display_name: Video Understanding / 视频理解
 description: 上传优先、长视频友好的多模态视频理解 Skill。支持当前聊天中的视频附件，以及 Bilibili/B站和 YouTube URL。默认 Deep/效果优先：字幕/ASR、PySceneDetect 场景检测、自适应关键帧、章节化长视频、Evidence Memory、音画时间轴、Agentic Rewatch、证据化总结与后续问答。快速模式仅在用户明确要求快速/字幕优先时启用。
-version: 0.2.2
+version: 0.2.3
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/video-understanding/SKILL.md
@@ -10,7 +10,7 @@ activation: semantic-auto-upload-or-url
 supported_inputs: [video_attachment, bilibili, youtube]
 ---
 
-# Video Understanding v0.2.2
+# Video Understanding v0.2.3
 
 ## 0. 定位
 
@@ -64,6 +64,19 @@ v0.2.0 从“URL 解析器”升级为 **Upload-First Agentic Video Understandin
 ---
 
 ## 2. 自动触发
+
+### 2.0 固定主触发词
+
+用户说 **“深度看”** 时，只要当前回合或当前视频上下文存在视频附件 / Bilibili / YouTube 输入，视为 Video Understanding 的最高优先级强触发：
+
+```text
+深度看
+→ Video Understanding
+→ mode=deep
+→ Quality-First
+```
+
+不得把“深度看”解释成普通图片查看、简短摘要或其他旧任务；若当前存在多个视频，绑定最近明确选中的视频，否则绑定当前回合附件。
 
 ### 2.1 上传视频强触发
 
@@ -207,7 +220,15 @@ URL/Shorts
 - 字幕来源；
 - ASR 是否需要；
 - 是否可做视觉分析；
-- 长视频 tier。
+- 长视频 tier；
+- `audio_present`；
+- `audio_decodable`；
+- `speech_transcribed`；
+- `decoded_until_seconds`；
+- `visual_coverage_ratio`。
+
+**音轨存在、音频能解码、语音已经转写是三个不同状态。**  
+不得再把“没有 Whisper/ASR”表述成“听不到声音”。
 
 Preflight 不需要用户参与。
 
@@ -303,6 +324,14 @@ Dense Agentic Rewatch
 ```
 
 上传文件若宿主未提供可信字幕，默认 ASR。
+
+如果 ASR 依赖缺失或执行失败：
+- 不得让整个视频任务直接失败；
+- 保留音频存在/可解码状态；
+- 保留视觉结果；
+- `speech_transcribed=false`；
+- Completion Guard 通常判为 PARTIAL；
+- 明确写“音频正常但未完成语音转写”，而不是“听不到”。
 
 参考 Runtime 使用 faster-whisper >=1.2.1。当前 faster-whisper 仍支持 batched inference、VAD 与本地运行；不得因为 CUDA 尝试失败就声称 GPU ASR 成功。
 
@@ -499,10 +528,97 @@ start
 顶部必须真实标记：
 - 输入：上传 / B站 / YouTube
 - 时长/Tier
-- transcript source
-- visual success
+- completion：COMPLETE / PARTIAL / FAILED
+- audio_present / audio_decodable / speech_transcribed
+- transcript source / transcript coverage
+- decoded_until / visual coverage
 - OCR = host_vision 或实际本地 OCR
 - second-pass 是否真实执行
+
+---
+
+## 15.5 Completion Guard
+
+最终输出“看完了 / 分析完成”前必须通过 Completion Guard。
+
+### Audio State
+
+必须分别报告：
+
+```text
+audio_present
+audio_decodable
+speech_transcribed
+```
+
+示例：
+
+```text
+audio_present=true
+audio_decodable=true
+speech_transcribed=false
+```
+
+表示：**音频完整存在且可播放/解码，但当前没有完成语音转文字。**
+
+### Visual State
+
+至少记录：
+
+```text
+duration_seconds
+decoded_until_seconds
+visual_coverage_ratio
+decode_errors
+```
+
+Deep 模式中，视觉覆盖 <98% 时不得标记视觉 COMPLETE。
+
+### Overall State
+
+允许：
+
+- `COMPLETE`
+- `PARTIAL`
+- `FAILED`
+
+Deep 默认只有在：
+- 所需视觉覆盖 >=98%；且
+- 有音频时，字幕/ASR 对语音内容具有充分覆盖；且
+- 关键模态没有未解决的解码失败
+
+时才可标记 `COMPLETE`。
+
+只要仍有有效证据但关键模态不完整，就必须标记 `PARTIAL`。
+
+### 损坏视频
+
+视频后半段损坏时：
+- 保留已成功解码的前半段；
+- 音频若完整，继续保留/转写音频；
+- 不因视觉失败丢弃音频；
+- 可尝试 remux / H.264 repair；
+- **修复评估必须按原视频总时间轴计算覆盖率**；
+- 把 30 秒文件截成干净的 8 秒，不能算“100% 修复”。
+
+---
+
+## 15.6 Delivery Identity Guard
+
+每个 Runtime job 必须带：
+- `task_id`
+- `request_fingerprint`
+
+准备完成的 session/result 必须带：
+- `session_id`
+- `source_fingerprint`
+
+最终回复前必须确认交付结果属于当前视频任务。
+
+若 task/session/source 不匹配：
+- 禁止交付旧结果；
+- 禁止把上一轮 Skill 更新、状态报告或另一段视频的内容当作当前视频总结；
+- 重新绑定当前任务或明确报错。
 
 ---
 
@@ -567,8 +683,10 @@ start
 
 - 字幕失败 → ASR
 - 场景检测失败 → baseline visual fallback
+- 视觉部分损坏 → 保留已解码前缀 + 健康音频，标记 visual coverage 与 PARTIAL
 - 视觉失败但 transcript 成功 → transcript-only partial
 - ASR失败但烧录字幕可视觉读取 → visual-caption partial
+- ASR依赖缺失但音频可解码 → audio_present=true / audio_decodable=true / speech_transcribed=false，不得写“听不到”
 - 全部正文证据失败 → 不根据标题猜内容
 - 上传文件被宿主删除 → follow-up visual rewatch 要求重新 materialize/re-upload
 - 超长视频 → 内部分块，不要求用户手工切片
@@ -612,12 +730,18 @@ Stable 前至少：
 15. 1～3 小时视频不一次性灌入完整 transcript + frames
 16. 失败步骤不冒充成功
 17. 不默认产生额外 API 费用
+18. 音频存在、可解码、已转写三个状态不得混淆
+19. 视觉覆盖 <98% 的 Deep 任务不得标 COMPLETE
+20. 损坏视频保留已解码前缀和健康音频
+21. 截短 remux 不得冒充修复成功
+22. 当前 task/session/source identity 必须与最终交付一致
+23. “深度看”在视频上下文中为强触发
 
 ---
 
 ## 22. 当前状态
 
-当前版本：`0.2.2 release-candidate`
+当前版本：`0.2.3 release-candidate`
 
 已经实现到参考 Runtime：
 - Bilibili / YouTube；
@@ -640,6 +764,7 @@ Stable 前至少：
 
 ### Changelog
 
+- **0.2.3（2026-09-22）**：新增 Media Health / Completion Guard；区分 audio_present、audio_decodable、speech_transcribed；增加 decoded_until 与 visual coverage；损坏视频保留部分视觉和健康音频；修复评估按原时间轴；新增 task/session/source 身份守卫，防止结果串线；“深度看”升级为正式强触发。
 - **0.2.2（2026-09-22）**：新增 Mobile-Native Quality-First 契约；手机直接上传视频与电脑端享有同等默认质量策略；60 分钟视频可允许约 120 分钟甚至更久处理；明确“允许慢处理”不等于“后台异步保证”。
 - **0.2.1（2026-09-22）**：性能策略改为 Quality-First 无硬时限；允许长视频处理时间接近或超过原视频时长，默认以证据覆盖和准确性优先，只有用户明确要求快速时才压缩流程。
 - **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
