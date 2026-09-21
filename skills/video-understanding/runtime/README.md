@@ -1,4 +1,4 @@
-# Video Understanding Runtime v0.2.0
+# Video Understanding Runtime v0.2.1
 
 Executable reference Runtime for `skills/video-understanding/SKILL.md`.
 
@@ -122,6 +122,14 @@ Uploaded videos are not duplicated automatically because multi-hour files can be
 - `VIDEO_WHISPER_MODEL`
 - `VIDEO_WHISPER_DEVICE`
 - `VIDEO_UPLOAD_ROOTS`
+
+## Quality-first runtime policy
+
+The default is no longer tuned for a 5–15 minute target on a 60-minute video.
+
+A 60-minute video may legitimately take about 60 minutes or longer when deeper ASR, denser visual coverage, more rewatch passes, or number/name verification improves reliability.
+
+Only an explicit quick-mode request should reduce coverage for speed.
 
 ## Current limitations
 
