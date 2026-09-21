@@ -2,7 +2,7 @@
 name: video-understanding
 display_name: Video Understanding / 视频理解
 description: 上传优先、长视频友好的多模态视频理解 Skill。支持当前聊天中的视频附件，以及 Bilibili/B站和 YouTube URL。默认 Deep/效果优先：字幕/ASR、PySceneDetect 场景检测、自适应关键帧、章节化长视频、Evidence Memory、音画时间轴、Agentic Rewatch、证据化总结与后续问答。快速模式仅在用户明确要求快速/字幕优先时启用。
-version: 0.2.0
+version: 0.2.1
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/video-understanding/SKILL.md
@@ -10,7 +10,7 @@ activation: semantic-auto-upload-or-url
 supported_inputs: [video_attachment, bilibili, youtube]
 ---
 
-# Video Understanding v0.2.0
+# Video Understanding v0.2.1
 
 ## 0. 定位
 
@@ -492,17 +492,32 @@ start
 
 ---
 
-## 16. 性能目标
+## 16. 性能策略
 
-用户偏好：**慢一点无所谓，效果优先。**
+用户偏好：**速度不重要，效果优先。**
 
-参考目标：
-- 60 分钟已有字幕视频：希望落在约 5–15 分钟量级；
-- 无字幕 + 完整 ASR + 重视觉视频：允许更慢；
-- 90–180 分钟：允许明显超过 15 分钟；
-- >180 分钟：不设固定完成时间保证。
+默认不再追求“60 分钟视频 5–15 分钟完成”。
 
-这是优化目标，不是 SLA。
+允许：
+- 60 分钟视频处理约 60 分钟；
+- 无字幕、重视觉、复杂图表/代码/实验视频超过视频原始时长；
+- 90–180 分钟视频按质量需要持续更久；
+- >180 分钟视频采用章节化长任务，不设置固定完成时间目标。
+
+当“更慢”可以明显换来：
+- 更完整 ASR；
+- 更高场景覆盖；
+- 更多关键帧；
+- 更充分 OCR/画面阅读；
+- 更多 Agentic Rewatch；
+- 更可靠的专名/数字复核；
+- 更低漏关键信息概率；
+
+则优先选择更慢、更完整的路径。
+
+只有用户明确说“快速看 / 尽快 / 简单总结”时，才主动压缩计算与视觉覆盖。
+
+速度不是验收指标；**证据覆盖、准确性、可追溯性**才是默认验收重点。
 
 ---
 
@@ -585,7 +600,7 @@ Stable 前至少：
 
 ## 22. 当前状态
 
-当前版本：`0.2.0 release-candidate`
+当前版本：`0.2.1 release-candidate`
 
 已经实现到参考 Runtime：
 - Bilibili / YouTube；
@@ -608,6 +623,6 @@ Stable 前至少：
 
 ### Changelog
 
-- **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
+- **0.2.1（2026-09-22）**：性能策略改为 Quality-First 无硬时限；允许长视频处理时间接近或超过原视频时长，默认以证据覆盖和准确性优先，只有用户明确要求快速时才压缩流程。\n- **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
 - **0.1.1（2026-09-22）**：对齐首版 MCP Runtime。
 - **0.1.0（2026-09-22）**：Bilibili + YouTube 首版。
