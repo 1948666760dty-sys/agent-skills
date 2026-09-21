@@ -1,13 +1,14 @@
 [project]
 name = "video-understanding-runtime"
-version = "0.2.2"
-description = "Local read/fetch MCP runtime for Bilibili and YouTube video understanding."
+version = "0.2.3"
+description = "Local read/fetch runtime for upload-first Bilibili/YouTube long-video understanding."
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "mcp>=2.0.0",
   "yt-dlp>=2025.1.1",
   "faster-whisper>=1.2.1",
-  "opencv-python-headless>=4.10.0",\n  "scenedetect-headless>=0.7.1",
+  "opencv-python-headless>=4.10.0",
+  "scenedetect-headless>=0.7.1",
   "webvtt-py>=0.5.1"
 ]
 
