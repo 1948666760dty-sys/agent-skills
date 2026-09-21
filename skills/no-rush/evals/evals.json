@@ -1,7 +1,7 @@
 {
   "skill": "no-rush",
-  "version": "2.2.0",
-  "purpose": "Regression scenarios for default activation, visible marker, deduplication, explicit disable/restore, the unchanged understanding gate, latest-wins behavior, and final delivery checks. Evaluate the actual SKILL.md with an independent agent; do not infer behavioral passes from this file alone.",
+  "version": "2.3.0",
+  "purpose": "Regression scenarios for default activation, 100%-per-user-turn visible status, explicit disable/restore, the unchanged understanding gate, latest-wins behavior, and final delivery checks. Evaluate the actual SKILL.md with an independent agent; do not infer behavioral passes from this file alone.",
   "cases": [
     {
       "name": "unknown_effort_still_defaults_on",
@@ -34,7 +34,7 @@
       "request": "这次不用不着急，直接回答",
       "expect": [
         "no_rush_disabled_for_current_task_only",
-        "no_visible_marker"
+        "visible_disabled_marker"
       ]
     },
     {
@@ -60,7 +60,7 @@
       "expect": [
         "zero_clarification_rounds",
         "answer_directly",
-        "no_visible_marker"
+        "visible_enabled_marker"
       ]
     },
     {
@@ -271,11 +271,12 @@
       "context": "Mode: GPT-6 Pro.",
       "request": "你好",
       "expect": [
-        "silent_activation"
+        "enabled_marker_at_start",
+        "answer_normally"
       ],
       "observed_contract": {
         "no_rush_enabled": true,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -284,12 +285,13 @@
       "context": "Mode: Extra High.",
       "request": "1+1等于多少",
       "expect": [
+        "enabled_marker_at_start",
         "answer_2",
         "zero_clarification_rounds"
       ],
       "observed_contract": {
         "no_rush_enabled": true,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -298,11 +300,12 @@
       "context": "Mode: unknown.",
       "request": "把“你好”翻译成英文，只需给出译文。",
       "expect": [
-        "silent_activation"
+        "enabled_marker_at_start",
+        "final_payload_still_concise"
       ],
       "observed_contract": {
         "no_rush_enabled": true,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -352,11 +355,11 @@
       "context": "Mode: Extra High. Normally enabled.",
       "request": "这次关闭不着急，规划一个离线记账工具，支持导入、分类、月度统计。",
       "expect": [
-        "no_marker"
+        "disabled_marker_at_start"
       ],
       "observed_contract": {
         "no_rush_enabled": false,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -366,11 +369,11 @@
       "request": "规划一个离线记账工具，支持导入、分类、月度统计。",
       "expect": [
         "remains_disabled",
-        "no_marker"
+        "disabled_marker_at_start"
       ],
       "observed_contract": {
         "no_rush_enabled": false,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -405,11 +408,12 @@
       "context": "Mode: High. Same task, marker was already shown in an earlier turn. Requirements unchanged and clear.",
       "request": "继续完成刚才的项目规划。",
       "expect": [
-        "no_repeated_marker_across_turns"
+        "new_user_turn_resets_marker",
+        "marker_at_start"
       ],
       "observed_contract": {
         "no_rush_enabled": true,
-        "marker_count": 0,
+        "marker_count": 1,
         "action": "execute"
       }
     },
@@ -428,15 +432,30 @@
     },
     {
       "name": "strict_json_output",
-      "context": "Mode: High. All requirements understood. Only valid JSON is allowed, with exactly the key steps; no progress channel can be used.",
+      "context": "Mode: High. All requirements understood. Final payload must be valid JSON with exactly the key steps; a separate visible status message is allowed before the JSON payload.",
       "request": "规划 CSV 导入、分类、统计三个模块的实现顺序，只返回 JSON 对象，键为 steps，值为步骤数组。",
       "expect": [
-        "valid_json_only",
-        "do_not_break_required_format"
+        "status_message_before_strict_json",
+        "valid_json_payload_only",
+        "do_not_mix_marker_into_json"
       ],
       "observed_contract": {
         "no_rush_enabled": true,
-        "marker_count": 0,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "minimal_ack_turn",
+      "context": "Mode: unknown. No-Rush is enabled. This is a new user turn continuing the same task.",
+      "request": "嗯",
+      "expect": [
+        "enabled_marker_at_start",
+        "new_user_turn_resets_marker"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
         "action": "execute"
       }
     }
