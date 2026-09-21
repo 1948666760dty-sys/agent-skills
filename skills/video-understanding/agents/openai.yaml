@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video Understanding"
+  short_description: "Paste a Bilibili or YouTube URL for deep multimodal understanding."
+  default_prompt: "Use $video-understanding. A bare supported video URL is enough to trigger analysis. Default to Deep mode, keep evidence types separate, and never claim runtime work succeeded unless it actually did."
