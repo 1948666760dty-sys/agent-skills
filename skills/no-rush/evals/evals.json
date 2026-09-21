@@ -600,6 +600,150 @@
         "marker_count": 1,
         "action": "execute"
       }
+    },
+    {
+      "name": "zero_keyword_simple_preloaded",
+      "context": "Mode: unknown. Host preloaded No-Rush. User does not mention No-Rush.",
+      "request": "北京是中国的首都吗？",
+      "expect": [
+        "enabled_marker_at_start",
+        "keyword_not_required",
+        "answer_normally"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "zero_keyword_complex_q1",
+      "context": "Mode: High. Host preloaded No-Rush. Desktop-native and web are both plausible and materially change architecture. No delegation.",
+      "request": "帮我做一个长期使用的个人记账工具，先把完整开发方案定下来。",
+      "expect": [
+        "enabled_marker_at_start",
+        "keyword_not_required",
+        "ask_material_user_choice"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "clarify",
+        "question_required": true
+      }
+    },
+    {
+      "name": "zero_keyword_complex_q2",
+      "context": "Mode: Medium. Host preloaded No-Rush. Core goal is clear but compact vs information-dense UI is a meaningful user preference.",
+      "request": "设计一个我每天都会看的学习面板。",
+      "expect": [
+        "enabled_marker_at_start",
+        "ask_high_value_q2"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "clarify",
+        "question_required": true
+      }
+    },
+    {
+      "name": "reasonable_default_is_not_permission",
+      "context": "Mode: High. Host preloaded. Model has a common default but the route materially changes privacy and cost.",
+      "request": "给我做一个保存私人资料的AI整理工具。",
+      "expect": [
+        "ask_material_user_choice",
+        "do_not_silently_choose_reasonable_default"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "clarify",
+        "question_required": true
+      }
+    },
+    {
+      "name": "q3_filename_does_not_block",
+      "context": "Mode: High. Host preloaded. All substantive requirements confirmed; only filename unspecified.",
+      "request": "生成最终文件。",
+      "expect": [
+        "do_not_ask_low_value_q3",
+        "execute"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "retrievable_fact_does_not_trigger_question",
+      "context": "Mode: Medium. Host preloaded. Exact factual requirement is available through a tool/file.",
+      "request": "按文件里的要求继续。",
+      "expect": [
+        "retrieve_first",
+        "do_not_ask_retrievable_fact"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "delegated_material_choice_executes",
+      "context": "Mode: High. Host preloaded. User already delegated platform and storage choices.",
+      "request": "平台和存储你决定，继续做。",
+      "expect": [
+        "delegated",
+        "do_not_reask"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "direct_do_complex_executes_v25",
+      "context": "Mode: High. Host preloaded. Complex task has material choices but user explicitly requests direct execution.",
+      "request": "直接做，所有路线你自己定，给我完整方案。",
+      "expect": [
+        "skip_stage_a_questions",
+        "still_final_check"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "keyword_present_simple_still_no_question",
+      "context": "Mode: unknown. Host preloaded. User mentions No-Rush but task is deterministic.",
+      "request": "不着急，2+2是多少？",
+      "expect": [
+        "enabled_marker_at_start",
+        "zero_clarification_rounds"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": true,
+        "marker_count": 1,
+        "action": "execute"
+      }
+    },
+    {
+      "name": "explicit_disable_zero_keyword_router",
+      "context": "Mode: Medium. Host preloaded. User explicitly disables No-Rush for this task.",
+      "request": "这次不用不着急，直接告诉我1+1。",
+      "expect": [
+        "disabled_marker_at_start"
+      ],
+      "observed_contract": {
+        "no_rush_enabled": false,
+        "marker_count": 1,
+        "action": "execute"
+      }
     }
   ],
   "closing_report_contract": {
