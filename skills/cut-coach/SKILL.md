@@ -4,7 +4,7 @@ display_name: Cut Coach / 减脂教练
 description: 个人减脂饮食记录与决策 Skill。用户发送食物/饮料/营养标签照片，或说“我吃了/喝了/刚吃/今天吃了…”，或询问本餐热量、今日剩余、日报、周报、月报时自动触发。识别食物与实际摄入量，估算热量和宏量营养素，按 duty-NAV 计算个人完成度，维护当天账本，并根据当前餐次阶段主动给出下一步饮食建议。默认不使用官方 NRV。
 version: 1.1.0
 status: stable-default
-canonical_repository: 1948666760dty-sys/solo-breach
+canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/cut-coach/SKILL.md
 activation: semantic-auto
 ---
@@ -37,7 +37,7 @@ Cut Coach 是个人减脂饮食记录、估算、复盘与下一步决策 Skill�
 
 唯一规范主源：
 
-- Repo: `1948666760dty-sys/solo-breach`
+- Repo: `1948666760dty-sys/agent-skills`
 - Path: `skills/cut-coach/SKILL.md`
 
 当 GitHub 可访问时，触发 Cut Coach 后优先读取 canonical 文件，再按当前版本执行。

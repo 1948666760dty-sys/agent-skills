@@ -1,51 +1,40 @@
-# ChatGPT Custom Skills
+# 我的 Agent Skills
 
-## Complex Tavern Engine v3.5.3
+个人维护的 AI 助手 Skill 集合。按用途分类，在这里统一查找和更新。
 
-- Canonical path: `skills/complex-tavern/SKILL.md`
-- Current version: `3.5.3`
-- Status: `stable-default`
-- Triggers: “开始复杂酒馆”, “继续复杂酒馆”, “按复杂酒馆 v3 玩”, “继续当前酒馆故事”
-- Loading rule: on any Complex Tavern trigger, fetch the canonical `SKILL.md` from GitHub before starting or resuming; unless the user explicitly asks for an older version, use the latest canonical version by default.
-- Source of truth: GitHub copy above. Library/local copies are backups only.
-- Runtime: pure text; image generation is disabled by default.
+## 分类目录
 
-## 不着急 / No-Rush
+| 分类 | Skill | 当前版本 | 用途 |
+| --- | --- | --- | --- |
+| 互动叙事 | [复杂酒馆 / Complex Tavern](skills/complex-tavern/SKILL.md) | 3.6.6 | 纯文字互动故事、持续世界与长篇小说 |
+| 工作流程 | [不着急 / No-Rush](skills/no-rush/SKILL.md) | 2.2.0 | 理解需求、跟踪任务与交付检查 |
+| 饮食记录 | [减脂教练 / Cut Coach](skills/cut-coach/SKILL.md) | 1.1.0 | 饮食记录、营养估算和阶段报告 |
 
-- Canonical path: `skills/no-rush/SKILL.md`
-- Current version: `2.2.0`
-- Status: `stable-default`
-- Source of truth: GitHub canonical file above. Local/Library copies are fallback only.
-- Loading rule: when GitHub access is available, fetch the canonical file before running No-Rush so the latest version is used.
-- Activation: enabled by default. No model-name or thinking-effort check is required.
-- Visible confirmation: `不着急 ✓` appears before the first normal response/progress update for medium/high-complexity work, project planning, Skill edits, multi-step tasks, and understanding/feasibility assessment. Simple chat, calculation, and one-step Q&A stay silent but enabled.
-- Deduplication: once per task, including progress, clarification, continuation, and final delivery; a new task resets the marker. Explicit disable suppresses it. Strict output formats take priority when there is no suitable progress message.
-- Understanding gate unchanged: >=95% executes directly; <95% resolves retrievable facts first and asks only key ambiguities. The marker is confirmation of activation, not proof of understanding or completion.
-- No hard model/mode exclusions: unknown effort, Instant, Medium, High, Extra High, automatic Thinking, GPT-5.6 Sol, GPT-6 Pro, etc. do not by themselves disable No-Rush.
-- Explicit disable: “这次不用不着急 / 这次关闭不着急” disables only the current task; “关闭不着急 / 暂停不着急” disables it for the current conversation until “开启不着急 / 恢复不着急”.
-- Pipeline: Understanding Gate → Current Task Brief → Execution → Final Check.
-- Latest-wins rule: newer explicit requirements supersede conflicting older requirements; superseded requirements must not reappear.
-- Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
-- Overrides: “直接做”, “别猜”, “严格不着急”.
-- Tests: `skills/no-rush/evals/evals.json`.
-- Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. The checker validates observed activation/action labels, marker placement/count and strict JSON; key-question quality still requires reading the actual replies. Scenario definitions alone are not a passing run.
-- Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.2.0 adds the lightweight marker; v2.1.0 removed the obsolete Extra High-only gate).
+## 如何使用
 
+打开所需 Skill 的链接，将文件内容交给支持自定义指令或 Skill 的 AI 助手；具体安装方式取决于所用客户端。把文件上传到 GitHub 本身不代表已经安装或启用。
 
-## Cut Coach / 减脂教练
+需要直接读取文件时使用以下地址：
 
-- Canonical path: `skills/cut-coach/SKILL.md`
-- Current version: `1.0.0`
-- Status: `stable-default`
-- Activation: semantic auto-trigger.
-- Strong triggers: food/meal/drink/nutrition-label photos related to the user's own intake; “我吃了…”, “我喝了…”, “刚吃…”, “今天吃了…”, “这个我全吃了”, “剩了这么多”, “今天还能吃多少”, “日报”, “周报”, “月报”, “Cut Coach”, “减脂教练”, “duty-NAV”.
-- Query-only mode: generic nutrition questions without an indication that the user consumed the food are analyzed but are not written into the daily ledger.
-- Personal targets: 2100 kcal, protein 120 g, carbs 220 g, fat 60 g, fiber 30 g.
-- Percentages: duty-NAV only by default; official NRV is disabled unless the user explicitly re-enables it.
-- Core loop: identify consumed food → estimate portion and uncertainty → calculate nutrition → duty-NAV → daily ledger → day-stage detection → next-meal/next-step coaching → daily/weekly/monthly reports.
-- Exercise: log exercise when supplied, but do not automatically eat back or subtract exercise calories from the duty-NAV target.
-- Daily ledger safety: missing meals/records must not be treated as zero intake; incomplete days are marked INCOMPLETE.
-- Weekly report: formal 7-day trend requires at least 4 FULL/ESTIMATED days; otherwise generate a data-insufficient snapshot.
-- Style: concise, direct, no default emoji, no food shaming.
-- Loading rule: when GitHub access is available, fetch the canonical file on trigger and use it over older chat memory or fallback copies.
-- Source of truth: GitHub canonical file above.
+- [复杂酒馆原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/complex-tavern/SKILL.md)
+- [不着急原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/no-rush/SKILL.md)
+- [减脂教练原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/cut-coach/SKILL.md)
+
+触发规则、加载说明及已有评估记录见 [详细索引](skills/README.md)。减脂教练内含作者的个人目标，使用时请根据自己的情况调整。
+
+## 目录与维护
+
+每个 Skill 固定放在 `skills/<名称>/SKILL.md`；相关脚本、参考资料与评估记录放在同一个 Skill 目录下。分类集中维护在本页，不因调整分类而反复移动 Skill 路径。
+
+- 新增 Skill：建立独立目录，并在本页补充分类、用途和版本。
+- 更新 Skill：同步文件中的版本与本页、详细索引中的版本。
+- `evals/` 存放已有评估材料；历史结果不代表本次迁移重新执行过评估。
+- 本仓库是正式维护地址，游戏项目独立放在 [孤锋演训 / Solo Breach](https://github.com/1948666760dty-sys/solo-breach)。
+
+## 迁移记录
+
+2026-09-21 从 `solo-breach/skills` 拆出。保留了该目录的 40 条历史提交记录；提取目录时提交标识会改变，原始历史仍保留在游戏仓库。
+
+迁移来源提交：[`8ff9714`](https://github.com/1948666760dty-sys/solo-breach/commit/8ff9714edaf438eed6d654a5f0d175ab475183bc)。本次仅整理目录、更新主源地址和索引，没有修改三个 Skill 的功能规则或提升版本号。
+
+旧仓库对应路径保留迁移指引。GitHub 普通文件不支持自动重定向；已有收藏、固定读取地址或安装配置应改为本仓库的新链接。

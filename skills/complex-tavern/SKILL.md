@@ -4,7 +4,7 @@ display_name: 复杂酒馆
 description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.6 在 v3.6.5 基础上新增 Persistent Paragraph Style Lock / 跨回合段落风格锁：长段落连续小说风格从“单轮放行检查”升级为故事级持久状态，interactive / autonomous_novel / test 的每次 Narrative Renderer 都必须先加载同一 paragraph_profile，再生成草稿；章节切换、Scene 切换、Decision Gate、模式切换或上下文压缩都不得把排版重置为模型默认短段风格。新增 rolling paragraph drift audit 与 draft-construction-first 规则，防止开头长段、后续逐轮回退成一两句一段。继续保留 v3.6.5 版本首行闸门、硬分段理由码、读者术语注释、v3.6.4 输出语义锁及长篇运行规则。
 version: 3.6.6
 status: stable-default
-canonical_repository: 1948666760dty-sys/solo-breach
+canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
@@ -18,7 +18,7 @@ activation: default-on-trigger
 ### 0.1 规范主源与默认加载
 
 复杂酒馆的规范主源（canonical）固定为：
-- Repo: `1948666760dty-sys/solo-breach`
+- Repo: `1948666760dty-sys/agent-skills`
 - Path: `skills/complex-tavern/SKILL.md`
 
 默认加载规则：
@@ -34,7 +34,7 @@ activation: default-on-trigger
 当用户明确触发“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等语义，且 GitHub canonical 可访问时，**正式执行前必须在当前运行/当前窗口中真实读取一次 canonical 文件**。这一步属于启动流程本身，不得用模型记忆、聊天摘要、旧窗口中的读取结果、Library 副本、缓存版本号或“我记得规则”代替。
 
 硬规则：
-- 只有当前运行已经真实读取 `1948666760dty-sys/solo-breach/skills/complex-tavern/SKILL.md`，并从该文件 frontmatter 取得 `version` 后，才允许说“已载入最新版 / 已按 vX.Y.Z 启动 / 当前 canonical 是 vX.Y.Z”。
+- 只有当前运行已经真实读取 `1948666760dty-sys/agent-skills/skills/complex-tavern/SKILL.md`，并从该文件 frontmatter 取得 `version` 后，才允许说“已载入最新版 / 已按 vX.Y.Z 启动 / 当前 canonical 是 vX.Y.Z”。
 - 未执行上述读取时，不得先声称“已经加载最新版”再按记忆中的规则运行。
 - GitHub 读取成功后，以**本次实际读取到的文件内容**覆盖模型对旧规则的记忆、摘要或先前窗口经验；发生冲突时 canonical 当前内容优先。
 - GitHub 读取失败或工具不可用时，可以按 0.1 使用 Library / 本地 fallback，但必须明确标记为“fallback，未验证 GitHub 最新版”；不得把 fallback 冒充为已验证 canonical。

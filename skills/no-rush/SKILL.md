@@ -4,7 +4,7 @@ display_name: 不着急
 description: 所有模式默认启用的沟通与交付闭环控制层 Skill；只有用户明确关闭时停用。适用于普通问答及中高复杂度任务、项目规划、Skill 修改、多步骤执行和理解度/可行性判断；复杂任务开头轻量显示“不着急 ✓”，简单任务静默启用。
 version: 2.2.0
 status: stable-default
-canonical_repository: 1948666760dty-sys/solo-breach
+canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/no-rush/SKILL.md
 ---
 
@@ -47,7 +47,7 @@ No-Rush 是默认控制层，不再依赖模型名称或思考档位。
 
 ## 2. 最新版加载
 GitHub 是唯一规范主源：
-- Repo: 1948666760dty-sys/solo-breach
+- Repo: 1948666760dty-sys/agent-skills
 - Path: skills/no-rush/SKILL.md
 
 当 GitHub 可访问时，运行 No-Rush 前优先读取该 canonical 文件。
