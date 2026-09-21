@@ -56,25 +56,29 @@
 ## 不着急 / No-Rush
 
 - Canonical path: `skills/no-rush/SKILL.md`
-- Current version: `2.4.0`
+- Current version: `2.5.0`
 - Status: `stable-default`
 - Source of truth: GitHub canonical file above. Local/Library copies are fallback only.
+- **Activation contract: default-preload / zero-keyword.** The user does not need to mention “不着急”, “No-Rush”, a model name, or a thinking mode. Any host integrating this repository should load No-Rush in its preflight/default controller chain before handling the first user turn.
+- Host limitation: a `SKILL.md` cannot execute before the host loads it. If a client discovers Skills only after matching a user keyword, true always-on behavior is impossible until the host/router is configured to preload No-Rush. Do not claim repo upload alone fixes that runtime layer.
+- Host integration guide: `skills/no-rush/HOST-INTEGRATION.md`.
 - Loading rule: when GitHub access is available, fetch the canonical file before running No-Rush so the latest version is used.
-- Activation: enabled by default. No model-name or thinking-effort check is required.
-- Visible confirmation: every user turn must expose No-Rush status before the first visible assistant content. Enabled = `不着急 ✓`; explicitly disabled = `不着急 ✗`. Complexity no longer controls visibility, so simple chat, calculation, one-step Q&A, continuations, and short acknowledgements are also marked.
-- Deduplication: exactly once per user turn, not once per task. A new user message always resets status display, even for the same task. Multiple assistant messages in the same turn share one marker. Strict JSON/code/template delivery gets a separate visible status message first so the payload itself can remain strict.
-- Understanding gate unchanged: >=95% executes directly; <95% resolves retrievable facts first and asks only key ambiguities. The marker is confirmation of activation, not proof of understanding or completion.
+- Visible confirmation: every user turn must expose No-Rush status before the first visible assistant content. Enabled = `不着急 ✓`; explicitly disabled = `不着急 ✗`.
+- Question Scan: complex/design/project/Skill-workflow tasks scan GOAL / SCOPE / USER PREFERENCE / ROUTE / DELIVERABLE / ACCEPTANCE before execution.
+- Clarification levels: Q1 blocking choices must be asked unless delegated/direct-do; Q2 high-value optimization questions should normally be asked on complex tasks (1–2); Q3 low-value details should not block execution.
+- Ownership rule: “the model can choose a reasonable default” is not enough to bypass a material user preference or route choice. Search/retrieval replaces factual questions, not user-owned decisions.
+- Understanding gate: >=95% executes when no unresolved Q1/Q2 remains; <95% resolves retrievable facts first, then asks only material ambiguities.
+- Explicit delegation: “你决定 / 都可以 / 你看着办 / 剩下你定” converts the relevant choice to DELEGATED and prevents re-asking.
+- Explicit fast path: “直接做” skips Stage A questions for that task but still keeps Task Brief and Final Check.
 - No hard model/mode exclusions: unknown effort, Instant, Medium, High, Extra High, automatic Thinking, GPT-5.6 Sol, GPT-6 Pro, etc. do not by themselves disable No-Rush.
 - Explicit disable: “这次不用不着急 / 这次关闭不着急” disables only the current task; “关闭不着急 / 暂停不着急” disables it for the current conversation until “开启不着急 / 恢复不着急”.
-- Pipeline: Understanding Gate → Current Task Brief → Execution → Final Check → Closing Status Report.
-- Closing status: on every delivery, staged delivery, or execution pause while No-Rush is enabled, end with four visible fields in this order: 已完成 / 未完成 / 存在问题 / 需要你确认. Empty fields must say 无. Only genuine user decisions belong in 需要你确认.
+- Pipeline: Host Preload → Status → Question Scan / Understanding Gate → Current Task Brief → Execution → Final Check → Closing Status Report.
+- Closing status: on every delivery, staged delivery, or execution pause while No-Rush is enabled, end with four visible fields in this order: 已完成 / 未完成 / 存在问题 / 需要你确认. Empty fields must say 无.
 - Latest-wins rule: newer explicit requirements supersede conflicting older requirements; superseded requirements must not reappear.
 - Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
-- Overrides: “直接做”, “别猜”, “严格不着急”.
 - Tests: `skills/no-rush/evals/evals.json`.
-- Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. The checker validates observed activation/action labels, marker placement/count and strict JSON; key-question quality still requires reading the actual replies. Scenario definitions alone are not a passing run.
-- Changelog: see the version history at the end of `skills/no-rush/SKILL.md` (v2.4.0 adds the mandatory four-field closing status report; v2.3.0 makes status visible on 100% of user turns; v2.2.0 introduced the earlier complexity-based marker; v2.1.0 removed the obsolete Extra High-only gate).
-
+- Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. Static/contract audit does not substitute for a live host/model run.
+- Changelog: see `skills/no-rush/SKILL.md`; v2.5.0 adds Question Scan and the zero-keyword host preload contract.
 
 ## duty-NRV / Cut Coach / 减脂教练
 
