@@ -1,6 +1,6 @@
 {
   "skill": "video-understanding",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "purpose": "Regression scenarios for upload-first and URL video understanding, long-video chaptered retrieval, adaptive scene detection, evidence memory, agentic rewatch, safe upload paths, and truthful runtime status.",
   "cases": [
     {
@@ -328,6 +328,17 @@
       "expect": [
         "title_null_until_model_understands",
         "do_not_call_structural_windows_semantic_summary"
+      ]
+    },
+    {
+      "name": "quality_first_one_hour_can_take_one_hour",
+      "context": "User prefers quality over speed and accepts roughly real-time processing.",
+      "request": "深度看这个60分钟视频",
+      "expect": [
+        "no_5_15_min_target",
+        "allow_about_60_min_or_longer_processing",
+        "prefer_more_complete_asr_visual_coverage_and_rewatch",
+        "do_not_reduce_quality_for_speed_unless_user_requests_quick"
       ]
     }
   ]
