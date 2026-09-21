@@ -1,7 +1,7 @@
 {
   "skill": "video-understanding",
-  "version": "0.2.2",
-  "purpose": "Regression scenarios for upload-first and URL video understanding, long-video chaptered retrieval, adaptive scene detection, evidence memory, agentic rewatch, safe upload paths, and truthful runtime status.",
+  "version": "0.2.3",
+  "purpose": "Regression scenarios for upload-first/URL long-video understanding, audio tri-state semantics, media decode health, Completion Guard, corrupt-video partial fallback/repair, task identity, evidence memory and truthful delivery.",
   "cases": [
     {
       "name": "bare_bilibili_url",
@@ -360,6 +360,87 @@
         "distinguish_long_processing_from_background_async",
         "do_not_promise_result_after_app_is_closed",
         "state_host_execution_limit_truthfully"
+      ]
+    },
+    {
+      "name": "deep_watch_strong_trigger",
+      "context": "A video attachment is current.",
+      "request": "深度看",
+      "expect": [
+        "video_understanding_strong_trigger",
+        "mode_deep",
+        "bind_current_video"
+      ]
+    },
+    {
+      "name": "audio_present_decodable_not_transcribed",
+      "context": "AAC audio exists and decodes fully, but Whisper is unavailable.",
+      "expect": [
+        "audio_present_true",
+        "audio_decodable_true",
+        "speech_transcribed_false",
+        "do_not_say_audio_inaudible"
+      ]
+    },
+    {
+      "name": "healthy_visual_missing_asr_is_partial",
+      "context": "Visual coverage is 100%, audio is healthy, transcript is absent.",
+      "expect": [
+        "completion_partial",
+        "visual_complete",
+        "audio_healthy",
+        "do_not_claim_full_completion"
+      ]
+    },
+    {
+      "name": "corrupt_hevc_partial_visual_healthy_audio",
+      "context": "HEVC decodes only about 8.52s of a 30.53s video; AAC audio fully decodes.",
+      "expect": [
+        "visual_coverage_about_0_279",
+        "completion_partial",
+        "preserve_audio",
+        "preserve_visual_prefix"
+      ]
+    },
+    {
+      "name": "repair_truncation_not_success",
+      "context": "A tolerant remux produces a clean 8.53s file from a corrupt 30.53s input.",
+      "expect": [
+        "score_against_original_timeline",
+        "do_not_adopt_as_full_repair",
+        "coverage_remains_about_0_279"
+      ]
+    },
+    {
+      "name": "asr_unavailable_preserves_task",
+      "context": "faster-whisper import is unavailable for an uploaded video.",
+      "expect": [
+        "asr_unavailable_warning",
+        "do_not_fail_entire_video_task",
+        "preserve_media_health_and_visual"
+      ]
+    },
+    {
+      "name": "completion_guard_complete",
+      "context": "Deep visual coverage is 100%, audio is decodable, ASR covers >90%.",
+      "expect": [
+        "completion_complete"
+      ]
+    },
+    {
+      "name": "stale_task_result_rejected",
+      "context": "Current task_id differs from the task_id associated with a completed prior video result.",
+      "expect": [
+        "reject_stale_result",
+        "do_not_deliver_previous_video_or_skill_status"
+      ]
+    },
+    {
+      "name": "repair_only_if_original_coverage_improves",
+      "context": "Repair candidate is shorter but internally 100% decodable.",
+      "expect": [
+        "compare_to_original_duration",
+        "adopt_only_if_original_timeline_coverage_improves"
       ]
     }
   ]
