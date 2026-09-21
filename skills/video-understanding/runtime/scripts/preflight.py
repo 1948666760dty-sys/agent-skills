@@ -9,7 +9,7 @@ REQUIRED = [
     ("yt_dlp", "yt-dlp"),
     ("faster_whisper", "faster-whisper"),
     ("cv2", "OpenCV"),
-    ("webvtt", "webvtt-py"),
+    ("webvtt", "webvtt-py"),\n    ("scenedetect", "PySceneDetect"),
 ]
 
 print(f"Python: {sys.version.split()[0]}")
