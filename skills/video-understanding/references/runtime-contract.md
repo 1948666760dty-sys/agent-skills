@@ -1,33 +1,92 @@
-# Video Understanding Runtime Contract v0.2.1
+# Video Understanding Runtime Contract v0.2.3
 
 ## 1. Scope
 
-Reference Runtime:
-`skills/video-understanding/runtime/`
-
 Inputs:
-- Bilibili URL
-- YouTube URL
-- host-materialized uploaded/local video inside an allowed inbox
+- current-chat video attachment when host-accessible
+- Bilibili
+- YouTube
+- host-materialized upload inside allowed roots
 
-The Runtime prepares evidence. The host model performs final multimodal reasoning.
+Runtime prepares evidence; host performs final multimodal reasoning.
 
-## 2. Security Boundary for Uploads
+## 2. Audio State Contract
 
-`start_uploaded_video_analysis` must never become an arbitrary local-file reader.
+Never collapse audio state into one boolean.
 
-Default allowed root:
+Required fields:
+- `audio_present`
+- `audio_decodable`
+- `speech_transcribed`
+- `transcript_source`
+
+`audio_present=true + audio_decodable=true + speech_transcribed=false` means the audio is healthy but ASR/caption transcription was not completed.
+
+Missing faster-whisper must return/record `ASR_UNAVAILABLE` or a warning and preserve visual/audio evidence; it must not fail the whole upload task by default.
+
+## 3. Visual Health Contract
+
+For uploaded/prepared media, FFprobe/FFmpeg health records:
+- duration_seconds
+- video/audio codec
+- decoded_until_seconds
+- visual_coverage_ratio
+- decode_errors
+
+Deep visual completion threshold: >=98%.
+
+## 4. Completion Guard
+
+Overall state:
+- COMPLETE
+- PARTIAL
+- FAILED
+
+Deep COMPLETE requires adequate visual coverage when video is present and adequate transcript/caption coverage when audio is present.
+
+Useful but incomplete evidence => PARTIAL.
+
+Do not say “看完了” for PARTIAL.
+
+## 5. Corrupt Video Fallback
+
+If a video becomes undecodable mid-stream:
+- keep frames decoded before the failure;
+- keep healthy audio;
+- continue ASR if possible;
+- keep transcript evidence;
+- report exact coverage and error;
+- attempt repair only as a fallback.
+
+Repair may try:
+1. tolerant remux;
+2. bounded-duration H.264 transcode.
+
+Repair acceptance must compare decoded coverage to the **original video duration**. A clean truncated prefix must not be accepted as a full repair.
+
+## 6. Task / Session Identity
+
+start/wait job:
+- task_id
+- request_fingerprint
+
+prepared result:
+- session_id
+- source_fingerprint
+
+Host must deliver only a result tied to the current task. Stale Skill-update text, previous-video output, or another session must be rejected.
+
+## 7. Upload Security
+
+Default root:
 `~/.video-understanding/inbox`
 
-Optional additional roots:
-`VIDEO_UPLOAD_ROOTS` using the platform path separator.
+Additional roots:
+`VIDEO_UPLOAD_ROOTS`
 
-A path outside allowed roots returns:
-`UPLOAD_PATH_NOT_ALLOWED`.
+Outside roots => `UPLOAD_PATH_NOT_ALLOWED`.
 
-A ChatGPT attachment can use this tool only when the host has actually materialized the file into an allowed root. If not, the host must process the attachment through its own file runtime or explain the limitation.
-
-## 3. Current MCP Tools
+## 8. Current MCP Tools
 
 1. start_video_analysis
 2. start_uploaded_video_analysis
@@ -38,128 +97,26 @@ A ChatGPT attachment can use this tool only when the host has actually materiali
 7. search_prepared_video
 8. inspect_video_window
 
-All are read/fetch semantics with local cache as an implementation detail.
+## 9. Long Video
 
-## 4. Long-Video Strategy
+Use chapters + Evidence Memory + bounded transcript/frame windows. Do not inject entire 1–3h evidence sets into one model call.
 
-Runtime profile by duration:
+## 10. Scene / Visual
 
-- <=5m: short
-- <=30m: standard
-- <=90m: long
-- <=180m: very_long
-- >180m: ultra_long
+- PySceneDetect AdaptiveDetector
+- baseline fallback
+- host-vision OCR
+- dense agentic rewatch
 
-Each profile defines:
-- baseline frame step
-- overview frame budget
-- chapter window
-- evidence-memory window/overlap
-- PySceneDetect frame skip
+## 11. External Runtime Requirements
 
-The Runtime must not load full long-video evidence into one model call.
+Python dependencies are in `pyproject.toml`.
 
-Recommended host:
-```text
-manifest
-→ chapters
-→ search evidence / transcript windows
-→ overview frames
-→ identify important intervals
-→ dense rewatch
-→ final synthesis
-```
+System executables required:
+- ffmpeg
+- ffprobe
 
-## 5. PySceneDetect
-
-Reference Runtime uses:
-- scenedetect-headless >=0.7.1
-- SceneManager
-- AdaptiveDetector
-- auto_downscale=true
-
-If scene detection fails:
-- preserve baseline coverage
-- return warning
-- do not claim scene-aware success.
-
-## 6. ASR
-
-Reference:
-- faster-whisper >=1.2.1
-- local model
-- device=auto attempts CUDA then CPU int8
-- VAD enabled
-
-Platform subtitles remain preferred for URL inputs.
-
-Uploaded-file v0.2 uses ASR unless the host separately supplies a trusted subtitle track.
-
-## 7. Chapters
-
-Runtime chapters are structural navigation windows, not generated semantic chapter summaries.
-
-They contain:
-- chapter_id
-- start/end
-- segment_count
-- characters
-- preview
-- title=null
-- summary=null
-- status=structural_window
-
-The host may assign semantic titles only after actual content understanding.
-
-## 8. Evidence Memory
-
-Runtime builds overlapping transcript chunks.
-
-`search_prepared_video` uses local lexical/BM25-like scoring and returns candidate windows.
-
-It is a retrieval step, not factual verification.
-
-Important answers should still inspect:
-- transcript window
-- visual frames when relevant.
-
-No embedding API is required.
-
-## 9. Visual
-
-Deep mode:
-- URL: downloads a video-only stream capped near 720p when available
-- upload: uses the allowed materialized file directly
-- overview frame budget adapts to duration
-- returned frame image width is capped to reduce context/transport cost
-- dense rewatch max 20 images per tool call
-
-OCR status in v0.2 remains:
-`host_vision`
-
-Do not claim local OCR ran unless a future local OCR stage is actually executed.
-
-## 10. Upload Cache
-
-Uploaded videos are not automatically duplicated into cache because multi-hour files can be very large.
-
-Manifest stores the allowed absolute source path for later rewatch.
-
-If the host deletes the source:
-- transcript/memory may still exist
-- future visual rewatch returns a clear re-upload/materialization error.
-
-## 11. Context Protection
-
-For long/very_long/ultra_long:
-- do not request all transcript segments at once
-- do not request all frames at once
-- query chapters/search first
-- fetch bounded windows.
-
-`get_video_transcript` caps max_chars per call.
-
-`inspect_video_window` caps images per call.
+`scripts/preflight.py` must verify both.
 
 ## 12. Errors
 
@@ -167,34 +124,25 @@ For long/very_long/ultra_long:
 - VIDEO_NOT_FOUND
 - UPLOAD_PATH_NOT_ALLOWED
 - MEDIA_DOWNLOAD_FAILED
+- ASR_UNAVAILABLE
 - ASR_FAILED
 - FRAME_EXTRACTION_FAILED
 - VISUAL_ANALYSIS_FAILED
 - INTERNAL_ERROR
 
-Partial success is allowed and must be labelled.
+## 13. Regression Samples
 
-## 13. Performance
+`scripts/media_health_regression.py` accepts:
+1. a healthy video with healthy audio;
+2. a video with partially corrupt visual stream but healthy audio.
 
-No fixed SLA and no default speed target.
-
-Quality-first is the default:
-- a 60-minute video may take around 60 minutes to process;
-- no-caption or visual-heavy videos may take longer than their playback duration;
-- longer runtime is acceptable when it materially improves transcript completeness, visual coverage, rewatch depth, number/name verification, or evidence traceability.
-
-Only explicit user requests for quick/fast/simple analysis should activate aggressive speed optimizations.
+It validates audio tri-state semantics, partial visual coverage, Completion Guard and repair scoring against original timeline.
 
 ## 14. Stable Gate
 
-Do not mark stable before real smoke tests cover:
-- short upload
-- 30–90m upload
-- 90–180m input
-- Bilibili
-- YouTube
-- ASR fallback
-- scene detector success and fallback
-- Video Memory retrieval
-- dense rewatch
-- upload path security.
+Do not mark stable before:
+- Python/TOML/static syntax checks pass;
+- MCP tool names are consistent;
+- real healthy/corrupt sample regression passes;
+- real ASR path passes on target Windows runtime;
+- 30–90m and 90–180m smoke tests pass.
