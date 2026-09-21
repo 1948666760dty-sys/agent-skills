@@ -7,13 +7,10 @@
 | 分类 | Skill | 当前版本 | 用途 |
 | --- | --- | --- | --- |
 | 互动叙事 | [复杂酒馆 / Complex Tavern](skills/complex-tavern/SKILL.md) | 3.6.6 | 纯文字互动故事、持续世界与长篇小说 |
-| 互动叙事 | [Qwen Romance / 千问成人言情扩展](skills/qwen-romance/SKILL.md) | 0.2.0 RC | 仅本地 Qwen 的恋爱、成熟关系与自适应长输出扩展；GPT/OpenAI 硬禁用 |
 | 工作流程 | [不着急 / No-Rush](skills/no-rush/SKILL.md) | 2.5.0 | 默认预加载、需求澄清、任务跟踪与交付检查 |
 | 饮食记录 | [duty-NRV / Cut Coach / 减脂教练](skills/cut-coach/SKILL.md) | 1.3.0 | 低成本饮食记录、主动减脂干预、运动配合与趋势审计 |
 
 ## 如何使用
-
-需要真正执行本 Skill 的本地运行层见：[qwen-romance-runtime](https://github.com/1948666760dty-sys/qwen-romance-runtime)。本仓库继续只维护规则与规范；Runtime 仓库单独维护 Adapter、Token Budget、多 Chunk、SQLite 状态、取消和 Web UI。
 
 打开所需 Skill 的链接，将文件内容交给支持自定义指令或 Skill 的 AI 助手；具体安装方式取决于所用客户端。把文件上传到 GitHub 本身不代表已经安装或启用。
 
@@ -22,7 +19,6 @@
 需要直接读取文件时使用以下地址：
 
 - [复杂酒馆原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/complex-tavern/SKILL.md)
-- [Qwen Romance 原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/qwen-romance/SKILL.md)
 - [不着急原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/no-rush/SKILL.md)
 - [duty-NRV / Cut Coach / 减脂教练原始文件](https://raw.githubusercontent.com/1948666760dty-sys/agent-skills/main/skills/cut-coach/SKILL.md)
 
