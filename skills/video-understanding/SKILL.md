@@ -2,7 +2,7 @@
 name: video-understanding
 display_name: Video Understanding / 视频理解
 description: 面向 ChatGPT 的统一长视频理解 Skill。用户只需发送 Bilibili/B站或 YouTube 链接（包括 b23.tv、BV/av/ep/ss、youtube.com、youtu.be、YouTube Shorts），即可自动识别平台并进入视频理解流程。默认 Deep/效果优先：字幕优先、无字幕本地 ASR、场景检测、关键帧、OCR、音画时间轴对齐、重点区间二次回看、证据化总结与后续问答。快速模式仅在用户明确说“快速看/简单总结”时启用。
-version: 0.1.0
+version: 0.1.1
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/video-understanding/SKILL.md
@@ -10,7 +10,7 @@ activation: semantic-auto-url
 supported_platforms: [bilibili, youtube]
 ---
 
-# Video Understanding v0.1.0
+# Video Understanding v0.1.1
 
 ## 0. 目标
 
@@ -559,7 +559,7 @@ No-Rush
 
 ## 19. 当前发布状态
 
-当前版本：`0.1.0 release-candidate`
+当前版本：`0.1.1 release-candidate`
 
 已经定义：
 - 自动触发；
@@ -577,5 +577,7 @@ No-Rush
 尚未因为“规范文件已存在”而宣称 Runtime 已可用。
 
 ### Changelog
+
+- **0.1.1（2026-09-22）**：加入真实参考 Runtime 的 5 工具编排契约；明确长任务 start/wait 对用户隐藏；v0.1 OCR 改为宿主 ChatGPT 直接读取 MCP ImageContent，避免声称未实现的本地 OCR。
 
 - **0.1.0（2026-09-22）**：首个 Bilibili + YouTube 统一视频理解候选版；裸链接自动触发；默认 Deep/效果优先；加入字幕→ASR fallback、场景关键帧、OCR、音画时间轴对齐、Agentic Rewatch、缓存和 MCP Runtime 契约。
