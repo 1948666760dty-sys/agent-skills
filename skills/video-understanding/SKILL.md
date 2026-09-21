@@ -2,7 +2,7 @@
 name: video-understanding
 display_name: Video Understanding / 视频理解
 description: 上传优先、长视频友好的多模态视频理解 Skill。支持当前聊天中的视频附件，以及 Bilibili/B站和 YouTube URL。默认 Deep/效果优先：字幕/ASR、PySceneDetect 场景检测、自适应关键帧、章节化长视频、Evidence Memory、音画时间轴、Agentic Rewatch、证据化总结与后续问答。快速模式仅在用户明确要求快速/字幕优先时启用。
-version: 0.2.1
+version: 0.2.2
 status: release-candidate
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/video-understanding/SKILL.md
@@ -10,7 +10,7 @@ activation: semantic-auto-upload-or-url
 supported_inputs: [video_attachment, bilibili, youtube]
 ---
 
-# Video Understanding v0.2.1
+# Video Understanding v0.2.2
 
 ## 0. 定位
 
@@ -139,7 +139,7 @@ Quick 可以减少视觉覆盖与二次回看，但仍必须如实标记证据�
 
 ## 4. 输入路由
 
-### A. 当前聊天视频附件
+### A. 当前聊天视频附件（Mobile / Native 优先）
 
 若宿主直接提供可读视频文件：
 1. 读取附件；
@@ -149,6 +149,20 @@ Quick 可以减少视觉覆盖与二次回看，但仍必须如实标记证据�
 5. Deep 时执行场景分析和关键帧；
 6. 建立 Chapters + Evidence Memory；
 7. 全局理解后自动回看重点。
+
+**手机端与电脑端在默认质量策略上平等。**  
+不得仅因为附件来自 Android/iOS/移动端，就自动：
+- 切 Quick；
+- 降低 ASR 完整度；
+- 显著减少场景覆盖；
+- 跳过二次回看；
+- 只做字幕摘要。
+
+若移动端宿主能够持续执行当前任务，允许长视频使用接近或超过视频时长的处理预算。例如：
+- 60 分钟视频可允许约 120 分钟甚至更久；
+- 复杂、无字幕、重视觉内容允许超过 2× 播放时长。
+
+“允许长时间处理”不等于“后台异步保证”。若当前宿主/会话不支持离开聊天后持续执行，不得承诺关闭 App 后仍会在两小时后自动交付。
 
 若通过 MCP Runtime 处理上传文件：
 - 只能使用宿主已 materialize 到受控 upload inbox 的文件；
@@ -494,15 +508,18 @@ start
 
 ## 16. 性能策略
 
-用户偏好：**速度不重要，效果优先。**
+用户偏好：**速度不重要，效果优先；手机也一样。**
 
 默认不再追求“60 分钟视频 5–15 分钟完成”。
 
 允许：
-- 60 分钟视频处理约 60 分钟；
+- 60 分钟视频处理约 60–120 分钟；
+- 如果证据覆盖明显受益，60 分钟视频允许超过 120 分钟；
 - 无字幕、重视觉、复杂图表/代码/实验视频超过视频原始时长；
 - 90–180 分钟视频按质量需要持续更久；
 - >180 分钟视频采用章节化长任务，不设置固定完成时间目标。
+
+这个策略对 **Mobile Native 上传** 和 Desktop/Runtime 输入一致；设备入口本身不是降质理由。
 
 当“更慢”可以明显换来：
 - 更完整 ASR；
@@ -600,7 +617,7 @@ Stable 前至少：
 
 ## 22. 当前状态
 
-当前版本：`0.2.1 release-candidate`
+当前版本：`0.2.2 release-candidate`
 
 已经实现到参考 Runtime：
 - Bilibili / YouTube；
@@ -623,6 +640,8 @@ Stable 前至少：
 
 ### Changelog
 
-- **0.2.1（2026-09-22）**：性能策略改为 Quality-First 无硬时限；允许长视频处理时间接近或超过原视频时长，默认以证据覆盖和准确性优先，只有用户明确要求快速时才压缩流程。\n- **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
+- **0.2.2（2026-09-22）**：新增 Mobile-Native Quality-First 契约；手机直接上传视频与电脑端享有同等默认质量策略；60 分钟视频可允许约 120 分钟甚至更久处理；明确“允许慢处理”不等于“后台异步保证”。
+- **0.2.1（2026-09-22）**：性能策略改为 Quality-First 无硬时限；允许长视频处理时间接近或超过原视频时长，默认以证据覆盖和准确性优先，只有用户明确要求快速时才压缩流程。
+- **0.2.0（2026-09-22）**：Upload-First；加入安全 upload inbox、本地视频 adapter、PySceneDetect AdaptiveDetector、自适应长视频 tier、结构章节、Evidence Memory、本地检索、长视频上下文保护与 8-tool MCP 编排。
 - **0.1.1（2026-09-22）**：对齐首版 MCP Runtime。
 - **0.1.0（2026-09-22）**：Bilibili + YouTube 首版。
