@@ -1,306 +1,247 @@
-# Video Understanding Runtime Contract v0.1.0
+# Video Understanding Runtime Contract v0.1.1
 
 ## 1. 目的
 
-本文件定义 ChatGPT/Agent Skill 与真实视频处理后端之间的最小契约。
+本文件描述当前已经写入仓库的参考 Runtime 与 Video Understanding Skill 之间的真实接口。
 
-目标用户体验只有一个入口：
+目标用户体验：
 
 ```text
-<video URL>
+用户只发送 B站/YouTube URL
+→ 宿主自动调用工具
+→ 宿主内部处理长任务和回看
+→ 当前聊天返回最终理解
 ```
 
-内部可以多阶段执行，但不得要求用户参与任务编排。
+用户不得被要求操作 job_id、轮询、下载器或帧文件。
 
-## 2. 支持平台
+## 2. 当前 Runtime
 
-v0.1：
-- Bilibili
-- YouTube
+路径：
 
-规范化后必须得到：
+`skills/video-understanding/runtime/`
+
+MCP transport：
+- Streamable HTTP
+- 默认本地地址：`127.0.0.1:8765/mcp`
+- ChatGPT 不能直接连接 localhost；实际接入需 Secure MCP Tunnel 或远程部署。
+
+当前工具均按 read/fetch 语义设计，不修改源平台内容。
+
+## 3. Tool Contract
+
+### 3.1 start_video_analysis
+
+输入：
 
 ```json
 {
-  "platform": "bilibili|youtube",
-  "canonical_id": "...",
-  "canonical_url": "...",
-  "part": null
+  "url": "Bilibili or YouTube URL",
+  "mode": "deep",
+  "include_audience": false,
+  "force": false
 }
 ```
 
-## 3. 推荐 MCP Tool
+输出初始 `job_id` 与 `running`。
 
-### 3.1 首选：analyze_video
+宿主必须自己保存 job_id，不得要求用户复制或再次输入。
 
-```json
-{
-  "name": "analyze_video",
-  "input": {
-    "url": "string",
-    "mode": "deep|quick",
-    "question": "string|null",
-    "language": "zh-CN"
-  }
-}
-```
+### 3.2 wait_video_analysis
 
-返回完整 `VideoAnalysisResult`。
+输入：
+- job_id
+- wait_seconds（0–30）
 
-若宿主允许足够长的工具调用，这是最简单路径。
+若仍在运行，宿主继续内部调用。
 
-### 3.2 长任务 fallback
+若 complete，返回 `session_id` 等 prepare 结果。
 
-若单次工具调用不能覆盖长视频处理时间，可实现：
+若 failed，返回明确 error code/message。
+
+### 3.3 get_video_manifest
+
+输入：
+- session_id
+
+返回：
+- 平台；
+- canonical id/url；
+- 标题/作者；
+- 时长；
+- transcript source；
+- visual readiness；
+- frame count；
+- warnings。
+
+### 3.4 get_video_transcript
+
+输入：
+- session_id；
+- start_seconds；
+- end_seconds；
+- max_chars。
+
+长视频应按时间窗口分页读取，不必一次把整个字幕塞入上下文。
+
+### 3.5 inspect_video_window
+
+输入：
+- session_id；
+- start_seconds；
+- end_seconds；
+- max_frames（Runtime 上限 20）；
+- density = overview | dense。
+
+输出为混合 MCP content blocks：
+- 时间戳 TextContent；
+- 实际 JPEG ImageContent。
+
+`overview`：用于第一遍全局粗看。
+
+`dense`：用于重点区间二次回看。
+
+## 4. 推荐宿主执行顺序
 
 ```text
 start_video_analysis
-get_video_analysis
+→ wait_video_analysis until complete
+→ get_video_manifest
+→ get_video_transcript in windows
+→ inspect_video_window overview
+→ model identifies 1..N important/uncertain intervals
+→ inspect_video_window dense for those intervals
+→ final synthesis
 ```
 
-Skill/宿主负责自动完成：
-- start；
-- 状态获取；
-- 最终结果获取。
+Quick 模式可跳过视觉或减少视觉调用。
 
-用户不得被要求输入 job_id。
+Deep 模式不能在 visual_ready=true 时完全忽略视觉证据。
 
-## 4. VideoAnalysisResult
+## 5. Bilibili Adapter
 
-```json
-{
-  "schema_version": "0.1",
-  "status": "complete|partial|failed",
-  "source": {
-    "platform": "youtube",
-    "canonical_id": "...",
-    "canonical_url": "...",
-    "title": "...",
-    "author": "...",
-    "duration_seconds": 3600,
-    "part": null,
-    "fetched_at": "ISO-8601"
-  },
-  "acquisition": {
-    "transcript_source": "human|platform_auto|asr|none",
-    "visual": true,
-    "ocr": true,
-    "second_pass": true,
-    "audience": false
-  },
-  "transcript": [],
-  "frames": [],
-  "ocr": [],
-  "chapters": [],
-  "rewatch_windows": [],
-  "analysis": {},
-  "warnings": []
-}
-```
+参考 Runtime vendoring 了：
 
-## 5. TranscriptSegment
+AntaresGG/BiliBiliVideoParser 的 Bilibili-native extractor（MIT）。
 
-```json
-{
-  "start_ms": 1000,
-  "end_ms": 5300,
-  "text": "...",
-  "source": "human|platform_auto|asr",
-  "confidence": 0.94
-}
-```
-
-ASR 无可靠 confidence 时允许 null。
-
-## 6. FrameRecord
-
-```json
-{
-  "timestamp_ms": 812000,
-  "path_or_asset_id": "...",
-  "reason": "scene_cut|baseline|semantic_anchor|rewatch",
-  "visual_summary": "...",
-  "confidence": 0.9
-}
-```
-
-## 7. OCRRecord
-
-```json
-{
-  "timestamp_ms": 812000,
-  "text": "...",
-  "bbox": null,
-  "confidence": 0.91
-}
-```
-
-## 8. RewatchWindow
-
-```json
-{
-  "start_ms": 1120000,
-  "end_ms": 1270000,
-  "reason": "critical_chart",
-  "sampling": "dense"
-}
-```
-
-## 9. Bilibili Adapter
-
-推荐能力：
-- b23.tv 跳转解析；
+负责：
+- b23.tv；
 - BV/av；
 - ep/ss；
-- 分P；
-- 元数据；
-- 人工字幕；
+- 分P元数据；
+- 官方字幕；
 - AI字幕；
-- 可选弹幕；
-- 无字幕音频 fallback。
+- 可选弹幕信号。
 
-匿名优先。
+MIT 原许可保存在 Runtime vendor 目录。
 
-不得在日志返回原始 cookie。
+## 6. YouTube Adapter
 
-## 10. YouTube Adapter
-
-推荐能力：
-- youtube.com/watch；
+当前使用 yt-dlp：
+- watch URL；
 - youtu.be；
-- shorts；
+- Shorts；
 - metadata；
-- manual captions；
-- auto captions；
-- audio/video fallback。
+- manual subtitles；
+- automatic captions。
 
-建议用 yt-dlp 或等价适配器，但 Skill 不绑定具体实现。
+字幕优先级仍由 Skill 解释：
+人工 > 平台自动 > ASR。
 
-## 11. ASR
+## 7. ASR
 
-免费优先：
-- faster-whisper；
-- 本地模型缓存。
+当无可用字幕：
+- 下载 audio-only；
+- 使用本地 faster-whisper；
+- 默认 model = small；
+- 默认 device = auto；
+- auto 先尝试 CUDA，失败再回退 CPU int8。
 
-Runtime 应允许：
-```yaml
-asr_model: configurable
-device: auto
-compute_type: auto
-```
+环境变量：
+- VIDEO_WHISPER_MODEL
+- VIDEO_WHISPER_DEVICE
 
-不得把“模型下载成功”当作“视频转写成功”。
+不得把 CUDA 尝试失败隐藏成“GPU 已成功运行”。
 
-## 12. Scene / Frame Pipeline
+## 8. Visual Pipeline
 
-Deep 推荐：
+Deep：
+- 下载不高于约 720p 的 video-only stream（可用时）；
+- 每 3 秒做一次场景差异 probe；
+- 每 12 秒保底一个 baseline；
+- scene-aware 候选与 baseline 合并；
+- 最多保留约 600 个 overview frame record；
+- 保存为最大宽度约 960px 的 JPEG。
 
-```text
-probe
-→ scene detection
-→ baseline sampling
-→ semantic anchors
-→ dedupe
-→ visual pass 1
-→ rewatch planning
-→ dense local resample
-→ visual pass 2
-```
+第一次视觉理解由宿主调用 overview。
 
-关键目标是覆盖信息，而不是固定帧数。
+第二次回看由宿主根据第一次结果决定时间窗，再调用 dense。
 
-## 13. OCR
+## 9. OCR
 
-默认免费本地 OCR。
+v0.1：
+- Runtime 不要求 PaddleOCR/Tesseract；
+- 通过 `inspect_video_window` 把真实帧发给宿主 ChatGPT；
+- OCR/图表/参数/代码阅读由宿主视觉能力完成；
+- manifest 中标记 `ocr = host_vision`。
 
-OCR 重点对象：
-- slides；
-- charts；
-- tables；
-- code；
-- UI；
-- prices；
-- specs；
-- labels。
+未来可增加本地 OCR，但不能在未执行时标记 local OCR success。
 
-低价值 talking-head 画面不应大量 OCR。
+## 10. Cache
 
-## 14. 缓存
+默认：
 
-缓存 key 至少：
+`~/.video-understanding/<session_id>/`
 
-```text
-platform + canonical_id + part + content_revision
-```
+缓存：
+- manifest；
+- transcript；
+- video-only；
+- scene frames；
+- dense rewatch frames；
+- 必要时 audio。
 
-建议分层：
-- raw metadata；
-- subtitles；
-- ASR；
-- frames；
-- OCR；
-- final analysis。
+Follow-up 应复用 session/cache。
 
-Follow-up 优先复用。
+## 11. 错误码
 
-## 15. 临时文件
-
-默认写入独立工作目录。
-
-任务结束：
-- 保留结构化缓存；
-- 可删除大体积原始音视频；
-- 不留下散乱文件到桌面/用户目录；
-- 可配置保留策略。
-
-## 16. 错误码
-
-至少定义：
+至少：
 - UNSUPPORTED_URL
 - VIDEO_NOT_FOUND
-- AUTH_REQUIRED
-- SUBTITLE_UNAVAILABLE
+- AUTH_REQUIRED（后续登录路径）
 - MEDIA_DOWNLOAD_FAILED
 - ASR_FAILED
 - FRAME_EXTRACTION_FAILED
-- OCR_FAILED
 - VISUAL_ANALYSIS_FAILED
-- RUNTIME_TIMEOUT
 - INTERNAL_ERROR
 
-允许 partial success。
+允许 partial/fallback，但不得把失败步骤说成成功。
 
-## 17. 性能遥测
+## 12. 免费优先
 
-返回：
-- total_ms；
-- acquire_ms；
-- asr_ms；
-- frame_ms；
-- ocr_ms；
-- reasoning_ms；
-- frame_count；
-- rewatch_frame_count。
+当前不要求额外模型 API Key。
 
-用于之后优化“60 分钟视频约 5–15 分钟”目标，但不得对用户伪装固定 SLA。
+使用：
+- 平台字幕；
+- Bilibili 公共 API；
+- yt-dlp；
+- faster-whisper；
+- OpenCV；
+- ChatGPT 当前宿主视觉理解。
 
-## 18. 安全与隐私
+首次下载 Whisper 模型会产生网络流量和本地模型占用，但不是额外按次 API 费用。
 
-- 不回传 raw cookie；
-- 不将私有视频缓存为公共资源；
-- 浏览器 cookie 读取必须有显式授权；
-- 日志避免敏感 token；
-- 下载内容仅用于用户请求的理解任务；
-- 遵守平台和宿主能力边界。
+## 13. 真实性与 Stable 门槛
 
-## 19. Stable 门槛
+当前 Runtime 已有代码，不代表已经在目标 Windows 机器真实运行成功。
 
-Runtime 达到 stable 前至少完成：
-- B站 3 个公开视频；
-- YouTube 3 个公开视频；
-- 其中至少 2 个无人工字幕；
-- 至少 2 个画面信息明显高于口述的信息型视频；
-- 至少 1 个 45–90 分钟长视频；
-- 裸链接端到端；
-- follow-up 局部回看；
-- 错误降级测试。
+Stable 前至少完成：
+- B站公开视频 >= 3；
+- YouTube公开视频 >= 3；
+- 无人工字幕 >= 2；
+- 视觉信息关键视频 >= 2；
+- 45–90 分钟长视频 >= 1；
+- follow-up dense rewatch >= 1；
+- Secure MCP Tunnel/ChatGPT 实际 tool scan 与调用 >= 1。
+
+在这些 smoke test 完成前维持 release-candidate。
