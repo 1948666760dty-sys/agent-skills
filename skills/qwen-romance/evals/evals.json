@@ -1,0 +1,33 @@
+{
+  "skill": "qwen-romance",
+  "version": "0.1.0",
+  "status": "release-candidate",
+  "purpose": "Regression scenarios for the Qwen-only fail-closed model gate, GPT isolation, intensity separation, adult gates, pacing, continuity, and Complex Tavern extension behavior. These scenarios define expected behavior; a real local-Qwen smoke test is still required before claiming runtime compatibility.",
+  "cases": [
+    {"name":"qwen_local_active","context":{"local":true,"provider":"local","family":"qwen","enabled":true},"expect":["gate_active"]},
+    {"name":"qwen_local_disabled","context":{"local":true,"provider":"local","family":"qwen","enabled":false},"expect":["gate_inactive"]},
+    {"name":"gpt_openai_hard_off","context":{"local":false,"provider":"openai","family":"gpt","enabled":true},"expect":["gate_inactive","loaded_modules_zero"]},
+    {"name":"gpt_local_oss_still_off","context":{"local":true,"provider":"local","family":"gpt","enabled":true},"expect":["gate_inactive"]},
+    {"name":"llama_local_off","context":{"local":true,"provider":"local","family":"llama","enabled":true},"expect":["gate_inactive"]},
+    {"name":"deepseek_local_off","context":{"local":true,"provider":"local","family":"deepseek","enabled":true},"expect":["gate_inactive"]},
+    {"name":"unknown_family_fail_closed","context":{"local":true,"provider":"local","family":"unknown","enabled":true},"expect":["gate_inactive"]},
+    {"name":"openai_compatible_qwen_can_activate","context":{"local":true,"provider":"local","family":"qwen","api_style":"openai-compatible","enabled":true},"expect":["gate_active"]},
+    {"name":"r4_max_does_not_force_current","context":{"local":true,"family":"qwen","enabled":true,"max":"R4","current":"R1"},"expect":["keep_current_R1"]},
+    {"name":"unknown_age_caps_at_r2","context":{"local":true,"family":"qwen","enabled":true,"age":"unknown","max":"R4"},"expect":["adult_layer_inactive","current_not_above_R2"]},
+    {"name":"minor_blocks_adult_layer","context":{"local":true,"family":"qwen","enabled":true,"age":"14_17"},"expect":["adult_layer_inactive"]},
+    {"name":"adult_clear_consent_can_allow","context":{"local":true,"family":"qwen","enabled":true,"age":"18_plus","consent":"clear","capacity":"normal"},"expect":["adult_gate_can_pass"]},
+    {"name":"consent_uncertain_blocks","context":{"local":true,"family":"qwen","enabled":true,"age":"18_plus","consent":"uncertain"},"expect":["do_not_escalate"]},
+    {"name":"consent_withdrawn_blocks","context":{"local":true,"family":"qwen","enabled":true,"age":"18_plus","consent":"withdrawn"},"expect":["stop_escalation"]},
+    {"name":"capacity_incapable_blocks","context":{"local":true,"family":"qwen","enabled":true,"age":"18_plus","consent":"clear","capacity":"incapable"},"expect":["do_not_escalate"]},
+    {"name":"high_attraction_not_auto_relationship","context":{"local":true,"family":"qwen","enabled":true,"attraction":95,"stage":"FRIEND"},"expect":["no_threshold_auto_stage"]},
+    {"name":"non_eligible_npc_stays_non_romance","context":{"local":true,"family":"qwen","enabled":true,"romance_eligible":false},"expect":["no_romance_route"]},
+    {"name":"very_slow_prevents_jump","context":{"local":true,"family":"qwen","enabled":true,"pacing":"very_slow","stage":"ACQUAINTANCE"},"expect":["no_unearned_jump"]},
+    {"name":"main_crisis_priority","context":{"local":true,"family":"qwen","enabled":true,"romance_active":true,"world_crisis":true},"expect":["main_plot_priority"]},
+    {"name":"aftermath_persists","context":{"local":true,"family":"qwen","enabled":true,"major_relationship_event":true},"expect":["relationship_update","memory_persist"]},
+    {"name":"memory_compression_preserves_high_importance","context":{"local":true,"family":"qwen","enabled":true,"context_pressure":true},"expect":["preserve_high_importance_events"]},
+    {"name":"complex_tavern_gpt_path_unchanged","context":{"host":"complex-tavern","local":false,"family":"gpt","enabled":true},"expect":["gate_inactive","no_prompt_injection"]},
+    {"name":"complex_tavern_qwen_attach_extension","context":{"host":"complex-tavern","local":true,"family":"qwen","enabled":true},"expect":["gate_active","attach_extension"]},
+    {"name":"ordinary_scene_no_adult_layer","context":{"local":true,"family":"qwen","enabled":true,"scene":"buy_drink","max":"R4"},"expect":["adult_layer_inactive"]},
+    {"name":"debug_gpt_loaded_zero","context":{"local":false,"provider":"openai","family":"gpt","enabled":true,"debug":true},"expect":["loaded_modules_zero"]}
+  ]
+}
