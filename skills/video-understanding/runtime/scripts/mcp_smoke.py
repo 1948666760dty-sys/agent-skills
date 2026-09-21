@@ -13,9 +13,12 @@ async def main() -> int:
         names = {tool.name for tool in tools.tools}
         required = {
             "start_video_analysis",
+            "start_uploaded_video_analysis",
             "wait_video_analysis",
             "get_video_manifest",
             "get_video_transcript",
+            "get_video_chapters",
+            "search_prepared_video",
             "inspect_video_window",
         }
         print(f"MCP protocol: {client.protocol_version}")
@@ -26,7 +29,7 @@ async def main() -> int:
         if missing:
             print("Missing required tools:", ", ".join(missing))
             return 1
-        print("MCP smoke test passed.")
+        print("MCP v0.2 smoke test passed.")
         return 0
 
 
