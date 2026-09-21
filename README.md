@@ -25,3 +25,22 @@
 - Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
 - Overrides: “直接做”, “别猜”, “严格不着急”.
 - Tests: `skills/no-rush/evals/evals.json`.
+
+
+## Cut Coach / 减脂教练
+
+- Canonical path: `skills/cut-coach/SKILL.md`
+- Current version: `1.0.0`
+- Status: `stable-default`
+- Activation: semantic auto-trigger.
+- Strong triggers: food/meal/drink/nutrition-label photos related to the user's own intake; “我吃了…”, “我喝了…”, “刚吃…”, “今天吃了…”, “这个我全吃了”, “剩了这么多”, “今天还能吃多少”, “日报”, “周报”, “月报”, “Cut Coach”, “减脂教练”, “duty-NAV”.
+- Query-only mode: generic nutrition questions without an indication that the user consumed the food are analyzed but are not written into the daily ledger.
+- Personal targets: 2100 kcal, protein 120 g, carbs 220 g, fat 60 g, fiber 30 g.
+- Percentages: duty-NAV only by default; official NRV is disabled unless the user explicitly re-enables it.
+- Core loop: identify consumed food → estimate portion and uncertainty → calculate nutrition → duty-NAV → daily ledger → day-stage detection → next-meal/next-step coaching → daily/weekly/monthly reports.
+- Exercise: log exercise when supplied, but do not automatically eat back or subtract exercise calories from the duty-NAV target.
+- Daily ledger safety: missing meals/records must not be treated as zero intake; incomplete days are marked INCOMPLETE.
+- Weekly report: formal 7-day trend requires at least 4 FULL/ESTIMATED days; otherwise generate a data-insufficient snapshot.
+- Style: concise, direct, no default emoji, no food shaming.
+- Loading rule: when GitHub access is available, fetch the canonical file on trigger and use it over older chat memory or fallback copies.
+- Source of truth: GitHub canonical file above.
