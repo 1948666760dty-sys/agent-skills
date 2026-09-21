@@ -1,247 +1,197 @@
-# Video Understanding Runtime Contract v0.1.1
+# Video Understanding Runtime Contract v0.2.0
 
-## 1. 目的
+## 1. Scope
 
-本文件描述当前已经写入仓库的参考 Runtime 与 Video Understanding Skill 之间的真实接口。
-
-目标用户体验：
-
-```text
-用户只发送 B站/YouTube URL
-→ 宿主自动调用工具
-→ 宿主内部处理长任务和回看
-→ 当前聊天返回最终理解
-```
-
-用户不得被要求操作 job_id、轮询、下载器或帧文件。
-
-## 2. 当前 Runtime
-
-路径：
-
+Reference Runtime:
 `skills/video-understanding/runtime/`
 
-MCP transport：
-- Streamable HTTP
-- 默认本地地址：`127.0.0.1:8765/mcp`
-- ChatGPT 不能直接连接 localhost；实际接入需 Secure MCP Tunnel 或远程部署。
+Inputs:
+- Bilibili URL
+- YouTube URL
+- host-materialized uploaded/local video inside an allowed inbox
 
-当前工具均按 read/fetch 语义设计，不修改源平台内容。
+The Runtime prepares evidence. The host model performs final multimodal reasoning.
 
-## 3. Tool Contract
+## 2. Security Boundary for Uploads
 
-### 3.1 start_video_analysis
+`start_uploaded_video_analysis` must never become an arbitrary local-file reader.
 
-输入：
+Default allowed root:
+`~/.video-understanding/inbox`
 
-```json
-{
-  "url": "Bilibili or YouTube URL",
-  "mode": "deep",
-  "include_audience": false,
-  "force": false
-}
-```
+Optional additional roots:
+`VIDEO_UPLOAD_ROOTS` using the platform path separator.
 
-输出初始 `job_id` 与 `running`。
+A path outside allowed roots returns:
+`UPLOAD_PATH_NOT_ALLOWED`.
 
-宿主必须自己保存 job_id，不得要求用户复制或再次输入。
+A ChatGPT attachment can use this tool only when the host has actually materialized the file into an allowed root. If not, the host must process the attachment through its own file runtime or explain the limitation.
 
-### 3.2 wait_video_analysis
+## 3. Current MCP Tools
 
-输入：
-- job_id
-- wait_seconds（0–30）
+1. start_video_analysis
+2. start_uploaded_video_analysis
+3. wait_video_analysis
+4. get_video_manifest
+5. get_video_transcript
+6. get_video_chapters
+7. search_prepared_video
+8. inspect_video_window
 
-若仍在运行，宿主继续内部调用。
+All are read/fetch semantics with local cache as an implementation detail.
 
-若 complete，返回 `session_id` 等 prepare 结果。
+## 4. Long-Video Strategy
 
-若 failed，返回明确 error code/message。
+Runtime profile by duration:
 
-### 3.3 get_video_manifest
+- <=5m: short
+- <=30m: standard
+- <=90m: long
+- <=180m: very_long
+- >180m: ultra_long
 
-输入：
-- session_id
+Each profile defines:
+- baseline frame step
+- overview frame budget
+- chapter window
+- evidence-memory window/overlap
+- PySceneDetect frame skip
 
-返回：
-- 平台；
-- canonical id/url；
-- 标题/作者；
-- 时长；
-- transcript source；
-- visual readiness；
-- frame count；
-- warnings。
+The Runtime must not load full long-video evidence into one model call.
 
-### 3.4 get_video_transcript
-
-输入：
-- session_id；
-- start_seconds；
-- end_seconds；
-- max_chars。
-
-长视频应按时间窗口分页读取，不必一次把整个字幕塞入上下文。
-
-### 3.5 inspect_video_window
-
-输入：
-- session_id；
-- start_seconds；
-- end_seconds；
-- max_frames（Runtime 上限 20）；
-- density = overview | dense。
-
-输出为混合 MCP content blocks：
-- 时间戳 TextContent；
-- 实际 JPEG ImageContent。
-
-`overview`：用于第一遍全局粗看。
-
-`dense`：用于重点区间二次回看。
-
-## 4. 推荐宿主执行顺序
-
+Recommended host:
 ```text
-start_video_analysis
-→ wait_video_analysis until complete
-→ get_video_manifest
-→ get_video_transcript in windows
-→ inspect_video_window overview
-→ model identifies 1..N important/uncertain intervals
-→ inspect_video_window dense for those intervals
+manifest
+→ chapters
+→ search evidence / transcript windows
+→ overview frames
+→ identify important intervals
+→ dense rewatch
 → final synthesis
 ```
 
-Quick 模式可跳过视觉或减少视觉调用。
+## 5. PySceneDetect
 
-Deep 模式不能在 visual_ready=true 时完全忽略视觉证据。
+Reference Runtime uses:
+- scenedetect-headless >=0.7.1
+- SceneManager
+- AdaptiveDetector
+- auto_downscale=true
 
-## 5. Bilibili Adapter
+If scene detection fails:
+- preserve baseline coverage
+- return warning
+- do not claim scene-aware success.
 
-参考 Runtime vendoring 了：
+## 6. ASR
 
-AntaresGG/BiliBiliVideoParser 的 Bilibili-native extractor（MIT）。
+Reference:
+- faster-whisper >=1.2.1
+- local model
+- device=auto attempts CUDA then CPU int8
+- VAD enabled
 
-负责：
-- b23.tv；
-- BV/av；
-- ep/ss；
-- 分P元数据；
-- 官方字幕；
-- AI字幕；
-- 可选弹幕信号。
+Platform subtitles remain preferred for URL inputs.
 
-MIT 原许可保存在 Runtime vendor 目录。
+Uploaded-file v0.2 uses ASR unless the host separately supplies a trusted subtitle track.
 
-## 6. YouTube Adapter
+## 7. Chapters
 
-当前使用 yt-dlp：
-- watch URL；
-- youtu.be；
-- Shorts；
-- metadata；
-- manual subtitles；
-- automatic captions。
+Runtime chapters are structural navigation windows, not generated semantic chapter summaries.
 
-字幕优先级仍由 Skill 解释：
-人工 > 平台自动 > ASR。
+They contain:
+- chapter_id
+- start/end
+- segment_count
+- characters
+- preview
+- title=null
+- summary=null
+- status=structural_window
 
-## 7. ASR
+The host may assign semantic titles only after actual content understanding.
 
-当无可用字幕：
-- 下载 audio-only；
-- 使用本地 faster-whisper；
-- 默认 model = small；
-- 默认 device = auto；
-- auto 先尝试 CUDA，失败再回退 CPU int8。
+## 8. Evidence Memory
 
-环境变量：
-- VIDEO_WHISPER_MODEL
-- VIDEO_WHISPER_DEVICE
+Runtime builds overlapping transcript chunks.
 
-不得把 CUDA 尝试失败隐藏成“GPU 已成功运行”。
+`search_prepared_video` uses local lexical/BM25-like scoring and returns candidate windows.
 
-## 8. Visual Pipeline
+It is a retrieval step, not factual verification.
 
-Deep：
-- 下载不高于约 720p 的 video-only stream（可用时）；
-- 每 3 秒做一次场景差异 probe；
-- 每 12 秒保底一个 baseline；
-- scene-aware 候选与 baseline 合并；
-- 最多保留约 600 个 overview frame record；
-- 保存为最大宽度约 960px 的 JPEG。
+Important answers should still inspect:
+- transcript window
+- visual frames when relevant.
 
-第一次视觉理解由宿主调用 overview。
+No embedding API is required.
 
-第二次回看由宿主根据第一次结果决定时间窗，再调用 dense。
+## 9. Visual
 
-## 9. OCR
+Deep mode:
+- URL: downloads a video-only stream capped near 720p when available
+- upload: uses the allowed materialized file directly
+- overview frame budget adapts to duration
+- returned frame image width is capped to reduce context/transport cost
+- dense rewatch max 20 images per tool call
 
-v0.1：
-- Runtime 不要求 PaddleOCR/Tesseract；
-- 通过 `inspect_video_window` 把真实帧发给宿主 ChatGPT；
-- OCR/图表/参数/代码阅读由宿主视觉能力完成；
-- manifest 中标记 `ocr = host_vision`。
+OCR status in v0.2 remains:
+`host_vision`
 
-未来可增加本地 OCR，但不能在未执行时标记 local OCR success。
+Do not claim local OCR ran unless a future local OCR stage is actually executed.
 
-## 10. Cache
+## 10. Upload Cache
 
-默认：
+Uploaded videos are not automatically duplicated into cache because multi-hour files can be very large.
 
-`~/.video-understanding/<session_id>/`
+Manifest stores the allowed absolute source path for later rewatch.
 
-缓存：
-- manifest；
-- transcript；
-- video-only；
-- scene frames；
-- dense rewatch frames；
-- 必要时 audio。
+If the host deletes the source:
+- transcript/memory may still exist
+- future visual rewatch returns a clear re-upload/materialization error.
 
-Follow-up 应复用 session/cache。
+## 11. Context Protection
 
-## 11. 错误码
+For long/very_long/ultra_long:
+- do not request all transcript segments at once
+- do not request all frames at once
+- query chapters/search first
+- fetch bounded windows.
 
-至少：
+`get_video_transcript` caps max_chars per call.
+
+`inspect_video_window` caps images per call.
+
+## 12. Errors
+
 - UNSUPPORTED_URL
 - VIDEO_NOT_FOUND
-- AUTH_REQUIRED（后续登录路径）
+- UPLOAD_PATH_NOT_ALLOWED
 - MEDIA_DOWNLOAD_FAILED
 - ASR_FAILED
 - FRAME_EXTRACTION_FAILED
 - VISUAL_ANALYSIS_FAILED
 - INTERNAL_ERROR
 
-允许 partial/fallback，但不得把失败步骤说成成功。
+Partial success is allowed and must be labelled.
 
-## 12. 免费优先
+## 13. Performance
 
-当前不要求额外模型 API Key。
+No fixed SLA.
 
-使用：
-- 平台字幕；
-- Bilibili 公共 API；
-- yt-dlp；
-- faster-whisper；
-- OpenCV；
-- ChatGPT 当前宿主视觉理解。
+60-minute captioned video 5–15 minutes is an optimization target, not a guarantee.
 
-首次下载 Whisper 模型会产生网络流量和本地模型占用，但不是额外按次 API 费用。
+Longer/no-caption/visual-heavy videos can take materially longer.
 
-## 13. 真实性与 Stable 门槛
+## 14. Stable Gate
 
-当前 Runtime 已有代码，不代表已经在目标 Windows 机器真实运行成功。
-
-Stable 前至少完成：
-- B站公开视频 >= 3；
-- YouTube公开视频 >= 3；
-- 无人工字幕 >= 2；
-- 视觉信息关键视频 >= 2；
-- 45–90 分钟长视频 >= 1；
-- follow-up dense rewatch >= 1；
-- Secure MCP Tunnel/ChatGPT 实际 tool scan 与调用 >= 1。
-
-在这些 smoke test 完成前维持 release-candidate。
+Do not mark stable before real smoke tests cover:
+- short upload
+- 30–90m upload
+- 90–180m input
+- Bilibili
+- YouTube
+- ASR fallback
+- scene detector success and fallback
+- Video Memory retrieval
+- dense rewatch
+- upload path security.
