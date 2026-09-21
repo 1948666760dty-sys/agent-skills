@@ -11,10 +11,22 @@ from typing import Any, Literal
 
 import cv2
 import yt_dlp
+from scenedetect import AdaptiveDetector, SceneManager, open_video
 
-SCHEMA_VERSION = "0.1"
-DEFAULT_CACHE = Path(os.environ.get("VIDEO_UNDERSTANDING_CACHE", Path.home() / ".video-understanding"))
+from .long_video import (
+    build_chapters,
+    build_evidence_chunks,
+    sampling_profile,
+    search_evidence,
+)
+
+SCHEMA_VERSION = "0.2"
+DEFAULT_CACHE = Path(
+    os.environ.get("VIDEO_UNDERSTANDING_CACHE", Path.home() / ".video-understanding")
+)
 DEFAULT_CACHE.mkdir(parents=True, exist_ok=True)
+DEFAULT_UPLOAD_INBOX = DEFAULT_CACHE / "inbox"
+DEFAULT_UPLOAD_INBOX.mkdir(parents=True, exist_ok=True)
 
 
 class VideoRuntimeError(RuntimeError):
@@ -37,7 +49,10 @@ def detect_platform(value: str) -> Literal["bilibili", "youtube"]:
         return "bilibili"
     if "youtube.com/" in lower or "youtu.be/" in lower:
         return "youtube"
-    raise VideoRuntimeError("UNSUPPORTED_URL", "Only Bilibili and YouTube are supported in v0.1.")
+    raise VideoRuntimeError(
+        "UNSUPPORTED_URL",
+        "Only Bilibili and YouTube URLs are supported by the URL adapter.",
+    )
 
 
 def _session_id(value: str) -> str:
@@ -68,7 +83,11 @@ def _save_manifest(session_id: str, manifest: dict[str, Any]) -> None:
     )
 
 
-def _run_bilibili_native(value: str, session_dir: Path, include_audience: bool) -> dict[str, Any]:
+def _run_bilibili_native(
+    value: str,
+    session_dir: Path,
+    include_audience: bool,
+) -> dict[str, Any]:
     from .vendor.bililens import bilibili_extract as native
 
     args = argparse.Namespace(
@@ -83,7 +102,10 @@ def _run_bilibili_native(value: str, session_dir: Path, include_audience: bool) 
     try:
         return asyncio.run(native.extract(args))
     except native.ParserError as exc:
-        raise VideoRuntimeError("VIDEO_NOT_FOUND", f"Bilibili extraction failed at {exc.stage}: {exc}") from exc
+        raise VideoRuntimeError(
+            "VIDEO_NOT_FOUND",
+            f"Bilibili extraction failed at {exc.stage}: {exc}",
+        ) from exc
 
 
 def _choose_vtt(files: list[Path]) -> Path | None:
@@ -107,7 +129,9 @@ def _parse_vtt(path: Path) -> list[dict[str, Any]]:
     segments: list[dict[str, Any]] = []
     previous = ""
     for caption in webvtt.read(str(path)):
-        text = " ".join(line.strip() for line in caption.text.splitlines() if line.strip())
+        text = " ".join(
+            line.strip() for line in caption.text.splitlines() if line.strip()
+        )
         if not text or text == previous:
             continue
         previous = text
@@ -140,7 +164,10 @@ def _youtube_source(value: str, session_dir: Path) -> dict[str, Any]:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(value, download=True)
     except Exception as exc:
-        raise VideoRuntimeError("VIDEO_NOT_FOUND", f"YouTube extraction failed: {exc}") from exc
+        raise VideoRuntimeError(
+            "VIDEO_NOT_FOUND",
+            f"YouTube extraction failed: {exc}",
+        ) from exc
 
     vtt = _choose_vtt(list(session_dir.glob("source.*.vtt")))
     segments = _parse_vtt(vtt) if vtt else []
@@ -150,9 +177,6 @@ def _youtube_source(value: str, session_dir: Path) -> dict[str, Any]:
         manual_tracks = info.get("subtitles") or {}
         automatic_tracks = info.get("automatic_captions") or {}
         selected_langs = set(requested)
-        # The same language can exist in both manual and automatic catalogs.
-        # Prefer the manual catalog when yt-dlp selected that language so we do
-        # not downgrade a human subtitle merely because an auto track also exists.
         if any(lang in manual_tracks for lang in selected_langs):
             source = "human"
         elif any(lang in automatic_tracks for lang in selected_langs):
@@ -162,6 +186,7 @@ def _youtube_source(value: str, session_dir: Path) -> dict[str, Any]:
 
     return {
         "platform": "youtube",
+        "input_kind": "url",
         "canonical_id": str(info.get("id") or ""),
         "canonical_url": info.get("webpage_url") or value,
         "title": info.get("title") or "",
@@ -170,11 +195,17 @@ def _youtube_source(value: str, session_dir: Path) -> dict[str, Any]:
         "transcript_source": source,
         "transcript_segments": segments,
         "audience": None,
-        "warnings": [] if segments else ["No accessible subtitle text; ASR fallback is required."],
+        "warnings": [] if segments else [
+            "No accessible subtitle text; ASR fallback is required."
+        ],
     }
 
 
-def _bilibili_source(value: str, session_dir: Path, include_audience: bool) -> dict[str, Any]:
+def _bilibili_source(
+    value: str,
+    session_dir: Path,
+    include_audience: bool,
+) -> dict[str, Any]:
     result = _run_bilibili_native(value, session_dir, include_audience)
     metadata = result.get("metadata", {})
     content = result.get("content", {})
@@ -187,16 +218,22 @@ def _bilibili_source(value: str, session_dir: Path, include_audience: bool) -> d
     }.get(source_type, "none")
     return {
         "platform": "bilibili",
+        "input_kind": "url",
         "canonical_id": str(metadata.get("bvid") or metadata.get("aid") or ""),
         "canonical_url": result.get("source", {}).get("canonical_url") or value,
         "title": metadata.get("title") or "",
-        "author": (metadata.get("uploader") or {}).get("name", "") if isinstance(metadata.get("uploader"), dict) else str(metadata.get("uploader") or ""),
+        "author": (
+            (metadata.get("uploader") or {}).get("name", "")
+            if isinstance(metadata.get("uploader"), dict)
+            else str(metadata.get("uploader") or "")
+        ),
         "duration_seconds": float(
             next(
                 (
                     item.get("duration_seconds")
                     for item in metadata.get("pages", [])
-                    if item.get("page") == result.get("selection", {}).get("page")
+                    if item.get("page")
+                    == result.get("selection", {}).get("page")
                 ),
                 metadata.get("duration_seconds") or 0,
             )
@@ -210,7 +247,11 @@ def _bilibili_source(value: str, session_dir: Path, include_audience: bool) -> d
     }
 
 
-def _download_media(url: str, session_dir: Path, kind: Literal["audio", "video"]) -> Path:
+def _download_media(
+    url: str,
+    session_dir: Path,
+    kind: Literal["audio", "video"],
+) -> Path:
     stem = session_dir / kind
     for old in session_dir.glob(f"{kind}.*"):
         if old.name not in {"manifest.json"}:
@@ -237,31 +278,52 @@ def _download_media(url: str, session_dir: Path, kind: Literal["audio", "video"]
                 if candidate.is_file():
                     return candidate
     except Exception as exc:
-        raise VideoRuntimeError("MEDIA_DOWNLOAD_FAILED", f"{kind} download failed: {exc}") from exc
+        raise VideoRuntimeError(
+            "MEDIA_DOWNLOAD_FAILED",
+            f"{kind} download failed: {exc}",
+        ) from exc
 
     candidates = [
-        p for p in session_dir.glob(f"{kind}.*")
+        p
+        for p in session_dir.glob(f"{kind}.*")
         if p.is_file() and not p.name.endswith(".part")
     ]
     if not candidates:
-        raise VideoRuntimeError("MEDIA_DOWNLOAD_FAILED", f"{kind} download completed without a usable file.")
+        raise VideoRuntimeError(
+            "MEDIA_DOWNLOAD_FAILED",
+            f"{kind} download completed without a usable file.",
+        )
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
-def _transcribe(media: Path) -> tuple[list[dict[str, Any]], str, list[str]]:
+def _transcribe(
+    media: Path,
+) -> tuple[list[dict[str, Any]], str, list[str]]:
     from faster_whisper import WhisperModel
 
     model_name = os.environ.get("VIDEO_WHISPER_MODEL", "small")
-    requested_device = os.environ.get("VIDEO_WHISPER_DEVICE", "auto").lower()
+    requested_device = os.environ.get(
+        "VIDEO_WHISPER_DEVICE",
+        "auto",
+    ).lower()
     attempts = (
         [("cuda", "float16"), ("cpu", "int8")]
         if requested_device == "auto"
-        else [(requested_device, "float16" if requested_device == "cuda" else "int8")]
+        else [
+            (
+                requested_device,
+                "float16" if requested_device == "cuda" else "int8",
+            )
+        ]
     )
     errors: list[str] = []
     for device, compute_type in attempts:
         try:
-            model = WhisperModel(model_name, device=device, compute_type=compute_type)
+            model = WhisperModel(
+                model_name,
+                device=device,
+                compute_type=compute_type,
+            )
             generated, info = model.transcribe(
                 str(media),
                 language=None,
@@ -283,7 +345,10 @@ def _transcribe(media: Path) -> tuple[list[dict[str, Any]], str, list[str]]:
             return segments, str(info.language or "unknown"), errors
         except Exception as exc:
             errors.append(f"{device}/{compute_type}: {exc}")
-    raise VideoRuntimeError("ASR_FAILED", "faster-whisper failed: " + " | ".join(errors))
+    raise VideoRuntimeError(
+        "ASR_FAILED",
+        "faster-whisper failed: " + " | ".join(errors),
+    )
 
 
 def _resize(frame: Any, max_width: int = 960) -> Any:
@@ -291,95 +356,340 @@ def _resize(frame: Any, max_width: int = 960) -> Any:
     if width <= max_width:
         return frame
     ratio = max_width / float(width)
-    return cv2.resize(frame, (max_width, max(1, int(height * ratio))))
+    return cv2.resize(
+        frame,
+        (max_width, max(1, int(height * ratio))),
+    )
 
 
-def _frame_at(cap: cv2.VideoCapture, seconds: float) -> Any | None:
+def _frame_at(
+    cap: cv2.VideoCapture,
+    seconds: float,
+) -> Any | None:
     cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, seconds) * 1000.0)
     ok, frame = cap.read()
     return frame if ok else None
 
 
-def _histogram(frame: Any) -> Any:
-    small = cv2.resize(frame, (160, 90))
-    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
-    hist = cv2.calcHist([hsv], [0, 1], None, [32, 32], [0, 180, 0, 256])
-    cv2.normalize(hist, hist)
-    return hist
+def _probe_video(path: Path) -> dict[str, Any]:
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        raise VideoRuntimeError(
+            "VIDEO_NOT_FOUND",
+            f"OpenCV could not open video: {path.name}",
+        )
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+    frame_count = float(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    cap.release()
+    duration = frame_count / fps if fps > 0 else 0.0
+    return {
+        "duration_seconds": round(duration, 3),
+        "fps": round(fps, 3),
+        "width": width,
+        "height": height,
+        "frame_count": int(frame_count),
+        "file_size_bytes": path.stat().st_size,
+    }
 
 
-def _extract_scene_index(video: Path, duration_seconds: float, out_dir: Path) -> list[dict[str, Any]]:
+def _upload_roots() -> list[Path]:
+    configured = os.environ.get("VIDEO_UPLOAD_ROOTS", "").strip()
+    if configured:
+        roots = [
+            Path(part).expanduser().resolve()
+            for part in configured.split(os.pathsep)
+            if part.strip()
+        ]
+    else:
+        roots = [DEFAULT_UPLOAD_INBOX.resolve()]
+    for root in roots:
+        root.mkdir(parents=True, exist_ok=True)
+    return roots
+
+
+def _validated_upload_path(value: str) -> Path:
+    path = Path(value).expanduser().resolve()
+    if not path.is_file():
+        raise VideoRuntimeError(
+            "VIDEO_NOT_FOUND",
+            f"Uploaded/local video file was not found: {path.name}",
+        )
+    roots = _upload_roots()
+    if not any(path.is_relative_to(root) for root in roots):
+        raise VideoRuntimeError(
+            "UPLOAD_PATH_NOT_ALLOWED",
+            "Local video path is outside VIDEO_UPLOAD_ROOTS. "
+            "Use the dedicated video-understanding inbox or explicitly configure an allowed root.",
+        )
+    return path
+
+
+def _fingerprint_local_file(path: Path) -> str:
+    stat = path.stat()
+    digest = hashlib.sha256()
+    digest.update(str(stat.st_size).encode("ascii"))
+    digest.update(path.name.encode("utf-8", errors="ignore"))
+    with path.open("rb") as handle:
+        digest.update(handle.read(1024 * 1024))
+        if stat.st_size > 1024 * 1024:
+            handle.seek(max(0, stat.st_size - 1024 * 1024))
+            digest.update(handle.read(1024 * 1024))
+    return digest.hexdigest()[:24]
+
+
+def _scene_candidates(
+    video: Path,
+    duration_seconds: float,
+) -> tuple[list[dict[str, float]], list[str], dict[str, Any]]:
+    profile = sampling_profile(duration_seconds)
+    warnings: list[str] = []
+    scenes: list[dict[str, float]] = []
+    try:
+        stream = open_video(str(video))
+        manager = SceneManager()
+        manager.auto_downscale = True
+        manager.add_detector(
+            AdaptiveDetector(
+                adaptive_threshold=3.0,
+                min_scene_len=0.8,
+                window_width=2,
+                min_content_val=15.0,
+            )
+        )
+        manager.detect_scenes(
+            video=stream,
+            frame_skip=int(profile["scene_frame_skip"]),
+            show_progress=False,
+        )
+        for start, end in manager.get_scene_list(start_in_scene=True):
+            s = float(start.get_seconds())
+            e = float(end.get_seconds())
+            if e <= s:
+                continue
+            scenes.append(
+                {
+                    "start_seconds": round(s, 3),
+                    "end_seconds": round(e, 3),
+                    "representative_seconds": round((s + e) / 2.0, 3),
+                    "duration_seconds": round(e - s, 3),
+                }
+            )
+    except Exception as exc:
+        warnings.append(
+            "PySceneDetect adaptive detection failed; "
+            f"falling back to baseline coverage only: {exc}"
+        )
+    return scenes, warnings, profile
+
+
+def _extract_scene_index(
+    video: Path,
+    duration_seconds: float,
+    out_dir: Path,
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, Any],
+    list[str],
+]:
     frames_dir = out_dir / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
-        raise VideoRuntimeError("FRAME_EXTRACTION_FAILED", "OpenCV could not open the downloaded video.")
+        raise VideoRuntimeError(
+            "FRAME_EXTRACTION_FAILED",
+            "OpenCV could not open the video.",
+        )
 
-    duration = duration_seconds
-    if duration <= 0:
-        fps = cap.get(cv2.CAP_PROP_FPS) or 0
-        count = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0
-        duration = count / fps if fps > 0 else 0
+    probe = _probe_video(video)
+    duration = duration_seconds or float(probe["duration_seconds"])
     if duration <= 0:
         cap.release()
-        raise VideoRuntimeError("FRAME_EXTRACTION_FAILED", "Video duration could not be determined.")
+        raise VideoRuntimeError(
+            "FRAME_EXTRACTION_FAILED",
+            "Video duration could not be determined.",
+        )
 
-    sample_step = 3.0
-    baseline_step = 12.0
-    scene_threshold = 0.36
-    scene_candidates: list[tuple[float, float]] = []
-    previous_hist = None
-    t = 0.0
-    while t < duration:
-        frame = _frame_at(cap, t)
-        if frame is not None:
-            hist = _histogram(frame)
-            if previous_hist is not None:
-                corr = cv2.compareHist(previous_hist, hist, cv2.HISTCMP_CORREL)
-                diff = max(0.0, 1.0 - float(corr))
-                if diff >= scene_threshold:
-                    scene_candidates.append((t, diff))
-            previous_hist = hist
-        t += sample_step
+    scenes, warnings, profile = _scene_candidates(video, duration)
+    baseline_step = float(profile["baseline_step_seconds"])
+    max_frames = int(profile["max_overview_frames"])
 
-    baseline = [(float(t), 0.0, "baseline") for t in range(0, int(duration) + 1, int(baseline_step))]
-    scenes = [(t, score, "scene_cut") for t, score in scene_candidates]
-    candidates = baseline + scenes
-    candidates.sort(key=lambda x: x[0])
+    candidates: list[tuple[float, str, float]] = []
+    baseline_count = max(1, int(duration // baseline_step) + 1)
+    for index in range(baseline_count):
+        candidates.append(
+            (
+                min(duration, index * baseline_step),
+                "baseline",
+                0.0,
+            )
+        )
 
-    deduped: list[tuple[float, float, str]] = []
+    scene_reps = [
+        (
+            float(scene["representative_seconds"]),
+            "scene",
+            float(scene["duration_seconds"]),
+        )
+        for scene in scenes
+    ]
+
+    if len(scene_reps) > max_frames:
+        step = len(scene_reps) / float(max_frames)
+        scene_reps = [
+            scene_reps[min(len(scene_reps) - 1, int(i * step))]
+            for i in range(max_frames)
+        ]
+
+    candidates.extend(scene_reps)
+    candidates.sort(key=lambda item: item[0])
+
+    deduped: list[tuple[float, str, float]] = []
     for item in candidates:
-        if deduped and item[0] - deduped[-1][0] < 1.2:
-            if item[1] > deduped[-1][1]:
+        if deduped and item[0] - deduped[-1][0] < 1.0:
+            if item[1] == "scene" and deduped[-1][1] != "scene":
                 deduped[-1] = item
             continue
         deduped.append(item)
 
-    if len(deduped) > 600:
-        baselines = [x for x in deduped if x[2] == "baseline"]
-        scenes_sorted = sorted((x for x in deduped if x[2] == "scene_cut"), key=lambda x: x[1], reverse=True)
-        room = max(0, 600 - len(baselines))
-        deduped = sorted(baselines + scenes_sorted[:room], key=lambda x: x[0])
+    if len(deduped) > max_frames:
+        scene_items = [item for item in deduped if item[1] == "scene"]
+        baseline_items = [item for item in deduped if item[1] == "baseline"]
+        scene_budget = min(len(scene_items), max_frames // 2)
+        baseline_budget = max_frames - scene_budget
+
+        def evenly_pick(
+            items: list[tuple[float, str, float]],
+            limit: int,
+        ) -> list[tuple[float, str, float]]:
+            if limit <= 0:
+                return []
+            if len(items) <= limit:
+                return items
+            if limit == 1:
+                return [items[len(items) // 2]]
+            indices = [
+                round(i * (len(items) - 1) / (limit - 1))
+                for i in range(limit)
+            ]
+            return [items[i] for i in indices]
+
+        deduped = sorted(
+            evenly_pick(scene_items, scene_budget)
+            + evenly_pick(baseline_items, baseline_budget),
+            key=lambda item: item[0],
+        )
 
     records: list[dict[str, Any]] = []
-    for seconds, score, reason in deduped:
+    for seconds, reason, score in deduped:
         frame = _frame_at(cap, seconds)
         if frame is None:
             continue
         frame = _resize(frame)
         name = f"{int(seconds * 1000):010d}.jpg"
         path = frames_dir / name
-        cv2.imwrite(str(path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+        cv2.imwrite(
+            str(path),
+            frame,
+            [int(cv2.IMWRITE_JPEG_QUALITY), 78],
+        )
         records.append(
             {
                 "timestamp_seconds": round(seconds, 3),
                 "reason": reason,
                 "score": round(score, 4),
-                "relative_path": str(path.relative_to(out_dir)).replace("\\", "/"),
+                "relative_path": str(path.relative_to(out_dir)).replace(
+                    "\\",
+                    "/",
+                ),
             }
         )
     cap.release()
-    return records
+    return records, scenes, profile, warnings
+
+
+def _build_manifest(
+    *,
+    sid: str,
+    mode: Literal["deep", "quick"],
+    source: dict[str, Any],
+    transcript: list[dict[str, Any]],
+    transcript_source: str,
+    asr_language: str | None,
+    video_path: Path | None,
+    session_dir: Path,
+    started: float,
+    warnings: list[str],
+    uploaded_absolute_path: Path | None = None,
+) -> dict[str, Any]:
+    duration = float(source.get("duration_seconds") or 0)
+    frame_index: list[dict[str, Any]] = []
+    scene_index: list[dict[str, Any]] = []
+    profile = sampling_profile(duration)
+    visual = False
+
+    if mode == "deep" and video_path is not None:
+        frame_index, scene_index, profile, scene_warnings = _extract_scene_index(
+            video_path,
+            duration,
+            session_dir,
+        )
+        warnings.extend(scene_warnings)
+        visual = bool(frame_index)
+
+    chapters = build_chapters(transcript, duration)
+    evidence_chunks = build_evidence_chunks(transcript, duration)
+
+    manifest: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "session_id": sid,
+        "mode": mode,
+        "created_at_unix": int(time.time()),
+        "source": source,
+        "acquisition": {
+            "transcript_source": transcript_source,
+            "asr_language": asr_language,
+            "visual": visual,
+            "ocr": "host_vision",
+            "second_pass": "available_on_demand" if visual else False,
+            "audience": bool(source.get("audience")),
+        },
+        "long_video": {
+            "profile": profile,
+            "chapter_count": len(chapters),
+            "evidence_chunk_count": len(evidence_chunks),
+            "strategy": (
+                "chaptered_retrieval_and_agentic_rewatch"
+                if profile["tier"] in {"long", "very_long", "ultra_long"}
+                else "global_overview_and_agentic_rewatch"
+            ),
+        },
+        "transcript": transcript,
+        "chapters": chapters,
+        "evidence_chunks": evidence_chunks,
+        "scene_index": scene_index,
+        "frame_index": frame_index,
+        "runtime": {
+            "video_relative_path": (
+                str(video_path.relative_to(session_dir)).replace("\\", "/")
+                if video_path is not None
+                and uploaded_absolute_path is None
+                and video_path.is_relative_to(session_dir)
+                else None
+            ),
+            "video_absolute_path": (
+                str(uploaded_absolute_path)
+                if uploaded_absolute_path is not None
+                else None
+            ),
+            "prepare_ms": round((time.monotonic() - started) * 1000),
+        },
+        "warnings": warnings,
+    }
+    _save_manifest(sid, manifest)
+    return manifest
 
 
 def prepare_video(
@@ -388,15 +698,17 @@ def prepare_video(
     include_audience: bool = False,
     force: bool = False,
 ) -> dict[str, Any]:
+    """Prepare a Bilibili/YouTube URL."""
     started = time.monotonic()
     platform = detect_platform(value)
-    sid = _session_id(value)
+    sid = _session_id("url:" + value)
     session_dir = _session_dir(sid)
 
     if not force and _manifest_path(sid).is_file():
         existing = load_manifest(sid)
         if existing.get("schema_version") == SCHEMA_VERSION and (
-            mode == "quick" or existing.get("acquisition", {}).get("visual")
+            mode == "quick"
+            or existing.get("acquisition", {}).get("visual")
         ):
             return _public_prepare_result(existing, cached=True)
 
@@ -413,70 +725,143 @@ def prepare_video(
     asr_language = None
 
     if not transcript:
-        audio = _download_media(source["canonical_url"], session_dir, "audio")
+        audio = _download_media(
+            source["canonical_url"],
+            session_dir,
+            "audio",
+        )
         transcript, asr_language, asr_warnings = _transcribe(audio)
         warnings.extend(asr_warnings)
         transcript_source = "asr"
-        warnings.append("ASR may be wrong on names, numbers, jargon, accents, or overlapping speech.")
-
-    visual = False
-    video_path = None
-    frame_index: list[dict[str, Any]] = []
-    if mode == "deep":
-        video_path = _download_media(source["canonical_url"], session_dir, "video")
-        frame_index = _extract_scene_index(
-            video_path,
-            float(source.get("duration_seconds") or 0),
-            session_dir,
+        warnings.append(
+            "ASR may be wrong on names, numbers, jargon, accents, "
+            "or overlapping speech."
         )
-        visual = bool(frame_index)
 
-    manifest: dict[str, Any] = {
-        "schema_version": SCHEMA_VERSION,
-        "session_id": sid,
-        "mode": mode,
-        "created_at_unix": int(time.time()),
-        "source": source,
-        "acquisition": {
-            "transcript_source": transcript_source,
-            "asr_language": asr_language,
-            "visual": visual,
-            "ocr": "host_vision",
-            "second_pass": "available_on_demand" if visual else False,
-            "audience": bool(source.get("audience")),
-        },
-        "transcript": transcript,
-        "frame_index": frame_index,
-        "runtime": {
-            "video_relative_path": (
-                str(video_path.relative_to(session_dir)).replace("\\", "/") if video_path else None
-            ),
-            "prepare_ms": round((time.monotonic() - started) * 1000),
-        },
-        "warnings": warnings,
-    }
-    _save_manifest(sid, manifest)
+    video_path = None
+    if mode == "deep":
+        video_path = _download_media(
+            source["canonical_url"],
+            session_dir,
+            "video",
+        )
+
+    manifest = _build_manifest(
+        sid=sid,
+        mode=mode,
+        source=source,
+        transcript=transcript,
+        transcript_source=transcript_source,
+        asr_language=asr_language,
+        video_path=video_path,
+        session_dir=session_dir,
+        started=started,
+        warnings=warnings,
+    )
     return _public_prepare_result(manifest, cached=False)
 
 
-def _public_prepare_result(manifest: dict[str, Any], cached: bool) -> dict[str, Any]:
+def prepare_uploaded_video(
+    file_path: str,
+    mode: Literal["deep", "quick"] = "deep",
+    force: bool = False,
+) -> dict[str, Any]:
+    """Prepare a host-materialized/uploaded local video from a restricted inbox."""
+    started = time.monotonic()
+    path = _validated_upload_path(file_path)
+    fingerprint = _fingerprint_local_file(path)
+    sid = _session_id("upload:" + fingerprint)
+    session_dir = _session_dir(sid)
+
+    if not force and _manifest_path(sid).is_file():
+        existing = load_manifest(sid)
+        absolute = existing.get("runtime", {}).get("video_absolute_path")
+        if (
+            existing.get("schema_version") == SCHEMA_VERSION
+            and absolute
+            and Path(absolute).is_file()
+            and (
+                mode == "quick"
+                or existing.get("acquisition", {}).get("visual")
+            )
+        ):
+            return _public_prepare_result(existing, cached=True)
+
+    probe = _probe_video(path)
+    source = {
+        "platform": "upload",
+        "input_kind": "uploaded_file",
+        "canonical_id": fingerprint,
+        "canonical_url": None,
+        "title": path.name,
+        "author": None,
+        "duration_seconds": float(probe["duration_seconds"]),
+        "part": None,
+        "file": probe,
+    }
+
+    transcript, asr_language, asr_warnings = _transcribe(path)
+    warnings = list(asr_warnings)
+    warnings.append(
+        "Uploaded-file v0.2 uses local ASR unless the host separately provides "
+        "a trusted embedded/sidecar subtitle track."
+    )
+    warnings.append(
+        "The cached session references the allowed local upload path; if the host "
+        "deletes that file, later visual rewatch will require re-upload/materialization."
+    )
+
+    manifest = _build_manifest(
+        sid=sid,
+        mode=mode,
+        source=source,
+        transcript=transcript,
+        transcript_source="asr",
+        asr_language=asr_language,
+        video_path=path if mode == "deep" else None,
+        session_dir=session_dir,
+        started=started,
+        warnings=warnings,
+        uploaded_absolute_path=path if mode == "deep" else None,
+    )
+    return _public_prepare_result(manifest, cached=False)
+
+
+def _public_prepare_result(
+    manifest: dict[str, Any],
+    cached: bool,
+) -> dict[str, Any]:
     source = manifest["source"]
+    long_video = manifest.get("long_video", {})
     return {
         "status": "complete",
         "cached": cached,
         "session_id": manifest["session_id"],
         "platform": source.get("platform"),
+        "input_kind": source.get("input_kind"),
         "canonical_id": source.get("canonical_id"),
         "canonical_url": source.get("canonical_url"),
         "title": source.get("title"),
         "author": source.get("author"),
         "duration_seconds": source.get("duration_seconds"),
         "part": source.get("part"),
-        "transcript_source": manifest.get("acquisition", {}).get("transcript_source"),
+        "transcript_source": manifest.get("acquisition", {}).get(
+            "transcript_source"
+        ),
         "transcript_segments": len(manifest.get("transcript", [])),
-        "visual_ready": bool(manifest.get("acquisition", {}).get("visual")),
+        "visual_ready": bool(
+            manifest.get("acquisition", {}).get("visual")
+        ),
         "frame_count": len(manifest.get("frame_index", [])),
-        "second_pass": manifest.get("acquisition", {}).get("second_pass"),
+        "chapter_count": long_video.get("chapter_count", 0),
+        "evidence_chunk_count": long_video.get(
+            "evidence_chunk_count",
+            0,
+        ),
+        "long_video_tier": long_video.get("profile", {}).get("tier"),
+        "second_pass": manifest.get("acquisition", {}).get(
+            "second_pass"
+        ),
         "warnings": manifest.get("warnings", []),
         "prepare_ms": manifest.get("runtime", {}).get("prepare_ms"),
     }
@@ -492,16 +877,26 @@ def public_manifest(session_id: str) -> dict[str, Any]:
         "mode": manifest.get("mode"),
         "source": {
             "platform": source.get("platform"),
+            "input_kind": source.get("input_kind"),
             "canonical_id": source.get("canonical_id"),
             "canonical_url": source.get("canonical_url"),
             "title": source.get("title"),
             "author": source.get("author"),
             "duration_seconds": source.get("duration_seconds"),
             "part": source.get("part"),
+            "file": source.get("file"),
         },
         "acquisition": manifest.get("acquisition"),
+        "long_video": manifest.get("long_video"),
         "transcript_segments": len(transcript),
-        "transcript_characters": sum(len(x.get("text", "")) for x in transcript),
+        "transcript_characters": sum(
+            len(x.get("text", "")) for x in transcript
+        ),
+        "chapter_count": len(manifest.get("chapters", [])),
+        "evidence_chunk_count": len(
+            manifest.get("evidence_chunks", [])
+        ),
+        "scene_count": len(manifest.get("scene_index", [])),
         "frame_count": len(manifest.get("frame_index", [])),
         "warnings": manifest.get("warnings", []),
     }
@@ -514,12 +909,18 @@ def transcript_window(
     max_chars: int = 24000,
 ) -> dict[str, Any]:
     manifest = load_manifest(session_id)
-    duration = float(manifest.get("source", {}).get("duration_seconds") or 0)
-    end = duration if end_seconds is None else end_seconds
+    duration = float(
+        manifest.get("source", {}).get("duration_seconds") or 0
+    )
+    end = duration if end_seconds is None else min(
+        float(end_seconds),
+        duration,
+    )
     rows = [
         row
         for row in manifest.get("transcript", [])
-        if float(row.get("end", 0)) >= start_seconds and float(row.get("start", 0)) <= end
+        if float(row.get("end", 0)) >= start_seconds
+        and float(row.get("start", 0)) <= end
     ]
     out: list[dict[str, Any]] = []
     count = 0
@@ -535,29 +936,93 @@ def transcript_window(
         "session_id": session_id,
         "start_seconds": start_seconds,
         "end_seconds": end,
-        "source": manifest.get("acquisition", {}).get("transcript_source"),
+        "source": manifest.get("acquisition", {}).get(
+            "transcript_source"
+        ),
         "segments": out,
         "truncated": truncated,
         "characters": count,
     }
 
 
-def _video_path(manifest: dict[str, Any], session_id: str) -> Path:
+def chapter_index(session_id: str) -> dict[str, Any]:
+    manifest = load_manifest(session_id)
+    return {
+        "session_id": session_id,
+        "tier": manifest.get("long_video", {})
+        .get("profile", {})
+        .get("tier"),
+        "chapters": manifest.get("chapters", []),
+    }
+
+
+def search_video_memory(
+    session_id: str,
+    query: str,
+    limit: int = 8,
+) -> dict[str, Any]:
+    manifest = load_manifest(session_id)
+    results = search_evidence(
+        manifest.get("evidence_chunks", []),
+        query=query,
+        limit=limit,
+    )
+    return {
+        "session_id": session_id,
+        "query": query,
+        "results": results,
+        "instruction": (
+            "Use these windows as retrieval candidates. "
+            "For important factual or visual questions, inspect the matching "
+            "transcript and dense video frames before answering."
+        ),
+    }
+
+
+def _video_path(
+    manifest: dict[str, Any],
+    session_id: str,
+) -> Path:
+    absolute = manifest.get("runtime", {}).get(
+        "video_absolute_path"
+    )
+    if absolute:
+        path = Path(absolute)
+        if path.is_file():
+            return path
+        raise VideoRuntimeError(
+            "VISUAL_ANALYSIS_FAILED",
+            "The uploaded local video is no longer available. "
+            "Re-upload/materialize it into the configured inbox.",
+        )
+
     rel = manifest.get("runtime", {}).get("video_relative_path")
     if not rel:
-        raise VideoRuntimeError("VISUAL_ANALYSIS_FAILED", "This session has no prepared video stream.")
+        raise VideoRuntimeError(
+            "VISUAL_ANALYSIS_FAILED",
+            "This session has no prepared video stream.",
+        )
     path = _session_dir(session_id) / rel
     if not path.is_file():
-        raise VideoRuntimeError("VISUAL_ANALYSIS_FAILED", "Prepared video file is missing.")
+        raise VideoRuntimeError(
+            "VISUAL_ANALYSIS_FAILED",
+            "Prepared video file is missing.",
+        )
     return path
 
 
-def _evenly_pick(items: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+def _evenly_pick(
+    items: list[dict[str, Any]],
+    limit: int,
+) -> list[dict[str, Any]]:
     if len(items) <= limit:
         return items
     if limit <= 1:
         return [items[len(items) // 2]]
-    indices = [round(i * (len(items) - 1) / (limit - 1)) for i in range(limit)]
+    indices = [
+        round(i * (len(items) - 1) / (limit - 1))
+        for i in range(limit)
+    ]
     return [items[i] for i in indices]
 
 
@@ -569,22 +1034,36 @@ def frame_paths_for_window(
     density: Literal["overview", "dense"] = "overview",
 ) -> list[dict[str, Any]]:
     manifest = load_manifest(session_id)
-    duration = float(manifest.get("source", {}).get("duration_seconds") or 0)
-    end = duration if end_seconds is None else min(end_seconds, duration)
+    duration = float(
+        manifest.get("source", {}).get("duration_seconds") or 0
+    )
+    end = duration if end_seconds is None else min(
+        end_seconds,
+        duration,
+    )
     if end <= start_seconds:
-        raise VideoRuntimeError("FRAME_EXTRACTION_FAILED", "end_seconds must be greater than start_seconds.")
+        raise VideoRuntimeError(
+            "FRAME_EXTRACTION_FAILED",
+            "end_seconds must be greater than start_seconds.",
+        )
     max_frames = max(1, min(int(max_frames), 20))
 
     if density == "overview":
         candidates = [
-            item for item in manifest.get("frame_index", [])
-            if start_seconds <= float(item.get("timestamp_seconds", 0)) <= end
+            item
+            for item in manifest.get("frame_index", [])
+            if start_seconds
+            <= float(item.get("timestamp_seconds", 0))
+            <= end
         ]
         picked = _evenly_pick(candidates, max_frames)
         return [
             {
                 **item,
-                "absolute_path": str(_session_dir(session_id) / item["relative_path"]),
+                "absolute_path": str(
+                    _session_dir(session_id)
+                    / item["relative_path"]
+                ),
             }
             for item in picked
         ]
@@ -592,14 +1071,18 @@ def frame_paths_for_window(
     video = _video_path(manifest, session_id)
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
-        raise VideoRuntimeError("FRAME_EXTRACTION_FAILED", "OpenCV could not reopen the prepared video.")
+        raise VideoRuntimeError(
+            "FRAME_EXTRACTION_FAILED",
+            "OpenCV could not reopen the prepared video.",
+        )
     window_dir = _session_dir(session_id) / "rewatch"
     window_dir.mkdir(parents=True, exist_ok=True)
     if max_frames == 1:
         times = [(start_seconds + end) / 2.0]
     else:
         times = [
-            start_seconds + i * (end - start_seconds) / (max_frames - 1)
+            start_seconds
+            + i * (end - start_seconds) / (max_frames - 1)
             for i in range(max_frames)
         ]
     records: list[dict[str, Any]] = []
@@ -610,7 +1093,11 @@ def frame_paths_for_window(
         frame = _resize(frame)
         name = f"{int(seconds * 1000):010d}.jpg"
         path = window_dir / name
-        cv2.imwrite(str(path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+        cv2.imwrite(
+            str(path),
+            frame,
+            [int(cv2.IMWRITE_JPEG_QUALITY), 82],
+        )
         records.append(
             {
                 "timestamp_seconds": round(seconds, 3),
