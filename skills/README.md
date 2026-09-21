@@ -18,7 +18,7 @@
 ## Video Understanding / 视频理解
 
 - Canonical path: `skills/video-understanding/SKILL.md`
-- Current version: `0.2.2`
+- Current version: `0.2.3`
 - Status: `release-candidate`
 - Activation: current-chat video attachment or supported Bilibili/YouTube URL.
 - Core direction: **Upload-First + Long-Video Agentic Understanding**.
@@ -27,11 +27,13 @@
 - Quality-first runtime policy: no default speed target; a 60-minute video may take about 60–120 minutes or longer when deeper ASR, denser visual coverage, more rewatch, or better verification improves reliability.
 - Mobile-Native quality: a video uploaded from mobile is not automatically downgraded; when the host can keep executing, mobile deep analysis may use the same long processing budget as desktop. This does not imply guaranteed background execution after leaving the chat.
 - Runtime: `skills/video-understanding/runtime/`.
-- Runtime v0.2: faster-whisper >=1.2.1, PySceneDetect >=0.7.1 AdaptiveDetector, adaptive overview frames, structural chapters, overlapping Evidence Memory, local lexical retrieval, dense rewatch, MCP ImageContent.
+- Runtime v0.2.3: faster-whisper >=1.2.1, PySceneDetect, FFprobe/FFmpeg Media Health, Audio tri-state, Completion Guard, corrupt-video partial fallback/repair, adaptive overview frames, Evidence Memory, dense rewatch, MCP ImageContent.
+- Completion Guard: Deep visual coverage <98% or missing required speech/caption coverage => PARTIAL; audio-present / decodable / transcribed are reported separately.
+- Identity Guard: task_id + request_fingerprint + session/source fingerprint prevent stale-result cross-talk.
 - MCP tools: URL start, uploaded-file start, wait, manifest, transcript, chapters, search memory, inspect frames.
 - Upload security: MCP local-file reads are restricted to `~/.video-understanding/inbox` or explicit `VIDEO_UPLOAD_ROOTS`; arbitrary local path access is rejected.
 - Runtime contract: `skills/video-understanding/references/runtime-contract.md`.
-- Regression cases: `skills/video-understanding/evals/evals.json` (41 cases).
+- Regression cases: `skills/video-understanding/evals/evals.json` (50 cases).
 - Stable gate: real short upload + 30–90m + 90–180m tests, Bilibili/YouTube, ASR fallback, scene success/fallback, memory retrieval, rewatch and upload-path security.
 
 ## 不着急 / No-Rush
