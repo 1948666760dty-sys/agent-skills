@@ -1,4 +1,4 @@
-# Video Understanding Runtime v0.2.2
+# Video Understanding Runtime v0.2.3
 
 Executable reference Runtime for `skills/video-understanding/SKILL.md`.
 
@@ -18,6 +18,32 @@ Long videos are not pushed into one huge model context. The Runtime builds:
 - local retrieval candidates
 - bounded transcript windows
 - dense visual rewatch windows
+
+## Media health and Completion Guard
+
+v0.2.3 adds a full decode health layer using FFprobe/FFmpeg.
+
+Audio is reported as separate states:
+- `audio_present`
+- `audio_decodable`
+- `speech_transcribed`
+
+These must never be collapsed into a vague “audio works/does not work” statement.
+
+Video coverage records:
+- original duration
+- `decoded_until_seconds`
+- `visual_coverage_ratio`
+- decode errors
+
+Deep completion:
+- `COMPLETE`: visual coverage >=98% when visual is required, plus adequate speech/caption coverage when audio is present.
+- `PARTIAL`: useful evidence exists but one required modality is incomplete.
+- `FAILED`: no useful content evidence was acquired.
+
+Corrupt video keeps the surviving visual prefix and healthy audio evidence. Repair tries remux and, for bounded-duration inputs, H.264 transcode. A repair is adopted only when it improves coverage against the **original timeline**; a truncated 30-second file becoming a clean 8-second file is not counted as repair.
+
+Every job also carries `task_id`, `request_fingerprint`, and the prepared result carries `source_fingerprint`. Hosts must not deliver a result from a stale task/session.
 
 ## Current MCP tools
 
@@ -157,3 +183,17 @@ BSD-3-Clause upstream dependency.
 
 faster-whisper:
 MIT upstream dependency.
+
+
+## Real-sample regression
+
+Run:
+
+`.venv\Scripts\python.exe scripts\media_health_regression.py <healthy.mp4> <corrupt.mp4>`
+
+The regression asserts:
+- healthy video/audio decode fully;
+- audio without ASR remains `PARTIAL`, not “inaudible”;
+- corrupt HEVC keeps healthy audio and reports partial visual coverage;
+- truncating remux is not accepted as a successful repair;
+- near-full ASR + complete visuals can pass Completion Guard.
