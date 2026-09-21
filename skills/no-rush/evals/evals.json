@@ -1,7 +1,7 @@
 {
   "skill": "no-rush",
-  "version": "2.3.0",
-  "purpose": "Regression scenarios for default activation, 100%-per-user-turn visible status, explicit disable/restore, the unchanged understanding gate, latest-wins behavior, and final delivery checks. Evaluate the actual SKILL.md with an independent agent; do not infer behavioral passes from this file alone.",
+  "version": "2.4.0",
+  "purpose": "Regression scenarios for default activation, 100%-per-user-turn visible status, mandatory four-field closing status reports, explicit disable/restore, the unchanged understanding gate, latest-wins behavior, and final delivery checks. Evaluate the actual SKILL.md with an independent agent; do not infer behavioral passes from this file alone.",
   "cases": [
     {
       "name": "unknown_effort_still_defaults_on",
@@ -142,6 +142,52 @@
       "expect": [
         "do_not_claim_success",
         "state_specific_unfinished_part"
+      ]
+    },
+    {
+      "name": "closing_report_success",
+      "context": "No-Rush is enabled. All requested work completed successfully.",
+      "request": "交付结果",
+      "expect": [
+        "closing_report_present",
+        "closing_fields_in_order",
+        "completed_lists_real_work",
+        "unfinished_is_none",
+        "problems_is_none",
+        "user_confirmation_is_none"
+      ]
+    },
+    {
+      "name": "closing_report_partial_failure",
+      "context": "No-Rush is enabled. Main document generated, but upload action failed due to permission.",
+      "request": "把结果交付给我",
+      "expect": [
+        "closing_report_present",
+        "completed_mentions_generated_document",
+        "unfinished_mentions_upload",
+        "problems_mentions_permission_failure",
+        "do_not_claim_upload_success"
+      ]
+    },
+    {
+      "name": "closing_report_needs_user_decision",
+      "context": "No-Rush is enabled. Two materially different target formats remain and neither can be inferred or retrieved.",
+      "request": "继续",
+      "expect": [
+        "closing_report_present",
+        "needs_confirmation_contains_key_choice",
+        "do_not_invent_choice",
+        "do_not_ask_low_value_questions"
+      ]
+    },
+    {
+      "name": "closing_report_simple_task",
+      "context": "No-Rush is enabled. A simple one-step factual answer is delivered.",
+      "request": "1+1等于多少",
+      "expect": [
+        "answer_directly",
+        "compact_closing_report_present",
+        "all_four_closing_fields_present"
       ]
     }
   ],
@@ -459,5 +505,26 @@
         "action": "execute"
       }
     }
-  ]
+  ],
+  "closing_report_contract": {
+    "required_when_no_rush_enabled_on": [
+      "task_delivery",
+      "staged_delivery",
+      "execution_pause_for_missing_info_permission_or_tool_failure"
+    ],
+    "field_order": [
+      "已完成",
+      "未完成",
+      "存在问题",
+      "需要你确认"
+    ],
+    "empty_value": "无",
+    "rules": [
+      "completed_must_be_true",
+      "unfinished_is_not_same_as_problem",
+      "problems_describe_known_defects_failures_risks_or_evidence_gaps",
+      "need_user_confirmation_only_for_material_unresolved_choices",
+      "do_not_force_questions_when_none"
+    ]
+  }
 }
