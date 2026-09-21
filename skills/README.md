@@ -34,7 +34,7 @@
 - Upload security: MCP local-file reads are restricted to `~/.video-understanding/inbox` or explicit `VIDEO_UPLOAD_ROOTS`; arbitrary local path access is rejected.
 - Runtime contract: `skills/video-understanding/references/runtime-contract.md`.
 - Regression cases: `skills/video-understanding/evals/evals.json` (50 cases).
-- v0.2.3 audit: `skills/video-understanding/evals/RESULTS-v0.2.3.md` — real healthy/corrupt MP4 regression passed; repair truncation guard passed; GitHub Actions run 35668142940 passed all compile/install/preflight/media-health/MCP smoke steps.
+- v0.2.3 audit: `skills/video-understanding/evals/RESULTS-v0.2.3.md` — real healthy/corrupt MP4 regression passed; repair truncation guard passed; GitHub Actions runs 35668142940 and 35668408072 passed; the second run additionally completed real faster-whisper 1.2.1 tiny-model speech inference.
 - Stable gate: real short upload + 30–90m + 90–180m tests, Bilibili/YouTube, ASR fallback, scene success/fallback, memory retrieval, rewatch and upload-path security.
 
 ## 不着急 / No-Rush
