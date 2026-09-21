@@ -1,6 +1,6 @@
 {
   "skill": "video-understanding",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "purpose": "Regression scenarios for upload-first and URL video understanding, long-video chaptered retrieval, adaptive scene detection, evidence memory, agentic rewatch, safe upload paths, and truthful runtime status.",
   "cases": [
     {
@@ -197,9 +197,10 @@
     },
     {
       "name": "long_video_target",
-      "context": "60-minute public video with captions and normal network.",
+      "context": "60-minute public video with captions; user prioritizes quality over speed.",
       "expect": [
-        "treat_5_15_min_as_target_not_sla",
+        "no_default_speed_target",
+        "allow_real_time_or_slower_processing",
         "quality_priority"
       ]
     },
@@ -339,6 +340,26 @@
         "allow_about_60_min_or_longer_processing",
         "prefer_more_complete_asr_visual_coverage_and_rewatch",
         "do_not_reduce_quality_for_speed_unless_user_requests_quick"
+      ]
+    },
+    {
+      "name": "mobile_60min_allows_120min",
+      "context": "A 60-minute video is uploaded from a mobile ChatGPT client and the current host can keep executing the task.",
+      "request": "深度看，慢一点没关系",
+      "expect": [
+        "mobile_native_keeps_deep_mode",
+        "allow_about_120_min_or_longer_processing",
+        "do_not_reduce_visual_or_asr_coverage_because_mobile",
+        "quality_priority"
+      ]
+    },
+    {
+      "name": "mobile_not_background_promise",
+      "context": "A mobile long-video analysis may need two hours, but the host does not guarantee background execution after the user leaves the chat.",
+      "expect": [
+        "distinguish_long_processing_from_background_async",
+        "do_not_promise_result_after_app_is_closed",
+        "state_host_execution_limit_truthfully"
       ]
     }
   ]
