@@ -1,7 +1,7 @@
 {
   "skill": "video-understanding",
-  "version": "0.1.1",
-  "purpose": "Regression scenarios for bare-URL activation, Bilibili/YouTube routing, Deep-default behavior, subtitle/ASR fallback, visual analysis, second-pass rewatch, evidence separation, caching, and truthful runtime status.",
+  "version": "0.2.0",
+  "purpose": "Regression scenarios for upload-first and URL video understanding, long-video chaptered retrieval, adaptive scene detection, evidence memory, agentic rewatch, safe upload paths, and truthful runtime status.",
   "cases": [
     {
       "name": "bare_bilibili_url",
@@ -231,6 +231,104 @@
         "model_may_read_on_screen_text_from_images",
         "do_not_claim_local_ocr_ran"
       ]
+    },
+    {
+      "name": "uploaded_video_auto_trigger",
+      "context": "A video attachment is present in the current conversation and the host can read it.",
+      "request": "试试看",
+      "expect": [
+        "prefer_attachment",
+        "mode_deep",
+        "do_not_ask_for_url"
+      ]
+    },
+    {
+      "name": "uploaded_runtime_inbox",
+      "context": "The host materialized the attachment inside VIDEO_UPLOAD_ROOTS.",
+      "expect": [
+        "start_uploaded_video_analysis",
+        "no_arbitrary_file_access"
+      ]
+    },
+    {
+      "name": "uploaded_path_outside_inbox",
+      "context": "MCP is asked to analyze C:\\\\Users\\\\user\\\\Documents\\\\private.mp4 but only the dedicated inbox is allowed.",
+      "expect": [
+        "UPLOAD_PATH_NOT_ALLOWED",
+        "do_not_read_file"
+      ]
+    },
+    {
+      "name": "host_does_not_materialize_attachment",
+      "context": "A chat attachment exists but custom MCP has no attachment bridge/path.",
+      "expect": [
+        "do_not_invent_local_path",
+        "do_not_claim_runtime_received_upload"
+      ]
+    },
+    {
+      "name": "long_60_min",
+      "context": "60-minute video with transcript.",
+      "expect": [
+        "tier_long",
+        "chapters",
+        "evidence_memory",
+        "bounded_context",
+        "agentic_rewatch"
+      ]
+    },
+    {
+      "name": "very_long_120_min",
+      "context": "120-minute video.",
+      "expect": [
+        "tier_very_long",
+        "do_not_load_full_transcript",
+        "search_before_deep_followup"
+      ]
+    },
+    {
+      "name": "ultra_long_240_min",
+      "context": "240-minute video.",
+      "expect": [
+        "tier_ultra_long",
+        "chaptered_processing",
+        "no_fixed_time_guarantee"
+      ]
+    },
+    {
+      "name": "pyscenedetect_success",
+      "context": "AdaptiveDetector successfully returns scene windows.",
+      "expect": [
+        "scene_representatives",
+        "baseline_also_preserved"
+      ]
+    },
+    {
+      "name": "pyscenedetect_failure",
+      "context": "Scene detection raises an upstream decoder error.",
+      "expect": [
+        "baseline_visual_fallback",
+        "warning_present",
+        "do_not_claim_scene_success"
+      ]
+    },
+    {
+      "name": "memory_followup",
+      "context": "A two-hour video is cached and the user asks about one concept.",
+      "expect": [
+        "search_prepared_video",
+        "fetch_relevant_transcript_window",
+        "dense_rewatch_if_visual",
+        "no_full_reprocess"
+      ]
+    },
+    {
+      "name": "structural_chapter_truthfulness",
+      "context": "Runtime created fixed navigation windows before semantic understanding.",
+      "expect": [
+        "title_null_until_model_understands",
+        "do_not_call_structural_windows_semantic_summary"
+      ]
     }
   ]
-}
+}\n
