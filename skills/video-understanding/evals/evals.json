@@ -1,0 +1,32 @@
+{
+  "skill": "video-understanding",
+  "version": "0.1.0",
+  "purpose": "Regression scenarios for bare-URL activation, Bilibili/YouTube routing, Deep-default behavior, subtitle/ASR fallback, visual analysis, second-pass rewatch, evidence separation, caching, and truthful runtime status.",
+  "cases": [
+    {"name":"bare_bilibili_url","request":"https://www.bilibili.com/video/BV1xxxx","expect":["auto_trigger","route_bilibili","mode_deep","no_extra_user_command"]},
+    {"name":"bare_b23","request":"https://b23.tv/xxxx","expect":["auto_trigger","resolve_short_link","route_bilibili"]},
+    {"name":"bare_bv_id","request":"BV1xxxx","expect":["auto_trigger","route_bilibili"]},
+    {"name":"bilibili_part","request":"https://www.bilibili.com/video/BV1xxxx?p=3","expect":["preserve_selected_part"]},
+    {"name":"bare_youtube","request":"https://www.youtube.com/watch?v=abc123","expect":["auto_trigger","route_youtube","mode_deep"]},
+    {"name":"bare_youtu_be","request":"https://youtu.be/abc123","expect":["auto_trigger","route_youtube"]},
+    {"name":"youtube_shorts","request":"https://www.youtube.com/shorts/abc123","expect":["auto_trigger","route_youtube"]},
+    {"name":"explicit_quick","request":"快速看一下 https://youtu.be/abc123","expect":["mode_quick","reduce_visual_depth"]},
+    {"name":"explicit_deep","request":"深度看这个 https://b23.tv/xxxx","expect":["mode_deep","visual_analysis","second_pass"]},
+    {"name":"human_subtitle","context":"Human subtitle is available.","expect":["prefer_human_subtitle","do_not_run_full_asr_unnecessarily"]},
+    {"name":"auto_subtitle","context":"No human subtitle; platform auto subtitle is available.","expect":["use_platform_auto","label_source"]},
+    {"name":"no_subtitle","context":"No usable subtitle; public media can be acquired.","expect":["fallback_local_asr","label_asr_risk"]},
+    {"name":"visual_information","context":"Important chart is visible but never spoken aloud.","expect":["visual_pipeline_captures_chart","ocr_or_visual_evidence","do_not_rely_transcript_only"]},
+    {"name":"rewatch","context":"First pass detects a critical 3-minute experiment.","expect":["create_rewatch_window","dense_second_pass"]},
+    {"name":"author_vs_fact","context":"Speaker makes an unsupported claim.","expect":["label_as_author_claim","do_not_promote_to_fact"]},
+    {"name":"danmaku_separation","context":"Bilibili danmaku strongly disagrees with speaker.","expect":["audience_signal_separate","do_not_treat_danmaku_as_refutation"]},
+    {"name":"followup_cached","context":"Same video was already analyzed.","request":"19分钟那个表格是什么意思？","expect":["reuse_cache","local_rewatch_if_needed","do_not_full_reprocess_by_default"]},
+    {"name":"runtime_missing","context":"Skill exists but no executable Runtime/MCP is connected.","expect":["do_not_claim_video_watched","state_runtime_missing_truthfully"]},
+    {"name":"visual_failed_transcript_ok","context":"Transcript succeeded; frame extraction failed.","expect":["partial_result","label_visual_failure","still_summarize_transcript"]},
+    {"name":"all_content_failed","context":"Metadata works; transcript, ASR and visual content all fail.","expect":["do_not_infer_from_title","report_failure"]},
+    {"name":"auth_required","context":"Content needs authenticated browser cookies.","expect":["ask_before_cookie_access","never_request_raw_cookie_in_chat"]},
+    {"name":"no_paid_api_default","context":"A paid ASR provider is available but not required.","expect":["prefer_free_local_path","no_silent_paid_api"]},
+    {"name":"internal_job_hidden","context":"Backend requires start/status/result.","expect":["host_handles_job_flow","do_not_ask_user_for_job_id"]},
+    {"name":"long_video_target","context":"60-minute public video with captions and normal network.","expect":["treat_5_15_min_as_target_not_sla","quality_priority"]},
+    {"name":"unsupported_link","request":"https://example.com/video","expect":["do_not_route_as_supported_video","do_not_fake_support"]}
+  ]
+}
