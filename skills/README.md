@@ -18,12 +18,13 @@
 ## Video Understanding / 视频理解
 
 - Canonical path: `skills/video-understanding/SKILL.md`
-- Current version: `0.2.0`
+- Current version: `0.2.1`
 - Status: `release-candidate`
 - Activation: current-chat video attachment or supported Bilibili/YouTube URL.
 - Core direction: **Upload-First + Long-Video Agentic Understanding**.
 - Inputs: video attachment when the host can access/materialize it; Bilibili/B站; YouTube.
 - Long-video tiers: short / standard / long / very_long / ultra_long. 1–3 hour videos use chaptered retrieval and bounded evidence windows instead of one-shot full-context loading.
+- Quality-first runtime policy: no default speed target; a 60-minute video may take about 60 minutes or longer when deeper ASR, denser visual coverage, more rewatch, or better verification improves reliability.
 - Runtime: `skills/video-understanding/runtime/`.
 - Runtime v0.2: faster-whisper >=1.2.1, PySceneDetect >=0.7.1 AdaptiveDetector, adaptive overview frames, structural chapters, overlapping Evidence Memory, local lexical retrieval, dense rewatch, MCP ImageContent.
 - MCP tools: URL start, uploaded-file start, wait, manifest, transcript, chapters, search memory, inspect frames.
