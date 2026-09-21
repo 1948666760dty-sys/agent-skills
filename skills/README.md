@@ -77,6 +77,7 @@
 - Latest-wins rule: newer explicit requirements supersede conflicting older requirements; superseded requirements must not reappear.
 - Clarification convergence: normal tasks max 3 rounds; complex/contradictory tasks max 4 rounds.
 - Tests: `skills/no-rush/evals/evals.json`.
+- v2.5.0 audit: `skills/no-rush/evals/RESULTS-v2.5.0.md` — 28/28 static checks passed; 100 regression scenarios defined. Independent live host/model observations remain a separate runtime test.
 - Marker regression: have an independent agent apply the canonical Skill to `marker_cases` and save observations; run `node skills/no-rush/evals/check-observations.cjs observations.json`. Static/contract audit does not substitute for a live host/model run.
 - Changelog: see `skills/no-rush/SKILL.md`; v2.5.0 adds Question Scan and the zero-keyword host preload contract.
 
