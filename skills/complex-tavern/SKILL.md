@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.6 在 v3.6.5 基础上新增 Persistent Paragraph Style Lock / 跨回合段落风格锁：长段落连续小说风格从“单轮放行检查”升级为故事级持久状态，interactive / autonomous_novel / test 的每次 Narrative Renderer 都必须先加载同一 paragraph_profile，再生成草稿；章节切换、Scene 切换、Decision Gate、模式切换或上下文压缩都不得把排版重置为模型默认短段风格。新增 rolling paragraph drift audit 与 draft-construction-first 规则，防止开头长段、后续逐轮回退成一两句一段。继续保留 v3.6.5 版本首行闸门、硬分段理由码、读者术语注释、v3.6.4 输出语义锁及长篇运行规则。
-version: 3.6.6
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.7 在 v3.6.6 的 Persistent Paragraph Style Lock 基础上新增 Theme Restraint & Interpretive Distance Gate / 主题克制与解释距离闸门：把“不要替读者总结主题”从临时文风建议升级为故事级 narrative_voice_profile、Theme Restatement Scan 与跨通道冗余审计；人物行为已经清楚呈现含义时，旁白不得立刻把同一主题重新讲一遍，但时代跨度、复杂世界规则、硬科幻机制与必要转场仍允许简短说明。继续保留 v3.6.6 跨回合段落风格锁、v3.6.5 版本首行闸门/读者术语注释、v3.6.4 输出语义锁及长篇运行规则。
+version: 3.6.7
 status: stable-default
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.6 — Persistent Paragraph Style Lock
+# Complex Tavern Engine v3.6.7 — Theme Restraint & Interpretive Distance Gate
 
 ## 0. 性质与真实性边界
 
@@ -225,6 +225,23 @@ Opening Brief 提供的是“玩家需要知道什么”，本规则决定“这
 
 它不是强制慢开场，也不是固定字数要求。若题材本身要求从危机第一秒开始，允许跳过；但系统不得为了“尽快有戏”让所有科幻/悬疑开局都在第三段出现神秘信号、陌生电话、敲门或事故。
 
+
+#### 1.2.4 Theme Restraint & Interpretive Distance Gate / 主题克制与解释距离闸门
+
+正式正文默认使用 `theme_exposition_policy=restrained`：主题、道德结构、关系本质和世界观价值判断应优先由**人物行为、具体细节、选择、矛盾与后果**让读者自己形成判断，而不是在场景已经表达清楚后，再由作者旁白把同一含义解释一遍。
+
+默认规则：
+- **Evidence First / 证据先行**：能靠当前动作、对话、物件、站位、犹豫、交换、代价或后果表现的信息，优先让场景本身承担；不要先写“这说明……”“其实……”“这个世界就是……”再补例子。
+- **No Immediate Moral Restatement / 禁止紧跟式主题复述**：若前面若干句或若干段已经具体呈现某个主题含义，旁白不得立刻用抽象句把同一结论再说一遍。典型需要删除的结构是“具体行为已经成立 → 紧接一句作者总结它意味着什么 → 后面人物又再次说出同一结论”。
+- **Cross-Channel Redundancy Guard / 跨通道冗余防护**：同一个主题点若已经通过行为充分表达，通常不再同时用作者旁白、主角内心独白、NPC 台词三路重复。保留最有戏剧作用的一路；其他通道只有提供新信息、造成新决定或揭示角色差异时才保留。
+- **Character Interpretation Is Subjective / 人物解释不自动等于真理**：NPC 可以讨论、辩解、概括甚至发表极端观点，但这些首先是该角色的立场。旁白不得紧接着替角色盖章“他说得没错/事实就是如此”，除非剧情已有独立可观察证据且这一确认本身是当前事件的新信息。
+- **Protagonist Theory Is A Perspective / 主角推论属于视角**：主角可以形成假设、误判或阶段性理解，但应以“你开始怀疑/你想到/在你看来”等人物视角存在；不能把尚未验证的主题解释无缝升级成全知旁白事实。
+- **Necessary Exposition Still Allowed / 必要说明保留**：时间跳跃、历史背景、制度规则、复杂科幻/奇幻机制、空间转场、无法通过当下动作高效表达但又是理解当前情节所必需的信息，允许使用简短概述。它的职责是让读者**看懂发生了什么**，不是替读者决定**应该怎样理解其道德意义**。
+- **Delete Test / 删除测试**：若一条抽象总结句删除后，事件因果、人物动机证据、世界规则和当前可理解性都不受损，只是少了一次“作者告诉你这段意味着什么”，默认删除。
+- **Turning-Point Exception / 转折例外**：真正的章节转折、人物价值观改变或新证据推翻旧理解时，可以出现较明确的概括句；但它必须带来新的认知或决定，不能只是把刚发生的事情换成抽象词再说一遍。
+- **Explicit Style Override / 用户可覆盖**：用户明确要求寓言式、议论式、强作者声音、论文式或高度解释性的叙述时，可以放宽本规则；否则默认保持克制。
+
+该闸门不要求“永远只 show 不 tell”。目标是区分**必要说明**与**重复解释**：前者帮助理解剧情，后者削弱沉浸感并让主题显得被强行强调。
 
 ### 1.3 原作母体适配器 / Source-World Adapter
 
@@ -710,6 +727,38 @@ narrative_layout_profile:
 - 若用户明确说“以后更紧凑/更碎/对白密一点/恢复普通分段”等，可修改未来 `narrative_layout_profile`；不得倒改已经发生的 Canon
 - 用户没有修改时，后续所有正文必须沿用最近已锁定 profile；“模型默认文风”没有更高优先级
 - 旧存档缺少该字段时，从当前 Skill 默认建立 `longform_continuous`，但不自动重排已写历史正文；只约束后续新输出
+
+### 4.17 Narrative Voice Profile / 故事级叙述声音档案
+
+主题克制不是单轮提示，而是故事级持续状态。新故事第一次进入正式 Scene 1 前，除 `narrative_layout_profile` 外同时建立 `narrative_voice_profile`；之后 interactive、autonomous_novel、test、章节切换、Scene 切换、Decision Gate、存档恢复与上下文压缩都必须继承，除非用户明确修改。
+
+默认档案：
+
+```text
+narrative_voice_profile:
+  interpretive_distance: restrained
+  thematic_exposition_policy: restrained
+  evidence_first: true
+  cross_channel_theme_redundancy_guard: enabled
+  character_interpretation_is_subjective: true
+  necessary_exposition: allowed
+  persistence_scope: story
+```
+
+含义：
+- `interpretive_distance=restrained`：作者声音不抢在人物与场景前面替读者下结论。
+- `thematic_exposition_policy=restrained`：允许必要解释，但抑制已经被场景充分表达后的主题复述。
+- `cross_channel_theme_redundancy_guard=enabled`：检测“行为 + 旁白 + 内心 + 台词”对同一含义的重复表达。
+- `character_interpretation_is_subjective=true`：角色说出的世界观解释先按角色立场处理，除非剧情另有证据。
+- `necessary_exposition=allowed`：不误伤硬科幻机制、制度规则、历史背景、时间跳跃和必要转场。
+
+硬规则：
+- `narrative_voice_profile` 属于渲染运行状态，不属于 Canon；它控制叙述距离，不改变已经发生的事件。
+- 每次 Narrative Renderer 生成草稿前必须先加载当前故事的 `narrative_voice_profile`，与 `narrative_layout_profile` 同级持久。
+- 章节/Scene/模式切换和上下文压缩都不是重置叙述声音的理由。
+- 用户没有修改时，“模型默认喜欢解释主题”不能覆盖故事级 voice profile。
+- 旧存档缺失该字段时，从当前版本默认建立 `restrained`，只约束后续新正文，不重写历史 Raw Story Log。
+- 用户明确要求更强作者声音、寓言式议论或更解释性的版本时，可修改未来 voice profile；若用户随后要求恢复克制，则从之后正文恢复，不倒改 Canon。
 
 ## 5. 长上下文与双层叙事档案
 
@@ -1303,7 +1352,8 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
+8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`narrative_voice_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`theme_restatement_scan_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
+8A. **Thematic Restraint / Interpretive Distance**：本轮是否已加载故事级 `narrative_voice_profile`；具体行为、细节或后果已经把主题表达清楚后，旁白是否又立刻用抽象句重复同一含义；同一主题点是否在行为、作者旁白、主角内心与 NPC 台词之间机械重复；NPC/主角的阶段性解释是否被旁白错误盖章成客观真理；本轮概述是否属于时间跳跃、世界规则、复杂机制或必要转场等真正帮助理解的说明。执行 Theme Restatement Scan：若删除某句只会减少一次“作者告诉读者这意味着什么”而不损失因果、规则或新信息，则默认删除并重新检查；未通过时 `theme_restatement_scan_status=FAIL`，正文不得放行。
 9. **Reader Annotation Safety**：本轮是否出现对一般读者明显陌生且影响理解的特殊术语却完全未处理；是否反过来过度标注普通词；标记是否放在术语处而解释独立位于正文外；Reader Annotation 是否泄露后台秘密/原作未来、被写进角色知识，或把注释强塞进小说段落
 10. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
 11. **Canon & State**：是否和 Canon、时间、地点、金钱、物品、身体状态冲突
@@ -1341,6 +1391,7 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
 - 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；`narrative_layout_profile` 是否在新 TURN/新章/新 Scene/模式切换后被遗失或重置；是否出现“开局长段、后续越写越碎”的 Cross-Turn Paragraph Style Drift；非对话段落边界是否存在仅靠软理由放行的 Paragraph Density Drift；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
+- 主题表达是否发生 Authorial Restatement：场景已经通过行为/细节/后果表达清楚后，旁白又把同一含义抽象总结；同一主题是否在行为、旁白、主角内心、NPC 台词之间重复三次以上而没有新增信息；角色观点是否被叙述层误认证为世界真理；硬科幻/制度/历史等必要说明是否被错误当成主题解释而删掉；`narrative_voice_profile` 是否在跨 TURN/Scene/Chapter 后漂移回高解释度
 - Reader Glossary 是否过密/过稀；陌生术语是否首次出现未解释、同一熟悉术语是否反复脚注；注释是否混入正文叙述、改变角色知识或泄露未来/秘密
 
 ### 13.3 分级
@@ -1458,6 +1509,7 @@ autonomous_novel 在以下条件暂停：
 - 从 `schema_version: 3.5.3` / v3.5.x 迁移到 `schema_version: 3.6.1` 时：默认 `run_mode=interactive`；新增 Autonomous Player、novel_target、Decision Ledger、Long-Term Archive、lifecycle_stage 等字段为空或按当前明确状态初始化，不倒推过去不存在的自动决策；已有 Raw Story Log / Canon / 关系 / 资源 / 时间完全不改写。用户随后启用小说模式时，从当前人物 Canon 与用户明确偏好建立初始 policy。旧档若已超过50/100回合，可在首次需要时依据已确认 Canon + 带来源的 Raw Story Log 回查补建 milestone/archive，但不得从摘要猜造来源
 - 从 v3.6.3 迁移到 v3.6.4 时不改变 `schema_version: 3.6.1`：旧 `export_edition` 可映射到 `content_edition`；缺失的 content edition / batch boundary / artifact policy 只能从用户已明确说过的输出要求、既有交付行为或存档字段中可靠映射，无法确定时保留 unknown 并在下一次真正需要用户可见输出前一次性补问，**禁止默认回填 novel/暂停/每批交付**
 - 从 v3.6.5 迁移到 v3.6.6 时不改变 `schema_version: 3.6.1`：新增 `narrative_layout_profile` 与 paragraph style signature；旧档不重排历史正文，后续正文默认建立 `longform_continuous` 故事级锁并持续继承
+- 从 v3.6.6 迁移到 v3.6.7 时不改变 `schema_version: 3.6.1`：新增 `narrative_voice_profile`、Theme Restatement Scan 与跨通道主题冗余防护；旧档不重写历史正文，后续正文默认建立 `interpretive_distance=restrained`，并继续允许必要的世界规则/硬科幻/时间跳跃说明
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -1499,7 +1551,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、`narrative_layout_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1789,17 +1841,31 @@ Artifact Policy：
 193. 上下文压缩只压缩故事内容加载，不删除 `narrative_layout_profile`；恢复存档必须先恢复 profile 再续写
 194. v3.6.6 新增 paragraph profile / style signature 与跨回合漂移审计，不改变持久化 schema_version，仍为 3.6.1
 
-## 21. v3.6.6 运行口径
+### Z. v3.6.7 Theme Restraint & Interpretive Distance Regression
+195. 在已经连续写出“许知遥帮老人解锁、安抚、买水”等具体帮助后，紧接“因为结果摆在那里——人真的被她帮助了”只是在解释刚刚已经呈现的含义，Theme Restatement Scan 必须判 FAIL，并优先删除总结句而保留具体行为
+196. 同一开场若先通过多人真实帮助 + 私下利益计算表现世界规则，随后又出现“这个世界一直就是这样，所有善意背后其实……”的作者总括，除非承担不可替代的新世界规则信息，否则判为重复主题说明
+197. NPC 可以说“我帮他只是想让他欠我”，这属于角色自述；旁白不得紧接“她说出了这个世界的真相”把角色观点自动认证为客观事实
+198. 主角可以在足够证据后形成“你开始怀疑这些善意可能都带着交换条件”的阶段性假设；该句必须保持人物视角，后续新证据可以推翻或修正
+199. 同一主题点若已经由行为充分表达，又被旁白概括，再由 NPC 复述同一结论且没有新增人物差异/冲突/决定，跨通道冗余防护必须判 FAIL；优先保留最有戏剧作用的表达通道
+200. 删除某抽象总结句后，事件因果、规则、人物可知信息和读者理解均不受影响时，Delete Test 默认要求删除；若删除会导致读者无法理解关键世界机制，则不得机械删除
+201. “量子通信为什么不能传递可控超光速信息”“某制度为何要求实名验证”等当前剧情必须理解的机制说明，仍可简短 tell；主题克制不得误伤必要硬科幻/制度 exposition
+202. 数月时间跳跃、跨城市迁移、长期战争态势等无法逐日场景化的信息可以概述；概述完成后应尽快回到人物与当前动作
+203. interactive 连续多轮后若前几轮保持克制、后续突然恢复“每个事件后作者总结一次意义”的写法，Cross-Turn voice drift / Theme Restatement Scan 必须判 FAIL
+204. autonomous_novel 跨章节、批次与 technical checkpoint 后必须继续加载同一 `narrative_voice_profile`，不能因为新章重置成高解释度旁白
+205. 用户明确要求寓言式、议论式、强作者声音或论文式叙述时，可以更新未来 `narrative_voice_profile` 放宽主题解释；用户未要求时默认 `restrained`
+206. v3.6.7 新增 narrative voice profile 与主题复述审计，不改变持久化 `schema_version`，仍为 3.6.1
+
+## 21. v3.6.7 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.6 是 **Persistent Paragraph Style Lock** 小版本修复：完整继承 v3.6.5 Activation Banner / Paragraph Hardening / Reader Annotation、v3.6.4 Visible Output Semantics Lock 与既有长篇运行规则；本次专门修复“开头能生成大段，后续回合又逐渐恢复模型默认短段落风格”的跨回合排版漂移。长段落连续小说风格现在是故事级状态，而不是每轮临时提醒。
+v3.6.7 是 **Theme Restraint & Interpretive Distance Gate** 小版本修复：完整继承 v3.6.6 Persistent Paragraph Style Lock、v3.6.5 Activation Banner / Paragraph Hardening / Reader Annotation、v3.6.4 Visible Output Semantics Lock 与既有长篇运行规则；本次专门修复“场景已经把主题演出来，作者旁白又立刻把同一含义解释一遍”的主题过度强调与跨通道复述。默认叙述距离现在由故事级 `narrative_voice_profile` 持续锁定，而不是依赖单轮临时文风提醒。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.6 继续使用既有世界状态架构；`narrative_layout_profile` / paragraph style signature 属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.6.7 继续使用既有世界状态架构；`narrative_layout_profile`、`narrative_voice_profile` / paragraph style signature 属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
