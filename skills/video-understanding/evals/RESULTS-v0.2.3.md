@@ -73,6 +73,13 @@ Important guard:
 
 Therefore, truncation is correctly rejected as a “successful repair.”
 
+Standalone H.264 repair verification on the corrupt sample:
+- output codec: H.264
+- output duration: 8.533333 s
+- original timeline duration: 30.531995 s
+- preserved original-timeline coverage: ~0.279488
+- result: not an improvement; must not be adopted as a full repair
+
 ## Real regression harness
 
 Script:
@@ -115,6 +122,7 @@ Permanent workflow:
 Audit runs:
 - run id: `35668142940` — SUCCESS (compile/install/preflight/media-health/MCP)
 - run id: `35668408072` — SUCCESS (same checks + real faster-whisper inference)
+- run id: `35670068968` — SUCCESS on the final v0.2.3 main state after strengthening the corrupt-video repair regression
 
 All steps passed:
 1. checkout
@@ -152,3 +160,25 @@ Before `stable`:
 - at least one 30–90 minute video;
 - at least one 90–180 minute video;
 - real ChatGPT/MCP task identity delivery validation.
+
+
+## Final CI status
+
+Temporary PR #7 audited the latest v0.2.3 main state after the stronger corrupt-video regression was committed.
+
+Run id: `35670068968`
+
+Result: SUCCESS
+
+Passed:
+- Runtime dependency install
+- Python compile
+- JSON/TOML validation
+- Runtime preflight
+- FFmpeg/FFprobe presence
+- synthetic media-health smoke
+- real faster-whisper model inference
+- MCP server startup
+- 8-tool MCP smoke
+
+The temporary PR was closed and not merged.
