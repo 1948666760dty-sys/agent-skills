@@ -69,7 +69,7 @@
 ## duty-NRV / Cut Coach / 减脂教练
 
 - Canonical path: `skills/cut-coach/SKILL.md`
-- Current version: `1.5.0`
+- Current version: `1.5.1`
 - Status: `stable-default`
 - Activation: semantic auto-trigger.
 - Naming: `duty-NRV`, `Cut Coach`, `减脂教练` are the same Skill and share one ledger/ruleset; `duty-NAV` remains only a historical compatibility alias.
@@ -77,6 +77,7 @@
 - Percentages: user-visible percentages default to personal NRV only; official/China food-label NRV appears only when explicitly requested.
 - Daily output: current-day 5-item personal-NRV progress bars + grouped confirmed consumed item names by meal + next action.
 - Daily scoring v1.5.0: A-plan “减脂优先” total score = **execution 80% + food quality 20%**.
+- Score copy v1.5.1: every score must include an overall interpretation, strengths, main deductions, and one highest-value action for tomorrow; unknown nutrient fields are never invented.
 - Execution score weights: calories 30 / protein 30 / fiber 15 / fat 15 / carbs 10. Calories use a two-sided target band so extreme under-eating is penalized rather than rewarded.
 - Food-quality score: fruit/vegetable coverage, minimally processed ratio, fiber, added sugar, saturated fat, sodium, and protein-source diversity. Missing fields are excluded and renormalized, never silently scored as zero.
 - Score safety: INCOMPLETE days cannot receive a final daily score; midday scores are provisional; score confidence and record completeness are shown; exercise kcal does not directly add score or erase intake.
