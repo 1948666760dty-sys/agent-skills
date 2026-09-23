@@ -1,0 +1,55 @@
+name: One-time Complex Tavern demo.6 repair
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/complex-tavern-demo6-repair.yml']
+permissions:
+  contents: write
+concurrency:
+  group: complex-tavern-demo6-repair
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.repository == '1948666760dty-sys/agent-skills'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply exact-base patch and run reference logic
+        run: |
+          python3 skills/complex-tavern-v4-demo/evals/repair_demo6.py --apply > /tmp/tavern-demo6-apply.json
+          python3 skills/complex-tavern-v4-demo/evals/repair_demo6.py > /tmp/tavern-demo6-check.json
+          git diff --exit-code -- skills/complex-tavern/SKILL.md skills/no-rush/SKILL.md
+      - name: Commit only authorized Demo and audit changes
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              'skills/complex-tavern-v4-demo/SKILL.md',
+              'skills/complex-tavern-v4-demo/README.md',
+              'skills/README.md',
+          }
+          tracked = set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
+          if not tracked <= allowed:
+              raise SystemExit('Unexpected changes: '+repr(tracked-allowed))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- skills/complex-tavern-v4-demo/SKILL.md skills/complex-tavern-v4-demo/README.md skills/README.md skills/complex-tavern-v4-demo/evals/RESULTS-demo.6.json skills/complex-tavern-v4-demo/evals/AUDIT-demo.6.md
+          git diff --cached --check
+          git commit -m 'complex-tavern demo.6: require final visible handoff menus and reproduce footer-only escape'
+          git push origin HEAD:main
+          git rev-parse HEAD
+      - name: Summarize limited validation scope
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/tavern-demo6-check.json').read_text())
+          print('Final-output reference cases:',len(r['output_logic_cases']))
+          print('Targeted document checks:',len(r['document_checks']))
+          print('Legacy false-acceptance reproduced:',r['legacy_false_acceptance_reproduction']['pass'])
+          print('No LLM gameplay or hosted Runtime integration was tested.')
+          PY
