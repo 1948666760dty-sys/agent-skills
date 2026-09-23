@@ -1,6 +1,6 @@
 # Complex Tavern v4 Demo
 
-- Version: `4.0.0-demo.3`
+- Version: `4.0.0-demo.4`
 - Status: `experimental-demo`
 - Stable remains: `skills/complex-tavern/SKILL.md`
 - Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
@@ -25,3 +25,13 @@
 - Versioned branch state snapshots + `commit_id` + last-written commit manifest prevent torn multi-file state.
 - Removed duplicated runtime/calendar/trigger authority files.
 - `with_history` exports still exclude NPC Private State unless explicit GM/Audit export is authorized.
+
+## demo.4
+- Locks the user's 20 interaction preferences.
+- Resolves No-Rush/version first-line contention with a combined banner.
+- Unifies current Demo schema at `4.0-demo.4`.
+- Clarifies stable-vs-demo continuation routing.
+- Makes v4 Safe Pipeline the only macro execution flow; inherited v3 stages are responsibilities only.
+- Separates branch write scope from legal ancestor read scope.
+- Separates deterministic calendar obligations from optional Trigger candidates.
+- Adds truthful Context telemetry rules, Day Header display state, author/diegesis firewall, task-closure and anti-repair-signposting guards.
