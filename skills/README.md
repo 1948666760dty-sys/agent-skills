@@ -16,6 +16,17 @@
 - v3.7.1 cast-identity hotfix: recurring unnamed characters now keep stable entity IDs and role slots; later names require an explicit in-story/user/Canon source and bind to the same entity. Adds no-convenience-naming, cross-story isolation, role-collision protection, Entity Resolution Pass, cast-identity Preflight/Deep Audit, and regression cases 230–243. v3.7.0 relationship-stage behavior remains intact.
 
 
+## Complex Tavern Engine v4 Demo
+
+- Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
+- Current demo version: `4.0.0-demo.3`
+- Status: `experimental-demo`
+- Activation: explicit only — “复杂酒馆 4.0 demo / v4 demo / 继续 4.0 demo”. Ordinary Complex Tavern triggers still use stable v3.7.1.
+- Safety architecture: Single Authority, Single Context Assembly, branch scoping, capability registry, fail-closed high-risk modules.
+- Included demo modules: Calendar & Day Rhythm; Context Composer/Inspector; Source-linked Memory; Director Note; Trigger Eligibility; Branch/Checkpoint contract; Group Speaker Scheduler; Entity Template/Instance; read-only Continuity Debugger.
+- Save isolation: `/TavernSavesV4/`; v3 saves are clone-for-demo/read-only and never overwritten in place.
+- Regression: 50/50 contract + scenario checks passed on demo.3. Real vector DB / isolated branch database / visual inspector / binary card package integrations remain unverified runtime capabilities and must stay degraded/unavailable until a host provides them.
+
 ## Video Understanding / 视频理解
 
 - Canonical path: `skills/video-understanding/SKILL.md`
