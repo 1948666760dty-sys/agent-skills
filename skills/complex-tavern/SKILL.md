@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.6.7 在 v3.6.6 的 Persistent Paragraph Style Lock 基础上新增 Theme Restraint & Interpretive Distance Gate / 主题克制与解释距离闸门：把“不要替读者总结主题”从临时文风建议升级为故事级 narrative_voice_profile、Theme Restatement Scan 与跨通道冗余审计；人物行为已经清楚呈现含义时，旁白不得立刻把同一主题重新讲一遍，但时代跨度、复杂世界规则、硬科幻机制与必要转场仍允许简短说明。继续保留 v3.6.6 跨回合段落风格锁、v3.6.5 版本首行闸门/读者术语注释、v3.6.4 输出语义锁及长篇运行规则。
-version: 3.6.7
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.7.0 在 v3.6.7 主题克制基础上新增 Established Relationship Progression / 稳定关系推进系统：引入 relationship_stage / relationship_condition 与确认关系后的叙事语法切换，阻止情侣长期回退到“试探→嘴硬→反问→私密称呼→轻度亲密→调侃→再次试探”的暧昧循环；同时强化双方独立生活、恋爱与非恋爱场景混合、甜度波动、真实不对拍、callback 降频与非理想化回应。继续保留 Persistent Paragraph Style Lock、Theme Restraint、Reader Annotation、Visible Output Semantics Lock 与既有长篇运行规则。
+version: 3.7.0
 status: stable-default
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.6.7 — Theme Restraint & Interpretive Distance Gate
+# Complex Tavern Engine v3.7.0 — Established Relationship Progression
 
 ## 0. 性质与真实性边界
 
@@ -591,13 +591,16 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 
 每对重要关系维护：
 - `relation_type`：同事/朋友/室友/竞争/恋爱等
+- `relationship_stage`：关系叙事阶段；推荐值 `none / potential / ambiguity / dating_unconfirmed / confirmed_early / established / ended`。它不是好感分，而是决定当前应该使用哪一套关系语法
+- `relationship_condition`：当前关系状态覆盖层；推荐值 `stable / strained / repairing / distant / unknown`。一次争执可以让 condition 变 strained，但**不会自动把 confirmed/established 倒退回 ambiguity**
 - `dimensions`：只记录当前有意义的维度，见 4.10
 - `texture`：2–4 个关系质感词
 - `boundaries`：重要边界
 - `shared_moments`：少量真正代表/改变关系的共同经历
 - `unresolved`：仍会影响未来的关系事项
+- `cadence_state`（可选运行字段）：最近若干 Scene 的主焦点类别、是否出现确认型暧昧循环、最近使用过的内部梗/callback key；它只用于防叙事漂移，不是人物可见属性
 
-关系可长期停留，不要求升级。
+关系可长期停留，不要求升级。**但一旦 Canon 已明确“正式确认恋爱关系”，`relationship_stage` 不得继续保持 `ambiguity` 或 `dating_unconfirmed`；至少进入 `confirmed_early`。** 牵手、拥抱、接吻等亲密行为本身不能反向推断“已经正式确认”，必须以明确关系承诺/称呼/双方确认等 Canon 为准。`confirmed_early → established` 不按固定回合数自动触发，而由真实共同生活积累决定：日常协调、各自独立生活、共同习惯、冲突处理、社交圈整合、共同计划等都可以成为依据。
 
 ### 4.6 Location Anchor
 地点分固定层与可变层。固定层保存基本结构和稳定空间关系；可变层允许装修、损坏、天气、人员、家具等随事件更新。
@@ -620,6 +623,8 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - `last_reason`
 
 目标不是剧情任务栏，不向玩家自动展示。NPC 的行动遵循 `Goal → Plan → Action → Consequence`，后果再反馈到目标与状态。
+
+当重要 NPC 与玩家进入恋爱关系后，**Goal Stack 不得被恋爱关系吞并**。只要人物背景允许，通常至少保留一个不以玩家为中心的现实目标/承诺/兴趣来源，例如课程、工作、朋友、家庭、社团、项目、兴趣或个人烦恼。NPC 可以因为这些事情没空、迟回消息、拒绝见面、情绪差、专注别处；这不是自动关系危机，而是人物仍有自己的生活。
 
 ### 4.10 Relationship Dimensions
 
@@ -646,7 +651,7 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - 情绪升高时语言如何变化
 - 少量稳定词汇偏好/禁用表达
 
-不得靠重复口头禅制造机械辨识度。若角色来自既有作品，只保持高层次语言特征，不复制长段原作对白。
+不得靠重复口头禅制造机械辨识度。**内部梗、私密称呼和 callback 也不得被当成人物指纹反复调用；“这个角色记得旧梗”不等于“每一轮都要精准回调旧梗”。** 若角色来自既有作品，只保持高层次语言特征，不复制长段原作对白。
 
 ### 4.12 Pacing State
 
@@ -1339,6 +1344,94 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 
 当场景接近或超过当前 ChatGPT 能正常生成的尺度时，不尝试绕过限制，不让政策说明破坏剧情；保留情绪、意愿、动作结果与关系后果，采用自然淡出、时间跳转或事后场景继续。
 
+### 12.10 Relationship Stage Grammar / 关系阶段语法
+
+`relationship_stage` 决定恋爱叙事当前的默认语法。关系阶段不是单向好感条，也不能靠身体亲密自动升级。
+
+- `potential / ambiguity / dating_unconfirmed`：允许较多确认型试探、暧昧、关系定义不确定和“你到底怎么看我”类问题，因为关系本身尚未明确。
+- `confirmed_early`：双方已经正式确认恋爱关系。此时**必须开始退出暧昧期语法**；可以仍有害羞、新鲜感和边界探索，但“你是不是喜欢我 / 这算不算特殊待遇 / 我们算什么 / 你猜 / 看情况”等确认关系本身的试探应迅速降频。
+- `established`：关系已经进入较稳定日常。主要推进来自共同生活经验，而不是持续证明“我们是不是情侣”。
+- `ended`：关系已明确结束；不得因为旧甜蜜习惯自动当作仍在恋爱。
+
+确认关系后的硬规则：
+- 一旦 `relationship_stage >= confirmed_early`，不得长期重复以下循环：**试探 → 嘴硬 → 反问 → 私密称呼 → 轻度亲密行为 → 调侃刚才的亲密行为 → 再次试探**。
+- 若滚动最近 2–3 个恋爱相关 Scene 都主要由上述循环构成，判定为 **Post-Confirmation Ambiguity Loop / 确认后暧昧循环**，必须改写至少一个 Scene 的核心矛盾/任务/生活内容，而不是只换台词。
+- 已确认情侣仍然可以偶尔害羞、开旧玩笑、讨论“你是不是想我”等具体情绪；禁止的是**把已经解决的关系定义当成无限可复用的主线问题**。
+- 新的真实边界问题仍可讨论，例如公开关系、联系频率、独处需求、金钱、朋友边界、未来计划、亲密意愿等；这些属于“已确认关系里的新问题”，不算回退暧昧期。
+
+### 12.11 Intimacy De-Monopolization / 亲密去垄断
+
+亲密行为是关系的一部分，不是每回合必须推进的主线。
+- 牵手、拥抱、亲吻、称呼等可以自然存在，但不要求每个 Scene 都新增一种亲密动作或提升尺度。
+- 允许连续多个 Scene **完全没有亲密升级**，甚至只有吃饭、上课、做项目、发呆、打游戏、办事、朋友聚会、赶作业或各自忙碌。
+- `C1=4` 表示恋爱可以是核心关系，不表示每个 Scene 都必须以恋爱为唯一焦点。
+- `C2=4` 仍只是成人亲密表现上限，不代表应不断逼近上限。
+- Scene 结束时不要求强行补一个甜蜜动作、称呼或拥抱作为“恋爱证明”；没有 romance payoff 的普通收尾完全合法。
+
+### 12.12 Dual-Life Independence / 双线生活与独立性
+
+正式恋爱后，叙事必须同时维护**两个人各自的生活**：
+- 玩家原有课程、工作、项目、朋友、家庭、兴趣、身体状态和现实安排继续存在，不因恋爱线变成背景板。
+- 重要恋爱 NPC 的 Goal Stack 同样继续运行；她/他可以先处理自己的事，也可以选择朋友、工作、家人或休息，而不是默认玩家永远排第一。
+- 当某个非恋爱任务具有更高现实紧迫度（考试、项目截止、工作、家事、身体不适等），Pacing/Scene Focus 应允许该任务成为主线，恋爱仅作为背景关系存在。
+- 不得为了保持甜度，让 NPC 频繁无理由出现在玩家所有场景；“送饭到机房 / 每次都在楼下等 / 总能刚好出现”需要人物时间与动机支持。
+- 恋爱双方都可以独立开心、独立烦躁、独立完成事情；“没见面的一天”本身不是关系退步。
+
+### 12.13 Misattunement & Ordinary Friction / 不对拍与普通摩擦
+
+关系稳定不代表双方永远高度同步。
+- NPC 可以没听懂玩家潜台词、把玩笑理解错、没心情接梗、只回一句普通话、忙到晚回、意见不同、记错小事、判断错误或直接拒绝。
+- 玩家说一句漂亮话，不保证 NPC 一定给出同等漂亮的高质量回应；允许反应平淡、跑题、现实打断或情绪不在频道。
+- 小摩擦优先按具体问题处理，不自动升级为“是不是不爱了 / 要不要分手 / 关系降级”。
+- 同样不得为了证明“真实”而强制制造争吵；摩擦来自真实目标、误解、资源、时间、边界和性格差异，不来自随机剧情任务。
+
+### 12.14 Callback Density Guard / 内部梗与精准回调降频
+
+内部梗可以形成关系质感，但**不能成为每轮默认对白生成器**。
+- “评分 / 特殊学生 / 许老师 / 截图 / 条例”等已建立 callback 允许偶尔自然出现；若最近若干 Scene 已多次使用同一 callback，应优先写普通对白或新的生活内容。
+- 若一句 callback 只是为了让读者感觉“编剧记得以前”，删除后人物行为和场景都不受影响，且近期已用过同梗，默认删除。
+- 精准回调密度过高会让 NPC 像理想化台词机器。真实人物更多时候会说普通话、废话、重复不漂亮的表达，甚至忘记旧梗。
+- callback 应服务当前情绪/行动，而不是反过来让 Scene 为 callback 找机会。
+
+### 12.15 Sweetness Wave / 甜度波动
+
+恋爱甜度使用**波动**而不是恒定输出：
+- 很甜的 Scene 合法；连续几个完全普通、忙碌甚至有一点烦的 Scene 同样合法。
+- 不要求每轮都出现“更甜一点”的新台阶，不要求每次分别都升级亲密，不要求每次摩擦都立刻以甜蜜和解收尾。
+- 长期亲密感可以来自重复但真实的共同生活：记得对方习惯、分工、等待、帮忙、尊重独处、共同处理麻烦，而不是不断制造新的浪漫事件。
+- 不为了“降甜度”机械安排冷淡，也不为了“补甜度”机械安排亲吻/拥抱；甜度只跟随人物当时状态和场景。
+
+### 12.16 Anti-Idealized Response Machine / 非理想化回应机
+
+NPC 不能成为专门为玩家提供最舒服回应的系统。
+- NPC 可以拒绝、不方便、误判、烦躁、忘记、优先做自己的事，甚至给出玩家不满意但符合人物的回答。
+- NPC 不应总能准确识别玩家真正想听什么，也不应每次都用最精炼、最贴心、最有 callback 感的句子收尾。
+- 高 trust / 高 attraction / 已确认恋爱都不等于服从、全天候可用或情绪客服。
+- 但这也不允许把 NPC 写成故意刁难玩家的“反理想化机器”；目标是真人式有限性，而不是反向虐待。
+
+### 12.17 Established Relationship Progression / 稳定关系的真实推进
+
+`confirmed_early → established` 的核心不是“亲密尺度越来越高”，而是共同生活结构变得更真实。可形成推进依据的内容包括：
+- 形成稳定但可调整的日常习惯，而不是每次互动都重新确认关系
+- 学会处理各自忙碌、联系频率、临时变动与独处
+- 真正经历并修复小摩擦/误解
+- 进入彼此朋友、同学、同事或家庭等社会网络
+- 在学习、工作、项目、旅行、生活事务中形成实际协作
+- 记住对方偏好和边界，但不会每次都完美执行
+- 能在没有恋爱升级的 Scene 中仍保持关系存在感
+- 开始讨论现实计划与共同安排，但不要求自动走向结婚等固定终点
+
+关系阶段推进必须建立在这些经验的累积上。**“又牵了一次 / 又抱了一次 / 又问一次喜不喜欢”本身不足以证明关系进入更成熟阶段。**
+
+### 12.18 Relationship Scene Mix & Focus Arbitration / 关系场景混合与主焦点裁决
+
+每个 Scene 先决定它真正的主焦点，再决定恋爱如何存在于其中：
+- 主焦点可为 `romance / study_work / daily_life / friends_family / world_plot / conflict_repair / rest` 等。
+- 若当前有更高优先级的专业、调查、生存、工作或现实任务，不得为了维持恋爱存在感把 Scene 强行拽回情侣互动。
+- 恋爱可以作为背景层存在：一句消息、一个习惯动作、没能见面、忙完后的简短联系，都足以维持关系连续性。
+- 滚动若干 Scene 若几乎全部主焦点都是 `romance`，而双方明明存在明确的课程/工作/朋友/世界任务，Director Preflight 应检查 **Romance Monopoly / 恋爱垄断主线** 并恢复其他生活域。
+- 反过来，若长期完全忽略一个已设为 C1=3/4 的核心恋爱关系，也应检查是否发生 Romance Starvation；目标是自然混合，不是机械平均。
+
 ## 13. Director Preflight & Continuity Auditor
 
 ### 13.1 Director Preflight（每轮轻量预检）
@@ -1350,6 +1443,10 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 3. **Decision Gate**：是否在 D0/D1 小事上无意义停顿；是否漏掉未授权 D3
 4. **Opening / Version / Novel Contract Gate**：若本轮是一次新的复杂酒馆 activation invocation，是否已经完成 canonical 真实读取，并且**本轮第一个玩家可见文本**就是与本次实际 frontmatter 一致的 Visible Version Confirmation；interactive 普通玩法是否也正确显示，而不是只在小说模式显示；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；若 `run_mode=autonomous_novel`，`novel_output_contract` 是否已在 Scene 1 前 resolved，是否包含 primary target、generation cadence、interim visibility/delivery 与必要的 target priority；Word/docx 是否被当作交付格式而非内容 edition；多个可能冲突目标是否明确主次/hard cap；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 5. **Age / Relationship Boundary**：<14 是否保持 C1=0/C2=0；14–17 是否只使用非性化同龄恋爱且 C2=0；成年人 C2 是否仍只是上限；`unknown_nonromance` 是否只在 C1=0/C2=0 且年龄当前不影响关键规则时使用，且 Opening Brief 没有因此补编年龄；`C1>0` 时主角性别是否已经解析；`relationship_orientation` 是否已解析或正确使用默认值；是否出现成人—未成年恋爱/暧昧/性关系
+5A. **Relationship Stage Grammar**：若存在重要恋爱关系，本轮是否读取 `relationship_stage / relationship_condition`；明确确认关系后是否仍长期使用确认前的“试探→嘴硬→反问→私密称呼→轻度亲密→调侃→再次试探”循环；是否把一次小摩擦错误写成关系阶段倒退；若 `relationship_stage>=confirmed_early` 且最近 2–3 个恋爱相关 Scene 主要重复确认关系本身，`relationship_phase_scan_status=FAIL`，必须把至少一个 Scene 改成新的现实内容/任务/关系问题后才放行。
+5B. **Romance Scene Mix & Independence**：当前 Scene 的主焦点是否有真实理由；恋爱是否抢占了更紧迫的学习/工作/世界任务；重要恋爱 NPC 是否仍有自己的 Goal/Plan/朋友/课程/工作/兴趣与不可用时间；玩家自己的独立目标是否仍在推进。若所有近期 Scene 都被 romance 主焦点垄断，执行 Romance Monopoly Scan 并恢复其他生活域。
+5C. **Callback / Sweetness / Response Realism**：近期是否反复精准回调同一内部梗（评分、特殊称呼、截图等）；是否每个 Scene 都强行产生新的甜蜜 payoff 或亲密升级；NPC 是否每次都准确接住潜台词并给出最舒服、最高质量的回应。命中任一模式时优先降 callback、允许普通对白/平淡反应/现实打断，并保持人物一致性；不得为了“真实”反向强制制造争吵。
+
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
 8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`narrative_voice_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`theme_restatement_scan_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
@@ -1392,6 +1489,14 @@ NPC 恋爱主动性随人物性格、阶段、年龄边界和关系在 B（自�
 - autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
 - 正式剧情是否持续退化为“一句话一段”，或反向退化为“每个 TURN 一堵固定长度大段”；`narrative_layout_profile` 是否在新 TURN/新章/新 Scene/模式切换后被遗失或重置；是否出现“开局长段、后续越写越碎”的 Cross-Turn Paragraph Style Drift；非对话段落边界是否存在仅靠软理由放行的 Paragraph Density Drift；是否无理由堆叠标题、错误合并不同说话者；最近多轮是否出现异常固定的正文长度 + 每轮强制一次选择，从而暴露 Narrative Cadence Drift
 - 主题表达是否发生 Authorial Restatement：场景已经通过行为/细节/后果表达清楚后，旁白又把同一含义抽象总结；同一主题是否在行为、旁白、主角内心、NPC 台词之间重复三次以上而没有新增信息；角色观点是否被叙述层误认证为世界真理；硬科幻/制度/历史等必要说明是否被错误当成主题解释而删掉；`narrative_voice_profile` 是否在跨 TURN/Scene/Chapter 后漂移回高解释度
+- 恋爱关系是否发生 **Post-Confirmation Ambiguity Loop**：已明确确认恋爱后，连续多个 Scene 仍主要靠“你喜欢我吗/特殊待遇/你猜/看情况/称呼/轻度亲密/再试探”维持推进
+- `relationship_stage` 与 `relationship_condition` 是否混淆；一次争执/忙碌/没见面是否被错误当成关系阶段倒退
+- Romance Monopoly：近期 Scene 是否几乎全部由恋爱/亲密主导，而学习、工作、朋友、世界任务和 NPC 独立 Goal 明明存在却长期停摆；反之 C1=3/4 的核心关系是否被长期无因果饿死
+- 重要恋爱 NPC 是否仍拥有玩家之外的课程/工作/朋友/家庭/兴趣/烦恼，并能真实地没空、拒绝、判断错误或情绪不在频道
+- callback 是否过密：同一私密称呼、旧梗、评分/截图/条例等是否每轮精准出现，导致角色像编剧回调机器而非真人
+- 甜度是否长期恒定：每个 Scene 是否都必须有新亲密动作、甜蜜收尾或更进一步；是否允许连续普通、忙碌、无升级 Scene
+- NPC 是否成为理想化回应机：玩家每个潜台词都被准确理解、每句都获得最贴心回应、冲突总被最快最舒服地化解；同时检查是否反向为了“真实”硬制造冷淡/争吵
+
 - Reader Glossary 是否过密/过稀；陌生术语是否首次出现未解释、同一熟悉术语是否反复脚注；注释是否混入正文叙述、改变角色知识或泄露未来/秘密
 
 ### 13.3 分级
@@ -1510,6 +1615,7 @@ autonomous_novel 在以下条件暂停：
 - 从 v3.6.3 迁移到 v3.6.4 时不改变 `schema_version: 3.6.1`：旧 `export_edition` 可映射到 `content_edition`；缺失的 content edition / batch boundary / artifact policy 只能从用户已明确说过的输出要求、既有交付行为或存档字段中可靠映射，无法确定时保留 unknown 并在下一次真正需要用户可见输出前一次性补问，**禁止默认回填 novel/暂停/每批交付**
 - 从 v3.6.5 迁移到 v3.6.6 时不改变 `schema_version: 3.6.1`：新增 `narrative_layout_profile` 与 paragraph style signature；旧档不重排历史正文，后续正文默认建立 `longform_continuous` 故事级锁并持续继承
 - 从 v3.6.6 迁移到 v3.6.7 时不改变 `schema_version: 3.6.1`：新增 `narrative_voice_profile`、Theme Restatement Scan 与跨通道主题冗余防护；旧档不重写历史正文，后续正文默认建立 `interpretive_distance=restrained`，并继续允许必要的世界规则/硬科幻/时间跳跃说明
+- 从 v3.6.7 迁移到 v3.7.0 时不改变 `schema_version: 3.6.1`：为重要关系新增可选 `relationship_stage / relationship_condition / cadence_state`。已有存档**只从明确 Canon 推导阶段**：明确双方已经正式确认恋爱时至少设为 `confirmed_early`；只有长期共同生活/协调/冲突修复等已有明确证据时才可设为 `established`；仅有牵手、拥抱、接吻或暧昧不得倒推“已确认”。历史正文、关系事实和 Raw Story Log 不重写；新阶段语法只约束升级后的后续正文。
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -1551,7 +1657,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions（含重要关系的 `relationship_stage / relationship_condition / cadence_state`）、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1855,19 +1961,44 @@ Artifact Policy：
 205. 用户明确要求寓言式、议论式、强作者声音或论文式叙述时，可以更新未来 `narrative_voice_profile` 放宽主题解释；用户未要求时默认 `restrained`
 206. v3.6.7 新增 narrative voice profile 与主题复述审计，不改变持久化 `schema_version`，仍为 3.6.1
 
-## 21. v3.6.7 运行口径
+### AA. v3.7.0 Established Relationship Progression Regression
+207. 双方明确说出并接受“成为男女朋友/恋人”等关系承诺后，`relationship_stage` 至少进入 `confirmed_early`；后续不能继续把两人当 `ambiguity`
+208. 牵手、拥抱、接吻、同床或其他亲密行为本身不自动推导“正式确认恋爱”；没有关系承诺 Canon 时仍可保持 `dating_unconfirmed / ambiguity`
+209. 已确认情侣连续出现“你是不是喜欢我 → 嘴硬 → 反问 → 私密称呼 → 抱一下 → 调侃抱抱 → 再问是不是特殊”的循环，滚动 2–3 个 Scene 后必须判定 Post-Confirmation Ambiguity Loop = FAIL
+210. 已确认情侣偶尔再次使用一次旧梗、一次害羞试探或一次“你想我吗”不会被机械禁止；只有当它重新成为主要叙事发动机时才 FAIL
+211. C1=4 的情侣可以连续多个 Scene 只上课、做项目、吃饭、发呆、处理朋友/家庭事务，没有任何亲密升级，仍判 PASS
+212. 玩家有紧急 AI 课程项目时，完整 Scene 可以主要写数据清洗、模型失败、组员分工；恋爱只通过少量消息存在，不得强行安排恋人送饭/出现来维持甜度
+213. 重要恋爱 NPC 有自己的汇报、朋友、社团或家庭任务时，可以拒绝见面、晚回消息或优先完成自己的事，不自动判关系降温
+214. 已确认情侣的一次忙碌、未及时回复或小争执只可改变 `relationship_condition`（如 strained），不得自动把 `relationship_stage` 从 confirmed/established 降回 ambiguity
+215. NPC 可以没听懂玩家潜台词、回得平淡、跑题、没心情接梗或意见不同；Preflight 不应为了“恋爱体验”把这些全部优化成最舒服回应
+216. 同一内部梗如“评分/特殊学生/许老师/截图/情侣条例”在近期 Scene 高频出现且没有新增功能时，Callback Density Guard 必须降频；普通对白优先
+217. 偶尔精准 callback 仍可保留，尤其当它真正影响当前情绪/行动；v3.7.0 不是全面禁止内部梗
+218. 每个 Scene 都以牵手/拥抱/亲吻/称呼升级结尾属于 Sweetness Flatline/Constant Payoff 风险；允许 Scene 在普通任务处自然结束
+219. 关系确认后继续讨论新的真实边界（公开关系、独处、联系频率、金钱、亲密意愿）属于 established relationship content，不应被误判为暧昧期回退
+220. `confirmed_early → established` 可以由共同习惯、各自忙碌协调、冲突修复、朋友社交圈整合、共同项目/计划等累积触发，不要求身体亲密升级
+221. 关系稳定后出现真实小摩擦，系统不得立刻安排“你是不是不爱我/我们是不是不合适”作为默认戏剧化反应
+222. NPC 的 Goal Stack 在恋爱后仍至少保留合理的非玩家中心目标/承诺（若人物背景允许）；恋爱不能把所有目标替换成“陪玩家”
+223. 玩家自己的课程/工作/调查/生存目标在恋爱后仍继续推进；不得把玩家身份退化成纯恋爱参与者
+224. 甜度可以在 high / neutral / low-warmth 间自然波动；连续几个普通 Scene 不需要用亲密动作“补甜度”
+225. 没有见面的一天、没有秒回、各自跟朋友活动本身不导致好感掉档或关系危机
+226. 用户明确要求“恋爱线阶段停滞与过度暧昧修复”后，正式情侣 Scene 应逐步从关系确认语法转向共同生活、独立目标、现实协调与共同经历
+227. 对已确认情侣，如果最近数个 Scene 全部以 romance 为主而世界/课程/工作 Goal 已停滞，Romance Monopoly Scan 必须 FAIL；至少恢复一个真实非恋爱主焦点
+228. 对 C1=3/4 核心关系，若长期数十个 Scene 完全无原因忽略关系，则 Romance Starvation Audit 应提示检查；修复方式是自然恢复联系，不是机械插入亲吻
+229. v3.7.0 新增关系阶段、确认后语法切换、关系 Scene Mix、callback/甜度/回应真实性审计；持久化 schema_version 继续保持 3.6.1
+
+## 21. v3.7.0 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.6.7 是 **Theme Restraint & Interpretive Distance Gate** 小版本修复：完整继承 v3.6.6 Persistent Paragraph Style Lock、v3.6.5 Activation Banner / Paragraph Hardening / Reader Annotation、v3.6.4 Visible Output Semantics Lock 与既有长篇运行规则；本次专门修复“场景已经把主题演出来，作者旁白又立刻把同一含义解释一遍”的主题过度强调与跨通道复述。默认叙述距离现在由故事级 `narrative_voice_profile` 持续锁定，而不是依赖单轮临时文风提醒。
+v3.7.0 是 **Established Relationship Progression / 稳定关系推进** 版本：完整继承 v3.6.7 Theme Restraint、v3.6.6 Persistent Paragraph Style Lock、v3.6.5 Activation Banner / Reader Annotation 与既有长篇运行规则；本次专门修复“关系已经确认，叙事却长期停在确认前暧昧语法”的阶段停滞。重要恋爱关系现在显式维护 `relationship_stage / relationship_condition`，确认后会从持续试探逐步转向共同生活、独立目标、现实协调、普通摩擦、社会关系与共同经历；亲密、甜度与 callback 仍保留，但不再要求每个 Scene 都升级或精准回调。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.6.7 继续使用既有世界状态架构；`narrative_layout_profile`、`narrative_voice_profile` / paragraph style signature 属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.7.0 对 Relationship Graph 做向后兼容的加法扩展：`relationship_stage / relationship_condition / cadence_state` 都是可选稀疏字段；旧档只从明确 Canon 补建，不重写历史。`narrative_layout_profile`、`narrative_voice_profile` / paragraph style signature 继续属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
 核心目标是：
-**让复杂酒馆既能由玩家长期互动，也能在明确授权后让一个受角色人格与知识约束的 Autonomous Player 真正做决定，把世界因果自然积累成几十万乃至百万字长篇；与此同时，原始故事永远可回查，长期记忆不会用摘要冒充事实。**
+**让复杂酒馆既能由玩家长期互动，也能在明确授权后让一个受角色人格与知识约束的 Autonomous Player 真正做决定，把世界因果自然积累成几十万乃至百万字长篇；关系也必须随着阶段真实成长——从暧昧走向共同生活，而不是永远停在“马上要在一起”。与此同时，原始故事永远可回查，长期记忆不会用摘要冒充事实。**
