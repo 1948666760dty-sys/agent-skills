@@ -69,19 +69,19 @@
 ## duty-NRV / Cut Coach / 减脂教练
 
 - Canonical path: `skills/cut-coach/SKILL.md`
-- Current version: `1.3.0`
+- Current version: `1.5.0`
 - Status: `stable-default`
 - Activation: semantic auto-trigger.
-- Naming: `duty-NRV`, `Cut Coach`, `减脂教练` are the same Skill and share one ledger/ruleset; `cut-coach` is only the repository path. `duty-NAV` is an internal personal-target metric.
-- Strong triggers: food/meal/drink/nutrition-label photos related to the user's own intake; “我吃了…”, “我喝了…”, “刚吃…”, “今天吃了…”, “这个我全吃了”, “剩了这么多”, “今天还能吃多少”, “日报”, “周报”, “月报”, “duty-NRV”, “Cut Coach”, “减脂教练”, “duty-NAV”.
-- Query-only mode: generic nutrition questions without an indication that the user consumed the food are analyzed but are not written into the daily ledger.
-- Personal targets: 2100 kcal, protein 120 g, carbs 220 g, fat 60 g, fiber 30 g.
-- Percentages: duty-NAV only by default; official NRV is disabled unless the user explicitly re-enables it.
+- Naming: `duty-NRV`, `Cut Coach`, `减脂教练` are the same Skill and share one ledger/ruleset; `duty-NAV` remains only a historical compatibility alias.
+- Personal targets: 2100 kcal; protein = latest confirmed bodyweight × 2.0 g (currently 68 kg → 136 g); carbs 220 g; fat 60 g; fiber 30 g.
+- Percentages: user-visible percentages default to personal NRV only; official/China food-label NRV appears only when explicitly requested.
+- Daily output: current-day 5-item personal-NRV progress bars + grouped confirmed consumed item names by meal + next action.
+- Daily scoring v1.5.0: A-plan “减脂优先” total score = **execution 80% + food quality 20%**.
+- Execution score weights: calories 30 / protein 30 / fiber 15 / fat 15 / carbs 10. Calories use a two-sided target band so extreme under-eating is penalized rather than rewarded.
+- Food-quality score: fruit/vegetable coverage, minimally processed ratio, fiber, added sugar, saturated fat, sodium, and protein-source diversity. Missing fields are excluded and renormalized, never silently scored as zero.
+- Score safety: INCOMPLETE days cannot receive a final daily score; midday scores are provisional; score confidence and record completeness are shown; exercise kcal does not directly add score or erase intake.
 - Default strategy: A3+B1 = strong proactive coaching + low logging burden.
-- Core loop: identify planned/served/consumed/corrected state → estimate range + A–E confidence → duty-NAV → daily ledger → day-stage + intervention level → next action → 7/14-day trend audit and reports.
-- Exercise: log exercise when supplied; wearable kcal is reference-only and is not automatically eaten back or subtracted from the duty-NAV target.
-- Daily ledger safety: missing meals/records must not be treated as zero intake; incomplete days are marked INCOMPLETE.
-- Weekly report: formal 7-day trend requires at least 4 FULL/ESTIMATED days; otherwise generate a data-insufficient snapshot.
-- Style: concise, direct, no default emoji, no food shaming; NORMAL/NOTICE/INTERVENE proactive coaching, with only one main behavior focus per day.
+- Data quality: A–E estimation confidence, FULL/ESTIMATED/INCOMPLETE coverage, range-first handling of photo estimates, and no fake precision.
 - Loading rule: when GitHub access is available, fetch the canonical file on trigger and use it over older chat memory or fallback copies.
+- Regression: `skills/cut-coach/REGRESSION-AUDIT-v1.5.0.md`.
 - Source of truth: GitHub canonical file above.
