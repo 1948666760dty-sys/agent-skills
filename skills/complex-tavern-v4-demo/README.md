@@ -35,3 +35,7 @@
 - Separates branch write scope from legal ancestor read scope.
 - Separates deterministic calendar obligations from optional Trigger candidates.
 - Adds truthful Context telemetry rules, Day Header display state, author/diegesis firewall, task-closure and anti-repair-signposting guards.
+
+## demo.4 logic regression
+- 80 / 80 rule-level/static logic checks passed.
+- This does not claim live vector retrieval, branch database isolation, visual inspector, or transactional backend runtime testing.
