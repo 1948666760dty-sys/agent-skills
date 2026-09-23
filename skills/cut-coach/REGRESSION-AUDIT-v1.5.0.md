@@ -126,3 +126,23 @@ Given a package that reports only “糖” without identifying added sugar.
 Expected:
 - do not treat all sugar as added sugar
 - added-sugar component = MISSING unless composition/source makes added sugar reliably identifiable
+
+
+### O. Score explanation copy
+Whenever a numeric score is shown, expected:
+- one-sentence overall interpretation
+- 1–3 data-supported strengths
+- 1–2 largest score deductions
+- exactly one highest-value action for tomorrow by default
+- unknown sodium / added sugar / saturated fat must be described as unknown, not invented as good or bad
+
+### P. Midday copy protection
+Given a midday provisional score:
+- use “当前暂评分”
+- do not describe unfinished calorie/protein intake as a failure
+- state that later meals can still change the result
+
+### Q. Incomplete-day copy protection
+Given INCOMPLETE day:
+- first sentence must state this is a provisional score for recorded intake only
+- no final-day language
