@@ -2,14 +2,14 @@
 name: complex-tavern-engine-v4-demo
 display_name: 复杂酒馆
 description: 复杂酒馆 4.0 并行 Demo。以 v3.7.1 为稳定基线，新增 Core Runtime Contract / Single Authority、Calendar & Day Rhythm、Context Composer、Source-linked Memory、Scene Director Note、Trigger Eligibility、Branch Namespace、Group Speaker Scheduler、Entity Card Template/Instance、Continuity Debugger 等受控接口。高风险模块默认采用只读、候选或显式启用模式，禁止 Memory/Trigger/Debugger/Template 直接写 Canon；Demo 不覆盖 v3.7.1 stable-default。
-version: 4.0.0-demo.2
+version: 4.0.0-demo.3
 status: experimental-demo
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern-v4-demo/SKILL.md
 activation: explicit-demo-trigger
 ---
 
-# Complex Tavern Engine v4.0.0-demo.2 — Safe Modular Runtime Demo
+# Complex Tavern Engine v4.0.0-demo.3 — Safe Modular Runtime Demo
 
 ## 0. 性质与真实性边界
 
@@ -45,29 +45,29 @@ activation: explicit-demo-trigger
 
 ### 0.1.2 Visible Version Confirmation Gate / 可见版本确认闸门
 
-每次用户**明确触发一次复杂酒馆会话入口**（例如“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆 / 从复杂酒馆存档恢复 / 复杂酒馆小说模式 / 继续小说模式”），在完成 0.1.1 的主源加载验证后、输出任何设定问题、存档信息或剧情正文之前，必须先向玩家显示一行版本确认。
+每次用户**明确触发一次 v4 Demo 会话入口**（例如“复杂酒馆 4.0 demo / v4 demo / 用 4.0 demo / 继续 4.0 demo / 从 4.0 demo 存档恢复”），在完成 0.1.1 的 Demo 主源加载验证后、输出任何设定问题、存档信息或剧情正文之前，必须先向玩家显示一行版本确认。普通“开始/继续复杂酒馆”不属于本文件的 activation invocation。
 
-GitHub canonical 本次读取成功时，固定语义格式为：
-`复杂酒馆 vX.Y.Z｜GitHub canonical 已验证`
+GitHub Demo canonical 本次读取成功时，固定语义格式为：
+`复杂酒馆 vX.Y.Z｜GitHub Demo canonical 已验证`
 
 其中 `vX.Y.Z` 必须动态取自**本次实际读取文件的 frontmatter `version`**，禁止把某个版本号硬编码到运行提示里，也禁止用记忆、摘要或上一次窗口的版本号代替。
 
 若 GitHub 本次不可访问而使用 fallback，则必须显示：
-`复杂酒馆 fallback vX.Y.Z｜未验证 GitHub 最新版`
+`复杂酒馆 Demo fallback vX.Y.Z｜未验证 GitHub Demo 最新版`
 
 其中版本号取自实际 fallback 文件；若 fallback 自身无法可靠取得版本号，则显示：
-`复杂酒馆 fallback｜版本未知｜未验证 GitHub 最新版`
+`复杂酒馆 Demo fallback｜版本未知｜未验证 GitHub Demo 最新版`
 
 若用户明确指定旧版/特定版本，版本提示必须同时表明“指定版本”，不得让玩家误以为它是 canonical 最新版。
 
 硬规则：
 - 版本确认行属于**启动/恢复入口提示**，不是普通剧情 UI；它允许且必须出现在 Opening State Machine / 存档恢复之前
-- 同一已激活游戏中的普通行动回合不要求每回合重复版本号，避免污染小说正文；但用户再次明确说“开始/继续/使用复杂酒馆”时，视为新的 activation invocation，必须重新真实读取并重新显示
+- 同一已激活 Demo 中的普通行动回合不要求重复版本号；只有用户再次明确说“4.0 demo / 继续 4.0 demo / 使用 4.0 demo”时才视为新的 Demo activation invocation。
 - 版本确认行不得被“复杂在后台、简单在玩家面前”“减少 UI”“Opening Brief 不独立显示”等规则吞掉
 - 未显示该行时，不得继续本次复杂酒馆入口流程；Director Preflight 应视为启动缺陷并先修正
-- **First Visible Output Barrier / 首个可见输出硬闸门**：只要本轮属于一次新的复杂酒馆 activation invocation，版本确认行必须成为本轮**第一个玩家可见文本**。无论后续是 interactive 普通玩法、autonomous_novel 小说模式、test、自定义开局问卷、存档恢复还是直接剧情续写，都不得先输出“请选择题材 / 继续吗 / 正文 / 存档摘要 / 我先检查一下”等任何其他可见内容
+- **First Visible Output Barrier / 首个可见输出硬闸门**：只要本轮属于一次新的 v4 Demo activation invocation，版本确认行必须成为本轮**第一个玩家可见文本**。无论后续是 interactive 普通玩法、autonomous_novel 小说模式、test、自定义开局问卷、存档恢复还是直接剧情续写，都不得先输出“请选择题材 / 继续吗 / 正文 / 存档摘要 / 我先检查一下”等任何其他可见内容
 - 工具读取 canonical 可以发生在版本行之前，但工具结果不是玩家剧情输出；一旦读取成功，下一段玩家可见文本必须先发版本确认。若同一回复里包含后续设定或剧情，版本确认仍必须占第一行，不能埋在中间
-- 普通“复杂酒馆 / 开始复杂酒馆 / 按复杂酒馆玩”默认进入 interactive，也**同样**适用首个可见输出硬闸门；小说模式不是触发版本提示的前提
+- 普通“复杂酒馆 / 开始复杂酒馆 / 按复杂酒馆玩”应路由到 stable，不由本 Demo 展示版本横幅；Demo interactive 与 Demo autonomous_novel 都适用本横幅。
 - 显示的版本号与本轮 `skill_version`、frontmatter `version` 不一致时属于 Critical 启动错误
 
 当 Files/Library 等持久化工具可用时，优先用它保存/读取存档、Raw Story Log 与章节检查点；工具不可用时仍可在当前对话内按同一规则运行，但不得声称已持久保存到外部。
@@ -880,7 +880,7 @@ Time Resolver 之后必须执行 Day Boundary Resolver；跨午夜要真实更�
 Context Composer 是 v4 唯一 story-context 组装入口。候选默认优先序：
 `hard user constraints / World Contract / Canon & current authority states / current branch & calendar / active entities & knowledge / active event & action queue / recent raw text / verified retrieved memory / archive summaries / low-priority lore`。
 它必须执行 branch-scope 过滤、source/version 去重、新状态覆盖旧摘要、预算裁剪；预算不足时优先丢低优先级候选，而不是关键身份/关系/时间事实。
-每 TURN 生成 `context_trace`：只记录来源、类别、纳入/排除原因与大致预算，不记录私有 chain-of-thought。Context Inspector 默认 player-safe；GM/Audit mode 可看到后台来源标识但仍不输出隐藏推理链。
+每 TURN 生成 `context_trace`：只记录来源、类别、纳入/排除原因与大致预算，不记录私有 chain-of-thought。Context Inspector 默认 `player_safe`：不仅隐藏 Private State 内容，也**不得暴露隐藏候选是否存在、数量、类型或“因私密被排除”之类元信息**；只能展示玩家有权知道的候选与普通预算裁剪结果。显式 GM/Audit mode 才可看到后台来源标识，但仍不输出隐藏推理链。
 
 ### 4.20 Source-linked Memory Retriever / 带来源记忆检索
 
@@ -919,12 +919,12 @@ NPC Director 先为在场 NPC 产生 `response_intent`（可为 `silent`）；Sp
 `Entity Template` 是可复用基础设定；`Entity Instance` 是当前 story/branch 实体。
 `Template Never Overrides Established Instance Canon`。同名导入默认新建/待解析，不按姓名自动覆盖。
 `merge_template` 必须用户显式授权，只填 unknown/允许字段；冲突保留 Instance Canon，除非 Author Revision。
-默认导出 `template_only`，剥离当前恋爱史、秘密、branch-specific 状态；`with_history` 需用户明确选择。无文件 Runtime 时只输出结构化预览，不声称已生成包文件。
+默认导出 `template_only`，剥离当前恋爱史、秘密、branch-specific 状态；`with_history` 需用户明确选择。即使选择 `with_history`，默认仍排除 NPC Private State、隐藏动机与未公开秘密；只有显式 GM/Audit export 且权限允许时才可包含相应后台字段。无文件 Runtime 时只输出结构化预览，不声称已生成包文件。
 
 ### 4.26 Continuity Debugger / Why Mode（只读）
 
 查询：`why_knows / why_here / why_state / trace_source / conflict_check / context_loaded`。
-默认 `player_safe=true`。Debugger 可输出 `source_turn / source_type / authority record / state transition / rule hit / confidence / unresolved conflict`；禁止生成 Delta、修 Canon、自动回档、暴露隐藏推理链。
+默认 `player_safe=true`。player-safe Debugger 不仅隐藏 Private State 内容，也不得通过“存在一条隐藏记录/隐藏原因/秘密事件候选”等元信息暗示后台事实；只输出玩家可知来源链。GM/Audit mode 才能查看授权后台记录。Debugger 可输出 `source_turn / source_type / authority record / state transition / rule hit / confidence / unresolved conflict`；禁止生成 Delta、修 Canon、自动回档、暴露隐藏推理链。
 发现错误只返回 `repair_proposal`，必须交给正常 Author/State/Delta 流程处理。
 
 ### 4.27 Feature Capability Registry / 能力登记
@@ -1615,7 +1615,8 @@ NPC 不能成为专门为玩家提供最舒服回应的系统。
 0F. **Branch Isolation**：branch_enabled 时可变状态与 trigger consumption 是否 branch-scoped；兄弟分支 Memory 是否不可见；是否自动 merge。
 0G. **Speaker Scheduling**：多人场景是否允许沉默；Scheduler 是否只调度、不授予知识/意图。
 0H. **Entity Template Safety**：Template 是否覆盖 Instance Canon；同名导入是否自动合并。
-0I. **Debugger Read-only**：Debugger 是否只读/player-safe；repair proposal 是否未直接提交。
+0I. **Debugger Read-only**：Debugger 是否只读/player-safe；player-safe 是否连隐藏记录的存在性元信息也不泄露；repair proposal 是否未直接提交。
+0J. **Persistence Commit Integrity**：若启用多文件持久化，本 TURN 是否只有一个 commit_id；manifest 是否最后写入；恢复是否只承认 manifest 完整的 commit；是否存在 stable/v4 根目录混用。
 
 
 1. **Player Agency**：有没有替玩家作出未授权重大决定
@@ -1804,7 +1805,7 @@ autonomous_novel 在以下条件暂停：
 - 从 v3.6.6 迁移到 v3.6.7 时不改变 `schema_version: 3.6.1`：新增 `narrative_voice_profile`、Theme Restatement Scan 与跨通道主题冗余防护；旧档不重写历史正文，后续正文默认建立 `interpretive_distance=restrained`，并继续允许必要的世界规则/硬科幻/时间跳跃说明
 - 从 v3.6.7 迁移到 v3.7.0 时不改变 `schema_version: 3.6.1`：为重要关系新增可选 `relationship_stage / relationship_condition / cadence_state`。已有存档**只从明确 Canon 推导阶段**：明确双方已经正式确认恋爱时至少设为 `confirmed_early`；只有长期共同生活/协调/冲突修复等已有明确证据时才可设为 `established`；仅有牵手、拥抱、接吻或暧昧不得倒推“已确认”。历史正文、关系事实和 Raw Story Log 不重写；新阶段语法只约束升级后的后续正文。
 - 从 v3.7.0 迁移到 v3.7.1 时不改变 `schema_version: 3.6.1`：新增可选 Cast Identity Registry。已有已命名角色按明确 Canon 建立 `entity_id + canonical_name`；已有反复出现但从未命名的角色只建立 `entity_id + role_slots`，`canonical_name` 必须保持 unknown。不得依据模型记忆、摘要语气或“通常应该有名字”倒编姓名；其他故事/测试局的人名不参与当前存档迁移。
-- v3.7.1 → v4 Demo **不做就地迁移**。必须 `clone_for_demo`：原 stable story_id 只读，创建新 Demo scope，初始化 `schema_version=4.0-demo.1`、`branch_id=main`、Feature Capability Registry 与空 Context Trace。
+- v3.7.1 → v4 Demo **不做就地迁移**。必须 `clone_for_demo`：原 stable story_id 只读，创建新 Demo scope，初始化 `schema_version=4.0-demo.3`、`branch_id=main`、Feature Capability Registry 与空 Context Trace。
 - 旧故事 absolute date 未可靠确认时保持 unknown；不为日期栏倒补历史。
 - 旧故事无 Branch Manifest 时只建 `main`；不得把 Decision Ledger 的 Branch Note 猜成真实分支。
 - 旧 Archive 可作为 Memory locator；只有回查 source_turn 后才升级 verified。
@@ -1851,7 +1852,7 @@ Artifact Policy：
 
 ## 18. 持久化合同
 
-当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
+当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSavesV4/<story_id>/`，至少维护：
 - `state.json`：`schema_version: 4.0-demo.2`、`story_id / active_branch_id / log_mode`、World Contract、adaptation_profile、`calendar_display_profile`、`player_intro_profile`、`relationship_preferences`、当前各 authority state + `authority_revision`、Cast Identity Registry、NPC Goal/Knowledge、Relationship Graph、Pacing、narrative profiles、Action Queue、Event、Feature Capability Registry、last committed TURN 与既有 novel/run fields。高风险模块的详细状态分文件保存，避免一个 state.json 成为多模块 last-write-wins 热点。
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
@@ -1870,13 +1871,18 @@ Artifact Policy：
 
 若无法使用持久化工具，明确告诉用户“当前只保持在对话上下文”，不得谎称已外部保存。
 
-新窗口恢复时：先读取本 Skill；再读取指定故事最新 `state.json` 与 `checkpoints.md`。用户只说“继续复杂酒馆”且未指定故事时，可在 `/TavernSaves/` 中定位最近修改的有效存档并向用户确认/展示其标题后恢复；只有需要精确旧细节时才检索对应 Raw Story Log（single-log 或 turn-chunks）。
+新窗口恢复时：先读取本 Skill；再读取指定故事最新 `state.json` 与 `checkpoints.md`。用户只说“继续复杂酒馆”且未指定故事时，可在 `/TavernSavesV4/` 中定位最近修改的有效存档并向用户确认/展示其标题后恢复；只有需要精确旧细节时才检索对应 Raw Story Log（single-log 或 turn-chunks）。
 
 ### 18.1 v4 Demo Additional Persistence
 
-若宿主支持持久化，Demo scope 额外建议：`runtime-state.json`、`calendar-ledger.json`、`context-trace/<TURN>.json`、`memory-index.json`、`branch-manifest.json`、`director-notes.json`、`trigger-state.json`、`entity-templates/`、`debug/repair-proposals/`。
-`context-trace` 只存来源/类别/纳入与排除原因，不存 chain-of-thought；Trigger/Director Note/Branch 文件均需 story/branch scope。
-若文件/原子更新能力不可用，对应模块必须按 Capability Registry 降级；不得把聊天记忆冒充持久 Runtime。
+本节在 Demo scope 内**覆盖**上方继承自 v3 的“直接写 Raw Log → state.json”持久化顺序；v3 文字仅作为兼容背景，不得与本节同时执行两套 commit 流程。
+
+若宿主支持持久化，Demo 使用独立根目录 `/TavernSavesV4/<story_id>/`。每个 branch 使用 `/branches/<branch_id>/` 命名空间；当前 authority 状态统一进入版本化 `state-snapshots/<commit_id>.json`，避免 `runtime-state.json / calendar-ledger.json / trigger-state.json` 等重复保存同一权威状态。派生/只读资料可单独保存：`context-trace/<TURN>.json`、`memory-index.json`、`entity-templates/`、`debug/repair-proposals/`；story 级 `branch-manifest` 只保存分支拓扑与 head，不复制 branch state。
+`context-trace` 只存来源/类别/纳入与排除原因，不存 chain-of-thought；所有分支相关文件必须带 story/branch scope。
+
+**Commit Protocol / 防状态撕裂：** 每个有效 TURN 生成唯一 `commit_id = <branch_id>:<TURN>:<authority_revision_set>`。先写不可变 Raw Story Log TURN chunk 与版本化 state snapshot，再写 `commit-manifest/<commit_id>.json`（列出本次所需文件/版本/branch scope）作为**最后的提交标记**；只有 manifest 存在且所列文件完整时该 commit 才算 committed。之后可最佳努力更新 `head.json`/便捷 state cache，但它们不是唯一恢复依据。恢复时选择当前 branch 最新一个“manifest + 所列文件均完整”的 commit；manifest 缺失的半写入文件一律忽略，不二次结算。
+
+若文件/原子更新能力不可用，对应模块必须按 Capability Registry 降级；Branch 继续 unavailable；不得把聊天记忆冒充持久 Runtime。
 
 ## 19. 防过度设计与性能预算
 
@@ -2241,11 +2247,11 @@ Artifact Policy：
 272. Debugger `context_loaded` 可说明 loaded/excluded 来源，但不输出 chain-of-thought。
 273. 高风险模块 capability=unavailable 时必须 fail-closed，不伪装成功。
 
-## 21. v4.0.0-demo.2 运行口径
+## 21. v4.0.0-demo.3 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v4.0.0-demo.2 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
+v4.0.0-demo.3 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
