@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
-description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.7.0 在 v3.6.7 主题克制基础上新增 Established Relationship Progression / 稳定关系推进系统：引入 relationship_stage / relationship_condition 与确认关系后的叙事语法切换，阻止情侣长期回退到“试探→嘴硬→反问→私密称呼→轻度亲密→调侃→再次试探”的暧昧循环；同时强化双方独立生活、恋爱与非恋爱场景混合、甜度波动、真实不对拍、callback 降频与非理想化回应。继续保留 Persistent Paragraph Style Lock、Theme Restraint、Reader Annotation、Visible Output Semantics Lock 与既有长篇运行规则。
-version: 3.7.0
+description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.7.1 在 v3.7.0 稳定关系推进系统基础上新增 Cast Identity Binding / 人物实体与姓名绑定修复：已有未命名角色先分配稳定 entity_id / role_slot，不得在后续场景为阅读方便擅自补名、换名或把另一故事的人名串入当前 Canon；任何后续命名都必须先完成同一实体解析并记录 name_source。继续保留关系阶段语法、NPC 独立生活、Persistent Paragraph Style Lock、Theme Restraint、Reader Annotation、Visible Output Semantics Lock 与既有长篇运行规则。
+version: 3.7.1
 status: stable-default
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.7.0 — Established Relationship Progression
+# Complex Tavern Engine v3.7.1 — Cast Identity Binding
 
 ## 0. 性质与真实性边界
 
@@ -552,6 +552,8 @@ Autonomous Player 的目标是让**这个具体角色**合理生活和行动。�
 
 Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 
+**人物姓名、别名、身份与“这个称呼究竟指哪一个人”属于高敏感连续性 Canon。** 已经存在的角色即使尚未命名，也不得因为后续写作方便而自动换成一个新名字；必须先解析它是否仍是同一实体。
+
 ### 4.2 Player State
 保存 `player_intro_profile`、当前时间、地点、现金/资源、库存、身体状态、明确关系/承诺、待办等当前可执行事实。开局档案中的稳定信息与后续变化分开维护，外貌、伤势、穿着等可变项由实际剧情更新。
 
@@ -579,6 +581,39 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - 若角色使用假身份或身份尚未核实，前台保存 `presented_identity` 与来源/核实状态；后台真实身份仍留在 Fixed/Private 层，不得自动同步给玩家
 
 重要 NPC 的 identity anchor 用于后续连续性：之后可以换衣服、受伤、疲惫、衰老，但稳定脸型、体型、声音习惯等不能无理由漂移。**首次登场允许分阶段完成**：第一眼优先给 3–5 个最显眼、最能记住的可见/可听锚点，随后在对话和动作中自然补足，不要求人物一进门就一次性罗列年龄、脸、头发、身高、衣服、声音、步态、职业和疲劳。首次登场描述应融入正文，不默认弹出“姓名/年龄/好感度/秘密”式 RPG 面板。
+
+#### 4.3.2 Cast Identity Registry / 人物实体与姓名绑定
+
+为每个会再次出现或已经参与过有意义事件的人物建立稳定实体记录，**先绑定“这个人是谁”，再决定“这个人叫什么”**。姓名为空并不代表人物不存在。
+
+最小字段：
+- `entity_id`：故事内唯一稳定 ID；一旦分配不得因为换 Scene、换称呼、换职责而重建
+- `canonical_name`：已确认姓名；未知时保持 `null/unknown`，不得为了可读性自动补名
+- `aliases / call_names`：已确认别名、昵称、职位称呼；必须指回同一 `entity_id`
+- `role_slots`：当前或历史角色槽，例如“AI项目数据方向组员”“许知遥室友A”“志愿活动负责人”；角色槽不是姓名
+- `first_seen_source / last_seen_source`：首次与最近出现来源
+- `name_source`：姓名从何而来，例如人物自我介绍、主角原本认识、可靠名单/证件、用户作者级指定、既有 Canon
+- `identity_status`：`unnamed / presented / named / verified / disputed`
+
+硬规则：
+- **Recurring-Unnamed Lock / 既有未命名角色锁**：一个角色已经以“组员 / 室友 / 老师 / 店员”等身份参与过剧情后，后续再次出现时默认解析回原 `entity_id`。不得因为叙述需要突然写成“陈浩 / 林泽 / 小王”等新名字，除非本轮出现了可靠 `name_source`。
+- **No Convenience Naming / 禁止便利补名**：为了让对白更好写、减少“某组员”重复、让场景更像小说，均不构成补名依据。可以继续用职位/关系/外貌锚点称呼。
+- **First-Creation Naming Allowed / 新角色首次创建可命名**：真正第一次生成的新角色可以在世界观允许、视角合理时直接获得名字；一旦写入 Canon 就立即绑定 `entity_id`，以后必须复用。
+- **Late Naming Is Binding, Not Replacement / 后续得名是绑定不是换人**：未命名角色后来通过自我介绍、名单、他人可靠称呼等获得姓名时，把该姓名绑定到原 `entity_id`，历史事件仍属于同一人；不得新建一个同名/新名实体来承接旧经历。
+- **Canonical Name Wins / 已命名优先**：若某角色已经有 `canonical_name`，后续出现冲突名字时默认旧 Canon 胜出；除非剧情明确存在改名、假名、误认，或用户进入作者修订并明确改写。
+- **Cross-Story Isolation / 跨故事隔离**：其他测试局、旧故事、平行存档或另一个世界中的人名不得因为模型记忆相似而灌入当前故事。Cast Registry 必须带 story/save scope。
+- **Role Collision Guard / 角色槽冲突防护**：若“项目组员”“室友”等槽位可能对应多个既有人物，且无法从当前上下文可靠解析是哪一个，保持模糊称呼或做最小化澄清；不得随机挑一个姓名。
+- **No Retroactive Fabrication / 禁止倒编姓名**：压缩摘要、恢复存档或长局回查时，如果原文只有“一个组员”，不得在摘要里把他写成某个名字；unknown 必须保持 unknown。
+
+渲染前执行 **Entity Resolution Pass**：
+1. 读取本 Scene 将出现的所有人物引用；
+2. 先按 `entity_id / canonical_name / alias / role_slot / source` 匹配 Cast Registry；
+3. 若命中已命名实体，使用已锁定姓名；
+4. 若命中既有未命名实体，继续使用稳定代称，除非当前 Scene 提供可靠 name_source；
+5. 只有确认是全新实体时，才允许按世界观新建人物并选择是否命名；
+6. 若无法区分多个候选实体，不得猜名。
+
+姓名修复遵循**最小修复原则**：错误名字若未被玩家接受、未产生依赖关系，只撤销错误 name binding，人物此前的行动、分工、关系和事件仍归原 `entity_id`；不得因为名字错了就把整段事件回滚。
 
 ### 4.4 NPC Knowledge Ledger
 记录“NPC 知道/相信什么、从哪里知道、可信度/确定程度”。只记录会影响未来行为的知识，不记录无意义琐碎事实。
@@ -919,7 +954,7 @@ Tier 6 完整 Raw Story Log
 3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK；若 `run_mode=autonomous_novel`，必须在 Scene 1 前额外检查 `Novel Output Contract` 是否 resolved；之后才进入 Scene 1 Opening Pass。`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
 5. **Context Loader**：加载当前场景与必要 Active Context
-6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态
+6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态；本轮只要出现任何既有或疑似既有人物，先执行 Cast Identity Registry 的 Entity Resolution Pass，确认 `entity_id → canonical_name/alias/role_slot` 绑定后再进入 NPC Director
 7. **Time Resolver**：仅按实际行动推进合理游戏时间
 8. **Background Simulator**：计算与经过时间相称的必要离屏变化
 9. **NPC Director**：NPC 依据 Goal、Plan、人格、关系与 Knowledge 决定行动
@@ -1448,8 +1483,10 @@ NPC 不能成为专门为玩家提供最舒服回应的系统。
 5C. **Callback / Sweetness / Response Realism**：近期是否反复精准回调同一内部梗（评分、特殊称呼、截图等）；是否每个 Scene 都强行产生新的甜蜜 payoff 或亲密升级；NPC 是否每次都准确接住潜台词并给出最舒服、最高质量的回应。命中任一模式时优先降 callback、允许普通对白/平淡反应/现实打断，并保持人物一致性；不得为了“真实”反向强制制造争吵。
 
 6. **First Appearance**：本轮若有首次登场 NPC，描述是否足够形成锚点且不过量倾倒；有没有描写玩家尚未看见/听见/知道的信息，或把自称身份当成已核实事实
+6A. **Cast Identity / Name Binding**：本轮出现的每个姓名是否已经绑定到正确 `entity_id`；既有未命名角色是否被为了阅读方便擅自补名；已命名角色是否被换名；同一个模糊 role slot 是否可能对应多人却被随机套名；其他故事/测试局的人名是否串入当前 save。若姓名缺少 `name_source`，或 Entity Resolution Pass 未能唯一解析，`cast_identity_scan_status=FAIL`：撤回姓名，保留原稳定代称并重新渲染，不得把错误名字写入 Canon/Raw Story Log。
+
 7. **Opening Presentation**：WORLD LOCK 是否被错误打印成 UI；Opening Brief/背景信息是否附着于当前动作、环境与互动，而非连续倾倒说明；非即时危机开局是否在 Scene 1 内建立正常性锚点，还是为了“有戏”过早强塞异常
-8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`narrative_voice_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`theme_restatement_scan_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
+8. **Narrative Continuation & Paragraphing**：本轮 Narrative Renderer 是否先加载故事级 `narrative_layout_profile`，而不是重新采用模型默认排版；是否因为固定字数、TURN 边界、选择配额或“差不多该停了”而提前截断仍可自然继续的场景；最近多轮是否从长段逐渐回退成短段；正文是否仍停留在 Draft Buffer；是否已经执行 Paragraph Merge Scan、Paragraph Boundary Audit 与 Cross-Turn Paragraph Drift Audit；是否存在同一时间/地点/人物/核心焦点下由 1–2 句短段组成的 Fragment Chain 或 Paragraph Density Drift；每一个非对话换段是否都能标记 `H1_TIME/H2_SPACE/H3_PRIMARY_FOCUS/H4_STRUCTURED_INSERT/H5_EMPHASIS` 至少一个硬理由，而不是“动作结束/观察结束/为了节奏”等软理由；是否反向退化为每 TURN 一堵固定长度大段。发现模板化节拍、碎段链、无硬理由换段或跨回合段落风格漂移时必须先重写，且只有 `paragraph_profile_loaded=true`、`narrative_voice_profile_loaded=true`、`paragraph_scan_status`、`paragraph_boundary_audit`、`paragraph_style_drift_status`、`theme_restatement_scan_status`、`cast_identity_scan_status`、`narrative_preflight_status` 全部 PASS 才允许 `narrative_release_status=PASS`
 8A. **Thematic Restraint / Interpretive Distance**：本轮是否已加载故事级 `narrative_voice_profile`；具体行为、细节或后果已经把主题表达清楚后，旁白是否又立刻用抽象句重复同一含义；同一主题点是否在行为、作者旁白、主角内心与 NPC 台词之间机械重复；NPC/主角的阶段性解释是否被旁白错误盖章成客观真理；本轮概述是否属于时间跳跃、世界规则、复杂机制或必要转场等真正帮助理解的说明。执行 Theme Restatement Scan：若删除某句只会减少一次“作者告诉读者这意味着什么”而不损失因果、规则或新信息，则默认删除并重新检查；未通过时 `theme_restatement_scan_status=FAIL`，正文不得放行。
 9. **Reader Annotation Safety**：本轮是否出现对一般读者明显陌生且影响理解的特殊术语却完全未处理；是否反过来过度标注普通词；标记是否放在术语处而解释独立位于正文外；Reader Annotation 是否泄露后台秘密/原作未来、被写进角色知识，或把注释强塞进小说段落
 10. **Knowledge Boundary**：NPC 是否知道自己无来源的信息；旁白是否泄露 Private State
@@ -1484,6 +1521,11 @@ NPC 不能成为专门为玩家提供最舒服回应的系统。
 - Delta 是否出现无因果跨状态域污染，例如专业/调查决定错误改写关系状态，或关系事件无依据删除技术证据/资源
 - Pacing State 是否长期过载导致每幕都有异常
 - 新篇是否完成 v3.5.5 Opening State Machine；是否遵守“先主题/作品 → 后 adaptation → 再补玩家核心”的依赖顺序；是否在作品未确定时提前锁定架空/分叉模式；`unknown_nonromance` 是否被滥用或在 Opening Brief 中被擅自补成年龄；`C1>0` 时主角性别是否缺失；`relationship_orientation` 是否缺失/漂移；是否无意义追问 cosmetic 字段，hard exclusions 是否错误弹问卷
+- Cast Identity 是否漂移：同一 `entity_id` 是否被多个无解释姓名替换；同一姓名是否被错误绑定到两个不同实体；既有未命名角色是否被后续便利补名
+- 角色槽位是否串线：项目组员、室友、老师、社团成员等模糊槽位在多人并存时是否被随机套到错误人物
+- Cross-Story Isolation 是否失效：其他测试局、旧存档或平行世界的人名/身份是否进入当前故事而无 Canon 来源
+- 摘要/压缩/恢复是否把 unknown name 倒编成确定姓名；姓名、别名、假名和 presented_identity 的来源是否仍可回查
+
 - 首次登场信息是否跨越感官/知识边界，或将 `presented_identity` 错升级为真实身份
 - Opening Brief 是否错误变成 Scene 1 之前的可见 UI 清单；背景信息是否连续倾倒而未与场景融合；非即时危机开局是否缺少 Scene 1 内的正常性锚点
 - autonomous_novel 是否在 `novel_output_contract` 未解析时直接开写；目标长度/章节、生成批次、batch boundary、聊天可见方式、delivery surface、content edition、docx artifact update/delivery timing、目标优先级是否缺失或漂移；是否出现 Silent Default（未授权却把 edition 默认为 novel、把批次默认为暂停、把 final_only 擅自提前交付）；Word/docx、Content Edition 与 Artifact Policy 是否被混为一类；恢复后是否有任一字段被重置
@@ -1616,6 +1658,7 @@ autonomous_novel 在以下条件暂停：
 - 从 v3.6.5 迁移到 v3.6.6 时不改变 `schema_version: 3.6.1`：新增 `narrative_layout_profile` 与 paragraph style signature；旧档不重排历史正文，后续正文默认建立 `longform_continuous` 故事级锁并持续继承
 - 从 v3.6.6 迁移到 v3.6.7 时不改变 `schema_version: 3.6.1`：新增 `narrative_voice_profile`、Theme Restatement Scan 与跨通道主题冗余防护；旧档不重写历史正文，后续正文默认建立 `interpretive_distance=restrained`，并继续允许必要的世界规则/硬科幻/时间跳跃说明
 - 从 v3.6.7 迁移到 v3.7.0 时不改变 `schema_version: 3.6.1`：为重要关系新增可选 `relationship_stage / relationship_condition / cadence_state`。已有存档**只从明确 Canon 推导阶段**：明确双方已经正式确认恋爱时至少设为 `confirmed_early`；只有长期共同生活/协调/冲突修复等已有明确证据时才可设为 `established`；仅有牵手、拥抱、接吻或暧昧不得倒推“已确认”。历史正文、关系事实和 Raw Story Log 不重写；新阶段语法只约束升级后的后续正文。
+- 从 v3.7.0 迁移到 v3.7.1 时不改变 `schema_version: 3.6.1`：新增可选 Cast Identity Registry。已有已命名角色按明确 Canon 建立 `entity_id + canonical_name`；已有反复出现但从未命名的角色只建立 `entity_id + role_slots`，`canonical_name` 必须保持 unknown。不得依据模型记忆、摘要语气或“通常应该有名字”倒编姓名；其他故事/测试局的人名不参与当前存档迁移。
 - `schema_version` 更新只改变状态结构，不改变已发生 Canon
 
 ## 17. 完结与小说导出
@@ -1657,7 +1700,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions（含重要关系的 `relationship_stage / relationship_condition / cadence_state`）、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
+- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、Cast Identity Registry（entity_id / canonical_name / aliases / role_slots / name_source / identity_status）、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions（含重要关系的 `relationship_stage / relationship_condition / cadence_state`）、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -1986,17 +2029,33 @@ Artifact Policy：
 228. 对 C1=3/4 核心关系，若长期数十个 Scene 完全无原因忽略关系，则 Romance Starvation Audit 应提示检查；修复方式是自然恢复联系，不是机械插入亲吻
 229. v3.7.0 新增关系阶段、确认后语法切换、关系 Scene Mix、callback/甜度/回应真实性审计；持久化 schema_version 继续保持 3.6.1
 
-## 21. v3.7.0 运行口径
+### AB. v3.7.1 Cast Identity Binding Regression
+230. 已经连续三幕只被称为“数据方向组员”的角色，下一幕没有任何自我介绍/名单/可靠称呼时，系统不得突然写成“林泽”；应继续使用原代称
+231. 已经连续三幕只被称为“前端方向组员”的角色，不得为了减少重复自动命名“陈浩”
+232. 某角色首次真正生成时可以自然命名；一旦命名并绑定 entity_id，后续所有 Scene 必须复用同一 canonical_name
+233. 既有未命名角色后来明确说“我叫周远”时，应把“周远”绑定到原 entity_id，而不是新建一个承接旧经历的新人物
+234. 一个已锁定为“周远”的角色后续被草稿写成“周航”且没有改名/假名 Canon，Cast Identity Scan 必须 FAIL，并恢复“周远”
+235. 两个不同室友都存在时，后文只说“她室友”且无法唯一解析，系统不得随机挑某个已命名室友；应保持模糊或依据场景证据解析
+236. 其他 Complex Tavern 测试故事里存在顾承宇、陈哲宇等名字，不构成当前 save 的姓名来源；Cross-Story Isolation 必须阻止串入
+237. 摘要中原文为“老师回复了项目问题”，没有姓名时，恢复后不得写成“刘静岚老师回复”
+238. 姓名错误修复只撤销错误 name binding；该未命名组员此前的数据清洗、前端维护、项目讨论等既有事件继续有效，不整段回滚
+239. presented_identity / 假名与 canonical_name 必须区分；角色自称假名不会覆盖后台已确认真实姓名
+240. 玩家明确作者级指令“这个组员就叫王明”时，可以把王明绑定到对应唯一 entity_id，并从之后稳定复用
+241. 用户只说“人物名字不对”但没有提供正确姓名时，系统应先回查 Canon；若没有合法姓名来源，恢复为未命名代称，不擅自再造另一个名字
+242. Entity Resolution Pass 在正文渲染前执行；`cast_identity_scan_status != PASS` 时正文不得提交 Canon / Raw Story Log
+243. v3.7.1 新增 Cast Identity Registry / Name Binding Gate，不改变持久化 schema_version，仍为 3.6.1
+
+## 21. v3.7.1 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v3.7.0 是 **Established Relationship Progression / 稳定关系推进** 版本：完整继承 v3.6.7 Theme Restraint、v3.6.6 Persistent Paragraph Style Lock、v3.6.5 Activation Banner / Reader Annotation 与既有长篇运行规则；本次专门修复“关系已经确认，叙事却长期停在确认前暧昧语法”的阶段停滞。重要恋爱关系现在显式维护 `relationship_stage / relationship_condition`，确认后会从持续试探逐步转向共同生活、独立目标、现实协调、普通摩擦、社会关系与共同经历；亲密、甜度与 callback 仍保留，但不再要求每个 Scene 都升级或精准回调。
+v3.7.1 是 **Cast Identity Binding / 人物实体与姓名绑定** 热修版本：完整继承 v3.7.0 Established Relationship Progression、v3.6.7 Theme Restraint、v3.6.6 Persistent Paragraph Style Lock 与既有长篇运行规则；本次专门修复“既有未命名角色在后续场景被模型为了可读性擅自补名/换名，或把别的故事人名串入当前 Canon”的连续性漏洞。人物现在先以稳定 `entity_id` 存在，姓名只是其可为空的属性；任何后续得名都必须有 `name_source` 并绑定回原实体。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
 长局记忆采用“**原文永久完整 + 工作上下文分层 + 来源索引精确回查**”原则：每50 TURN 做里程碑完整性固化，每100 TURN 建立长期档案快照，150–250 TURN 进入压缩准备，约200–350 TURN 后只有在真实上下文压力下才进入 Deep Archive。所有所谓压缩只影响 Active/Working Context，不删除 Raw Story Log。
 
-持久化 `schema_version` 继续保持 **3.6.1**。v3.7.0 对 Relationship Graph 做向后兼容的加法扩展：`relationship_stage / relationship_condition / cadence_state` 都是可选稀疏字段；旧档只从明确 Canon 补建，不重写历史。`narrative_layout_profile`、`narrative_voice_profile` / paragraph style signature 继续属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
+持久化 `schema_version` 继续保持 **3.6.1**。v3.7.1 在 v3.7.0 Relationship Graph 扩展之外再加入向后兼容的 Cast Identity Registry；`entity_id / canonical_name / aliases / role_slots / name_source / identity_status` 都按需稀疏保存。旧档只从明确 Canon 补建姓名绑定；未命名角色保持 unknown，不重写历史。`narrative_layout_profile`、`narrative_voice_profile` / paragraph style signature 继续属于渲染运行状态，Reader Glossary 属于阅读辅助层，均不改既有 Canon、Raw Story Log、关系、物品、资源、时间和已经发生的选择。
 
 对于30万字、100万字或数百回合目标，允许跨执行批次在 technical checkpoint 安全暂停与继续，但**不声称后台异步生成**。批次边界本身不等于暂停点；目标字数只计算纯小说正文，也绝不成为每回合固定字数配额。
 
