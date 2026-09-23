@@ -1,6 +1,6 @@
 # Complex Tavern v4 Demo
 
-- Version: `4.0.0-demo.2`
+- Version: `4.0.0-demo.3`
 - Status: `experimental-demo`
 - Stable remains: `skills/complex-tavern/SKILL.md`
 - Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
@@ -17,3 +17,11 @@
 - Director Notes route through Context Composer instead of bypassing it.
 - Trigger eligibility is derived per turn; stale eligibility is not persisted.
 - Authority revisions reject stale proposals.
+
+## demo.3 test-audit fixes
+- Separate `/TavernSavesV4/` namespace from stable saves.
+- Demo-specific visible version banner.
+- Player-safe Inspector/Debugger hide private-record existence metadata as well as content.
+- Versioned branch state snapshots + `commit_id` + last-written commit manifest prevent torn multi-file state.
+- Removed duplicated runtime/calendar/trigger authority files.
+- `with_history` exports still exclude NPC Private State unless explicit GM/Audit export is authorized.
