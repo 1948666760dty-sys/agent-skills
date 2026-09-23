@@ -1,5 +1,5 @@
 {
-  "version": "4.0.0-demo.2",
+  "version": "4.0.0-demo.3",
   "type": "contract-and-scenario-regression",
   "note": "These tests verify the Skill contract/rules, not a real vector DB or branch persistence runtime.",
   "cases": [
@@ -254,6 +254,54 @@
       "cat": "truthfulness",
       "scenario": "feature capability unavailable",
       "expect": "degrade/disable; never pretend runtime exists"
+    },
+    {
+      "id": "V4-043",
+      "cat": "versioning",
+      "scenario": "post-fix Skill frontmatter",
+      "expect": "must be 4.0.0-demo.3"
+    },
+    {
+      "id": "V4-044",
+      "cat": "versioning",
+      "scenario": "migration/init text",
+      "expect": "no stale demo.1/demo.2 schema initialization"
+    },
+    {
+      "id": "V4-045",
+      "cat": "persistence",
+      "scenario": "multi-file commit",
+      "expect": "versioned state snapshot + last-written commit manifest"
+    },
+    {
+      "id": "V4-046",
+      "cat": "persistence",
+      "scenario": "branch manifest",
+      "expect": "store branch topology/head only; do not duplicate branch state"
+    },
+    {
+      "id": "V4-047",
+      "cat": "persistence",
+      "scenario": "inherited v3 persistence text",
+      "expect": "v4 Demo persistence protocol explicitly overrides it"
+    },
+    {
+      "id": "V4-048",
+      "cat": "privacy",
+      "scenario": "player-safe inspector/debugger",
+      "expect": "hide both private content and existence metadata"
+    },
+    {
+      "id": "V4-049",
+      "cat": "isolation",
+      "scenario": "stable version",
+      "expect": "stable canonical remains v3.7.1"
+    },
+    {
+      "id": "V4-050",
+      "cat": "isolation",
+      "scenario": "stable blob",
+      "expect": "stable canonical blob remains unchanged from pre-demo audit"
     }
   ]
 }
