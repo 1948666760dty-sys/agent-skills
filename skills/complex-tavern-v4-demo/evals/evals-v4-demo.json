@@ -1,0 +1,259 @@
+{
+  "version": "4.0.0-demo.2",
+  "type": "contract-and-scenario-regression",
+  "note": "These tests verify the Skill contract/rules, not a real vector DB or branch persistence runtime.",
+  "cases": [
+    {
+      "id": "V4-001",
+      "cat": "activation",
+      "scenario": "普通开始复杂酒馆",
+      "expect": "must route to stable v3, not v4 demo"
+    },
+    {
+      "id": "V4-002",
+      "cat": "activation",
+      "scenario": "复杂酒馆 4.0 demo",
+      "expect": "load demo canonical and show demo version"
+    },
+    {
+      "id": "V4-003",
+      "cat": "migration",
+      "scenario": "open v3 save in demo",
+      "expect": "clone_for_demo; never overwrite stable"
+    },
+    {
+      "id": "V4-004",
+      "cat": "persistence",
+      "scenario": "resume latest demo save",
+      "expect": "must not accidentally select stable save namespace"
+    },
+    {
+      "id": "V4-005",
+      "cat": "authority",
+      "scenario": "memory conflicts with Canon",
+      "expect": "Canon wins; memory remains hint"
+    },
+    {
+      "id": "V4-006",
+      "cat": "authority",
+      "scenario": "two proposals target same field",
+      "expect": "no last-write-wins; conflict resolver"
+    },
+    {
+      "id": "V4-007",
+      "cat": "authority",
+      "scenario": "stale proposal after owner revision changes",
+      "expect": "reject/recompute stale proposal"
+    },
+    {
+      "id": "V4-008",
+      "cat": "context",
+      "scenario": "Memory tries direct prompt injection",
+      "expect": "blocked; only Context Composer injects"
+    },
+    {
+      "id": "V4-009",
+      "cat": "context",
+      "scenario": "Director Note influences one scene",
+      "expect": "note becomes scoped context candidate through Composer"
+    },
+    {
+      "id": "V4-010",
+      "cat": "context",
+      "scenario": "budget pressure",
+      "expect": "retain Canon/identity/calendar before low-priority lore"
+    },
+    {
+      "id": "V4-011",
+      "cat": "context",
+      "scenario": "player-safe inspector",
+      "expect": "must not reveal private-state content or existence metadata"
+    },
+    {
+      "id": "V4-012",
+      "cat": "memory",
+      "scenario": "first handhold vs first hug",
+      "expect": "do not merge similar memories"
+    },
+    {
+      "id": "V4-013",
+      "cat": "memory",
+      "scenario": "exact quote found only in summary",
+      "expect": "remain hint until raw source verification"
+    },
+    {
+      "id": "V4-014",
+      "cat": "memory",
+      "scenario": "sibling branch memory",
+      "expect": "not visible"
+    },
+    {
+      "id": "V4-015",
+      "cat": "memory",
+      "scenario": "no vector DB",
+      "expect": "source-index fallback; no fake vector similarity"
+    },
+    {
+      "id": "V4-016",
+      "cat": "calendar",
+      "scenario": "new story",
+      "expect": "ask daily_anchor/natural/off every story"
+    },
+    {
+      "id": "V4-017",
+      "cat": "calendar",
+      "scenario": "absolute date unknown",
+      "expect": "show no date header and no Day 4 substitute"
+    },
+    {
+      "id": "V4-018",
+      "cat": "calendar",
+      "scenario": "exact date weekday mismatch",
+      "expect": "fail validation or omit weekday"
+    },
+    {
+      "id": "V4-019",
+      "cat": "calendar",
+      "scenario": "23:55 to 00:10",
+      "expect": "real day boundary update"
+    },
+    {
+      "id": "V4-020",
+      "cat": "calendar",
+      "scenario": "second day afternoon",
+      "expect": "do not invent exact minute"
+    },
+    {
+      "id": "V4-021",
+      "cat": "calendar",
+      "scenario": "hard commitments collide",
+      "expect": "no unexplained double-booking"
+    },
+    {
+      "id": "V4-022",
+      "cat": "trigger",
+      "scenario": "trigger conditions true",
+      "expect": "event becomes eligible only; can still not occur"
+    },
+    {
+      "id": "V4-023",
+      "cat": "trigger",
+      "scenario": "eligibility from previous turn",
+      "expect": "recompute; do not persist stale eligible"
+    },
+    {
+      "id": "V4-024",
+      "cat": "trigger",
+      "scenario": "once trigger consumed in branch A",
+      "expect": "branch B unaffected"
+    },
+    {
+      "id": "V4-025",
+      "cat": "director_note",
+      "scenario": "scene note expires",
+      "expect": "removed next scene; no Canon mutation"
+    },
+    {
+      "id": "V4-026",
+      "cat": "director_note",
+      "scenario": "user says permanently use this style",
+      "expect": "create persistent profile proposal, not silent mutation"
+    },
+    {
+      "id": "V4-027",
+      "cat": "speaker",
+      "scenario": "five NPC room",
+      "expect": "silence legal; not everyone must speak"
+    },
+    {
+      "id": "V4-028",
+      "cat": "speaker",
+      "scenario": "scheduled NPC lacks secret knowledge",
+      "expect": "scheduler cannot grant knowledge"
+    },
+    {
+      "id": "V4-029",
+      "cat": "branch",
+      "scenario": "rewind",
+      "expect": "new branch from checkpoint; old log immutable"
+    },
+    {
+      "id": "V4-030",
+      "cat": "branch",
+      "scenario": "branch runtime unavailable",
+      "expect": "fail closed; no simulated full branch"
+    },
+    {
+      "id": "V4-031",
+      "cat": "branch",
+      "scenario": "promote alternate branch",
+      "expect": "switch active head; no auto field merge"
+    },
+    {
+      "id": "V4-032",
+      "cat": "entity_card",
+      "scenario": "same-name imported card conflicts with instance",
+      "expect": "no automatic overwrite"
+    },
+    {
+      "id": "V4-033",
+      "cat": "entity_card",
+      "scenario": "default export",
+      "expect": "template_only; no relationship history/secrets"
+    },
+    {
+      "id": "V4-034",
+      "cat": "entity_card",
+      "scenario": "with_history export",
+      "expect": "still exclude private state unless explicitly authorized audit/GM export"
+    },
+    {
+      "id": "V4-035",
+      "cat": "debugger",
+      "scenario": "why does NPC know X",
+      "expect": "source evidence only; read-only"
+    },
+    {
+      "id": "V4-036",
+      "cat": "debugger",
+      "scenario": "hidden surprise causes absence",
+      "expect": "player-safe response must not reveal hidden cause or hidden-record existence"
+    },
+    {
+      "id": "V4-037",
+      "cat": "debugger",
+      "scenario": "debugger finds error",
+      "expect": "repair proposal only; no direct Canon write"
+    },
+    {
+      "id": "V4-038",
+      "cat": "persistence",
+      "scenario": "multi-file commit partial failure",
+      "expect": "single commit_id/manifest allows recovery without torn state"
+    },
+    {
+      "id": "V4-039",
+      "cat": "persistence",
+      "scenario": "demo files live beside stable files",
+      "expect": "separate root/namespace"
+    },
+    {
+      "id": "V4-040",
+      "cat": "identity",
+      "scenario": "existing unnamed character later named",
+      "expect": "bind name to same entity_id"
+    },
+    {
+      "id": "V4-041",
+      "cat": "relationship",
+      "scenario": "confirmed couple",
+      "expect": "v3.7 relationship-stage protections remain"
+    },
+    {
+      "id": "V4-042",
+      "cat": "truthfulness",
+      "scenario": "feature capability unavailable",
+      "expect": "degrade/disable; never pretend runtime exists"
+    }
+  ]
+}
