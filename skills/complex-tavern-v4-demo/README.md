@@ -1,6 +1,6 @@
 # Complex Tavern v4 Demo
 
-- Version: `4.0.0-demo.5`
+- Version: `4.0.0-demo.6`
 - Status: `experimental-demo`
 - Stable remains: `skills/complex-tavern/SKILL.md`
 - Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
@@ -47,3 +47,11 @@
 - 收尾四类分别换行，未完成只列真实任务/待执行动作，内容与停点一致。
 - 保留 schema 4.0-demo.4；稳定版与 No-Rush 全局文件不改。
 - 新检查仅为纯决策表逻辑模型和定向文本静态检查，不是 LLM 玩法或 Runtime 实测。
+
+## demo.6 — 最终可见菜单校验
+
+- 重现demo.5仅检查四行收尾会误放行漏菜单结尾的问题。
+- 默认interactive的decision/scope出口必须有正文、当前字母菜单、自由行动与四行收尾；仅用户显式无菜单模式例外。
+- 最终装配后检查文本，修出口不重跑动作、不跨天；校验后编辑文本需重检。
+- Python仅为离线参考校验器，未自动接入ChatGPT；详见evals/RESULTS-demo.6.json。
+- schema仍为4.0-demo.4；稳定版、全局No-Rush与故事存档不修改。

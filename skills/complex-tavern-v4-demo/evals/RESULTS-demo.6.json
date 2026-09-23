@@ -1,0 +1,363 @@
+{
+  "version": "4.0.0-demo.6",
+  "schema": "4.0-demo.4",
+  "output_logic_cases": [
+    {
+      "id": "R01",
+      "name": "用户实际尾部：收尾有自由回复但无菜单，必须拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R02",
+      "name": "同一时点只补真实菜单和对齐收尾，可接受",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R03",
+      "name": "scope_boundary也需要实际菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R04",
+      "name": "只填A-D收尾但正文没菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R05",
+      "name": "菜单只藏在代码块，不算可见行动入口",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R06",
+      "name": "引用历史菜单不算本轮菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R07",
+      "name": "HTML注释菜单不算行动入口",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R08",
+      "name": "只有菜单和收尾，没有承接正文",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R09",
+      "name": "只有四行状态，没有正文和菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R10",
+      "name": "旧横排四类收尾拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R11",
+      "name": "待选却写无句号也拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R12",
+      "name": "待选却写无需确认拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R13",
+      "name": "缺自由行动入口",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R14",
+      "name": "只剩自由行动没有具体选择",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R15",
+      "name": "只有两个真实行动也允许，不凑数",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R16",
+      "name": "一个诚实具体行动加自由行动也不造假",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R17",
+      "name": "重复标签拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R18",
+      "name": "标签跳号拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R19",
+      "name": "同义原句重复不算新选择",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R20",
+      "name": "收尾引用不存在的F拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R21",
+      "name": "菜单埋在正文前面不算当前出口",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R22",
+      "name": "正文后仅自由问题仍不豁免菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R23",
+      "name": "用户明确自由文本模式才可以无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R24",
+      "name": "模型不能自称自由文本模式",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R25",
+      "name": "user_pause真实请求可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R26",
+      "name": "meta_hold真实请求可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R27",
+      "name": "requested_endpoint真实请求可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R28",
+      "name": "不能伪称暂停来漏菜单",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R29",
+      "name": "blocker真实限制可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R30",
+      "name": "technical_checkpoint真实限制可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R31",
+      "name": "阻塞却问题填无拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R32",
+      "name": "整局真实结束可无菜单",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R33",
+      "name": "未决问题不能伪称整局完成",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R34",
+      "name": "continue不能直接结束输出",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R35",
+      "name": "粗体字母菜单可识别",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R36",
+      "name": "中文句点菜单可识别",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R37",
+      "name": "额外重复收尾拒绝",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R38",
+      "name": "校验绑定未改动的最终文本",
+      "expected_accept": true,
+      "actual_accept": true,
+      "pass": true
+    },
+    {
+      "id": "R39",
+      "name": "校验后删菜单不能沿用PASS",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    },
+    {
+      "id": "R40",
+      "name": "校验后改字也需要重新校验",
+      "expected_accept": false,
+      "actual_accept": false,
+      "pass": true
+    }
+  ],
+  "document_checks": [
+    {
+      "id": "version",
+      "pass": true
+    },
+    {
+      "id": "schema_unchanged",
+      "pass": true
+    },
+    {
+      "id": "unique_final_gate",
+      "pass": true
+    },
+    {
+      "id": "old_free_only_exception_removed",
+      "pass": true
+    },
+    {
+      "id": "explicit_free_mode_only",
+      "pass": true
+    },
+    {
+      "id": "actual_text_check",
+      "pass": true
+    },
+    {
+      "id": "output_wired",
+      "pass": true
+    },
+    {
+      "id": "preflight_wired",
+      "pass": true
+    },
+    {
+      "id": "persistence_wired",
+      "pass": true
+    },
+    {
+      "id": "four_lines_kept",
+      "pass": true
+    },
+    {
+      "id": "no_forced_day_skip",
+      "pass": true
+    },
+    {
+      "id": "meta_hold_kept",
+      "pass": true
+    },
+    {
+      "id": "no_fake_autoinstall_claim",
+      "pass": true
+    },
+    {
+      "id": "no_replay",
+      "pass": true
+    }
+  ],
+  "legacy_false_acceptance_reproduction": {
+    "legacy_footer_checker_accepts_bad_tail_footer": true,
+    "new_final_output_check": {
+      "pass": false,
+      "errors": [
+        "HANDOFF_MENU_MISSING"
+      ],
+      "labels": [],
+      "render_sha256": "1292365910a47e2a89cccfff7c4b497241dae60a9c27b49b8616a93042166aa8"
+    },
+    "pass": true
+  },
+  "scope": "Offline reference checker on text fixtures plus targeted document checks. No gameplay generation, LLM integration, vector/branch/storage runtime or old 80-case behavioral test is claimed.",
+  "base_blob": "b877b9510d37985b5399d21b66530416da4062b6",
+  "new_blob": "d65de5f9441a3463eb339d4422fdba81ccba85cb",
+  "protected_sha256": {
+    "skills/complex-tavern/SKILL.md": "a0f165e9788bd67f1715806f1d0004ed46888dae505da7117cd957a62d5c8ac7",
+    "skills/no-rush/SKILL.md": "0702047b20cd4b7528de931f151bae6c542dc63113776c08aeb5995898c4e0f9"
+  }
+}

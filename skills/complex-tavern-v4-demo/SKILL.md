@@ -1,15 +1,15 @@
 ---
 name: complex-tavern-engine-v4-demo
 display_name: 复杂酒馆
-description: 复杂酒馆 4.0 并行 Demo。demo.4 在 v3.7.1 稳定基线与 demo.3 模块化运行合同上，合并用户确认的 20 项交互偏好，并修复 schema/启动路由/No-Rush 首行/双执行流程/branch read-scope/Trigger 确定性日程/Context telemetry/日期显示状态/Director Note 计数等冲突。继续采用 Single Authority、Single Context Assembly、branch scope、commit manifest 与 fail-closed；Demo 不覆盖 v3.7.1 stable-default。
-version: 4.0.0-demo.5
+description: 复杂酒馆4.0并行Demo。demo.6针对“有正文和自由回复收尾但仍漏字母选项”的重复缺陷，收紧无菜单豁免并加入最终可见正文/菜单/四行收尾检查、原时点最小修补和渲染摘要校验绑定。保留demo.5授权时间边界、四类换行、Single Authority、真实能力降级与既有叙事规则。参考校验代码不是已自动接入ChatGPT的Runtime。
+version: 4.0.0-demo.6
 status: experimental-demo
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern-v4-demo/SKILL.md
 activation: explicit-demo-trigger
 ---
 
-# Complex Tavern Engine v4.0.0-demo.5 — Safe Modular Runtime Demo
+# Complex Tavern Engine v4.0.0-demo.6 — Safe Modular Runtime Demo
 
 ## 0. 性质与真实性边界
 
@@ -487,7 +487,7 @@ v4 Demo 的核心不是让更多模块同时改状态，而是建立 **Single Au
 
 ### 2.2 Safe v4 Execution Pipeline
 
-本流程的 Release/Continuity Preflight 同时调用 3.3.1 Turn Exit Contract；它是同一流程的出口检查，不是第二套提交流程。
+本流程的 Release/Continuity Preflight 同时调用3.3.1出口判定和3.3.2最终可见正文/菜单检查；它是同一流程的出口检查，不是第二套提交流程。
 `Branch Resolver → User/Author Instruction Resolver → State Resolver → Day Boundary/Calendar Resolver → Entity Resolution → Trigger Eligibility → Memory Retrieval → Director Note Resolver → Context Composer → Scene Director → NPC Director → Speaker Scheduler → Narrative Draft → Release/Continuity Preflight → Delta Resolver → Authority Owners Validate → Atomic Commit → Visible Output`
 
 Continuity Debugger 位于写入链外，只读取已提交状态/来源。任何 Debugger 调用不得生成 Delta。
@@ -617,7 +617,7 @@ NPC 可以主动；interactive 玩家角色的重大回应不能被代演。**�
 
 最低验收口径：**系统应在“真正需要玩家决定”时停，而不是在“写到差不多该停了”时停。**
 
-#### 3.3.1 Turn Exit Contract / 回合出口与过早停顿防护（demo.5）
+#### 3.3.1 Turn Exit Contract / 回合出口与过早停顿防护（demo.6）
 
 本节细化 3.2、3.3 与 6.1，不新增第二套执行流程。只在普通剧情输出准备结束时检查；系统查询、审计和用户要求暂停不因本节而自动续写。核心：**无选项不等于该停止；需要归还控制权也不只限于重大危机。**
 
@@ -629,7 +629,7 @@ NPC 可以主动；interactive 玩家角色的重大回应不能被代演。**�
 5. 已到授权范围边缘且下一步需要玩家选择时间用途、场景方向或是否跨天，使用 `scope_boundary`。允许提供真正的方向选择：留在当前时段继续某事、转换另一活动、明确授权结束当天/推进到约定时间，以及自由行动；不制造事故、争吵或新任务来凑 Decision Gate。
 6. 用户要求的完整故事/明确交付目标已经达成才使用 `story_complete`。一次邀约确定、一顿饭结束、一个项目阶段完成都不自动等于整局完结。
 
-`decision_required / scope_boundary` 必须配套可用入口：通常 3–6 个真实不同的行动 + 自由行动，真实差异少时宁缺勿凑；若确实无法诚实列出具体行动，用一个明确的自由行动问题归还控制权，不留“你还有自己的时间”然后无人可操作的空结尾。D1 的“今晚用于项目收尾、休闲还是休息”可是真实偏好；“嗯/好/知道了”三个同义回答不是三个分支。`autonomous_novel` 对已授权类别交给 Autonomous Player，不机械改成每回合询问真人；未授权类别/手动门仍归还用户，显示遵守既有 Content Edition。
+`decision_required / scope_boundary` 必须配套可用入口：通常 3–6 个真实不同的行动 + 自由行动，真实差异少时宁缺勿凑；默认不能以一个自由行动问题替代菜单；具体交付必须通过3.3.2的最终可见检查。仅用户明确要求无菜单自由回复模式时可省略菜单，不能因为D1很普通或收尾已有“可以直接说”而豁免。D1 的“今晚用于项目收尾、休闲还是休息”可是真实偏好；“嗯/好/知道了”三个同义回答不是三个分支。`autonomous_novel` 对已授权类别交给 Autonomous Player，不机械改成每回合询问真人；未授权类别/手动门仍归还用户，显示遵守既有 Content Edition。
 
 **授权时间边界：**
 - 必须继续尊重 `No Proactive Day Skip`。**未来约定不等于跨天授权**；“明天中午一起吃饭”只锁定那顿饭，不替主角决定今晚的全部活动、睡觉、次日上午或提前消耗这段时间。
@@ -648,7 +648,28 @@ NPC 可以主动；interactive 玩家角色的重大回应不能被代演。**�
 - “存在问题”反映已知真实问题/限制；已发现未处理的阻塞不得填“无”。请求仅审计/修订时，人物状态、故事日期和 pending action 都保持不变。
 - 四字段按 2.3 最新展示合同分别换行，正文可以结束但不能靠收尾替代需要给玩家的行动入口。
 
-建议可选运行记录：`turn_exit = {mode, reason, decision_ref, authorization_scope, resume_point}`。这是可选派生/恢复提示，不改变已有 schema 的必需字段；demo.5 保持 `schema_version: 4.0-demo.4`，版本升级不改故事事实。
+建议可选运行记录：`turn_exit = {mode, reason, decision_ref, authorization_scope, resume_point}`。这是可选派生/恢复提示，不改变已有 schema 的必需字段；demo.6 保持 `schema_version: 4.0-demo.4`，版本升级不改故事事实。
+
+#### 3.3.2 Final Visible Handoff Gate / 最终正文与菜单可见性检查（demo.6）
+
+**修复对象：** demo.5 的出口判定不等于最终交付完整。“需要你确认”填了自由回复提示，或旁白写“还是由你决定”，都不能证明玩家收到对应菜单。必须同时检查最终可见正文、实际选项和四行收尾，而非只检查状态字段或渲染前计划。
+
+**默认普通互动的交付合同：**
+- 当前 `interactive` 的出口为 `decision_required / scope_boundary` 时，最终回复必须有 **承接玩家行动的正文 → 对应当前未决问题的字母选项 → 四类换行收尾**。菜单在正文后、收尾前实际出现；通常3–6个真实差异行动加自由行动，真实选择少则少给，不造同义项。
+- `自由行动` 是菜单之外的额外能力，**不是默认代替菜单的豁免**。仅用户明确选择“本局/本轮不要菜单，只让我自由回复”时可按已确认偏好省略字母菜单；不能由模型以“很自然/只是D1/能自由说”为由自行启用。
+- “你可以继续聊、休息或做别的”“接下来由你决定”“你想怎么做都可以说”等正文/收尾提示，不算已渲染菜单。A/B/C若只存在于代码块、引用的示例、历史日志或注释里，也不算本轮行动入口。
+- 默认手动决策至少有一个真实具体行动及自由行动入口。若确有更少行动，不为凑3个编剧情；如果关键状态缺失导致无法提出任何诚实具体行动，按实际证据阻塞处理，而不是假装已交付完整选择。
+- 不能只给菜单或只给“已完成”。本轮执行了行动，就在正文呈现可观察的回应/后果；已写过的正文可原地保留，只补当前出口，不重跑电话、邀约、洗澡或旧选择。
+- 菜单标签唯一且连续，收尾引用的字母必须确实存在。“需要你确认：无/无。/无需确认”等与待选出口冲突；仅写“自由回复”不豁免。输出后又删改正文/选项，必须重新检查，不能沿用旧PASS。
+
+**不误伤其他出口：** 用户明确暂停、系统查询、指定写到某处、真实阻塞/技术边界、完整故事结束，可以没有菜单；其原因必须来自用户要求或可验证状态，不得由模型为了逃避菜单自称“已结束”。同一回合的系统修复/审计不推进故事、不消耗剧情TURN、不执行hold动作。
+`autonomous_novel` 的已授权自动决策继续遵循Content Edition，不强制每次找真人选择；遇到仍归真人的manual gate，按同样的可见行动入口检查。
+
+**修补与放行：** 最终文本装配（含注释、选项、四类收尾）完成后执行 `Final Visible Handoff Check`。若应当有菜单却没有，在原时间、原场景、原角色状态追加对应菜单，重新校验；不制造事故、不为找菜单自动跳天，不改已确认关系/安排。需要更完整正文时，只补未呈现的授权内后果。校验失败的稿件不提交为完成版，也不提前写“问题：无”。该检查与现有Preflight/Persistence同一流程，发生在最终Raw Story Log/状态提交之前，不另建第二套状态写入者。
+
+可选派生记录 `delivery_check = {render_sha256, exit_mode, menu_labels, footer_labels, status, issues}` 用于绑定**被检查的那份最终文本**。它不是世界Canon，也不证明模型已自动执行了外部代码。宿主接入参考校验器才有程序级拦截；当前聊天依然需要模型实际遵循检查，不承诺零Bug。
+
+`evals/repair_demo6.py` 是离线纯逻辑参考：它能检查可见结构、例外、标签与四行收尾，并复现demo.5只检收尾的误放行；不能自动证明选项语义独立、剧情精彩、人物没有漂移或模型每次都调用了它。版本升为demo.6，存档schema仍为`4.0-demo.4`；故事历史和待执行动作不改。
 
 ### 3.4 Autonomous Player Policy / 自动主角决策策略
 
@@ -1208,9 +1229,11 @@ v4 Demo 以 2.2 的 Safe v4 Pipeline 为唯一宏观顺序。下面 v3 既有流
 16. **Continuity / Long-Run Auditor**：检查本轮状态变更；按第5.8与第14节触发里程碑、长期档案与自动小说审计
 17. **Delta Proposal（legacy mapping）**：只为发生变化的状态形成 proposal；真正提交由 2.2 的 Delta Resolver + Authority Owner 校验后执行
 18. **Persistence Handoff（legacy mapping）**：把已校验正文/状态交给 18.1 的 v4 Commit Protocol；Demo scope 不执行继承自 v3 的直接 Raw Log→state 双写流程
-19. **Output / Continue**：先执行 3.3.1 Turn Exit Contract：continue 返回已授权叙事，decision_required/scope_boundary 提供可用行动入口，其余合法出口说明原因；没有实际继续不声称已推进。再仅在按 2.3 Persistence Failure Policy 与 18.1 Commit Protocol 完成必要持久化判断后输出。interactive 只有 Decision Gate 要求停顿时才给 3–6 个真实差异行动（不足则少给）并始终允许自由输入；autonomous_novel 的每个真实 Decision Gate 都必须先写入 Decision Ledger，再按已锁定的 `content_edition` 渲染用户可见内容：novel 隐藏内联菜单但保留自然结果，interactive 在正文对应位置显示可行行动集合 + Autonomous Player 实际选择，并让随后正文呈现可观察结果，decision_ledger/audit 按各自版本输出。不得因为“自动小说”这一运行模式本身再次把 interactive edition 的选择隐藏。之后按 `batch_boundary_policy` 与目标/安全停点/技术 checkpoint 决定继续或暂停
+19. **Output / Continue**：先执行3.3.1出口判定，再按3.3.2检查最终装配文本中正文、菜单与四行收尾的实际存在性，失败先修补原出口且不提交草稿。出口判定：continue 返回已授权叙事，decision_required/scope_boundary 提供可用行动入口，其余合法出口说明原因；没有实际继续不声称已推进。再仅在按 2.3 Persistence Failure Policy 与 18.1 Commit Protocol 完成必要持久化判断后输出。interactive 只有 Decision Gate 要求停顿时才给 3–6 个真实差异行动（不足则少给）并始终允许自由输入；autonomous_novel 的每个真实 Decision Gate 都必须先写入 Decision Ledger，再按已锁定的 `content_edition` 渲染用户可见内容：novel 隐藏内联菜单但保留自然结果，interactive 在正文对应位置显示可行行动集合 + Autonomous Player 实际选择，并让随后正文呈现可观察结果，decision_ledger/audit 按各自版本输出。不得因为“自动小说”这一运行模式本身再次把 interactive edition 的选择隐藏。之后按 `batch_boundary_policy` 与目标/安全停点/技术 checkpoint 决定继续或暂停
 
 ### 6.1 输出与选项规则
+
+**Final Visible Handoff Check**：默认interactive在decision_required/scope_boundary交付时，必须实际呈现对应正文与字母菜单；自由行动附加而不代替菜单，收尾也不是菜单。最终装配文本通过3.3.2后才可提交；本轮查询、用户暂停和真实阻塞的例外保持。
 
 **Turn Exit Guard**：输出前按 3.3.1 检查正文、待执行选择、授权时间范围与四类收尾；没有 D2/D3 不等于没有 D1 方向决定，也不等于允许空停。到授权边界可给真实方向选择，禁止为了继续擅自跨天。
 
@@ -1730,6 +1753,7 @@ NPC 不能成为专门为玩家提供最舒服回应的系统。
 1. **Player Agency**：有没有替玩家作出未授权重大决定
 2. **Queue Integrity**：连续指令是否漏执行、乱序、重复执行；是否该中断却没中断
 3. **Decision Gate / Turn Exit**：是否在已授权 D0/D1 上重复询问；是否漏掉未授权 D3、真实 D1 方向选择或 scope_boundary；是否把无菜单直接当结束；是否为了找选项越过 No Proactive Day Skip；菜单与四行收尾是否一致。
+3A. **Final Visible Handoff**：是否检验了最终玩家可见文本而非只看出口元数据/四行收尾；应显示的菜单是否真实出现在正文后且不藏于示例/代码；自由行动是否被滥用成省略菜单借口；末尾再次编辑是否使旧校验失效；不得为了修出口重跑已完成动作、越过跨天授权或制造新剧情。
 4. **Opening / Version / Novel Contract Gate**：若本轮是一次新的 v4 Demo activation invocation，是否完成 Demo canonical 真实读取，并且**本轮第一个玩家可见文本**就是兼容 No-Rush 的合并 Visible Version Confirmation；interactive 普通玩法是否也正确显示，而不是只在小说模式显示；若是新篇，是否先完成 THEME/SOURCE SELECTION；若为既有作品/混合世界，是否只在母体确定后才解析 ADAPTATION MODE；随后 PLAYER CORE、AGE/RELATIONSHIP GATE、player_intro_profile、WORLD LOCK 是否都已解析；若 `run_mode=autonomous_novel`，`novel_output_contract` 是否已在 Scene 1 前 resolved，是否包含 primary target、generation cadence、interim visibility/delivery 与必要的 target priority；Word/docx 是否被当作交付格式而非内容 edition；多个可能冲突目标是否明确主次/hard cap；玩家提前提供的后置字段是否被正确保留而没有反过来打乱前置顺序；`C1>0` 时主角性别是否已进入 Player Core；Scene 1 Opening Pass 是否同时承担 Brief Integration / Exposition Integration / Normality Anchor；hard exclusions 是否在无信号时自动为空；是否把“选完题材/作品或改编方式”误当成已经开局完成
 4A. **Player Interaction Contract**：启动能力摘要是否保持一行；普通收尾是否按四个类别分别换行并与真实出口一致；真实 Decision Gate 是否按 3–6 个真实差异行动 + 自由行动；混合“行动+系统问题”是否按 2.3 顺序处理并在需要时 hold Delta。
 4B. **Time & Detail UX**：interactive 是否无授权主动跳到下一天；技术/工作重复步骤是否按 Task Detail Policy 概述；项目是否在达到阶段目标后仍机械追加新缺陷。
@@ -1966,6 +1990,8 @@ Artifact Policy：
 压缩 Active Context 永远不等于删除 Raw Story Log。
 
 ## 18. 持久化合同
+
+最终输出装配后执行3.3.2；缺少必须显示的正文/菜单/分类收尾时，先原地修补再走既有提交协议。检查与日志引用同一最终文本，不用渲染前的菜单计划代替。纯聊天宿主未接入代码时，不得声称参考Python校验器已自动执行。
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSavesV4/<story_id>/`，至少维护：
 - `state.json`：`schema_version: 4.0-demo.4`、`story_id / active_branch_id / log_mode`、World Contract、adaptation_profile、`calendar_display_profile`、`player_intro_profile`、`relationship_preferences`、当前各 authority state + `authority_revision`、Cast Identity Registry、NPC Goal/Knowledge、Relationship Graph、Pacing、narrative profiles、Action Queue、Event、Feature Capability Registry、last committed TURN 与既有 novel/run fields。高风险模块的详细状态分文件保存，避免一个 state.json 成为多模块 last-write-wins 热点。
@@ -2394,11 +2420,11 @@ Artifact Policy：
 302. Demo 当前持久 schema 在 clone 初始化、state contract、运行口径必须统一为 `4.0-demo.4`。
 303. v4 2.2 是唯一宏观流程；第6节 1–19 只能作为职责映射，Context/Delta/Persistence 不得执行第二遍。
 
-## 21. v4.0.0-demo.5 运行口径
+## 21. v4.0.0-demo.6 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v4.0.0-demo.5 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
+v4.0.0-demo.6 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
