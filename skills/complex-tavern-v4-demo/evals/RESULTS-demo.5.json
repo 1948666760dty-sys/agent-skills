@@ -1,0 +1,325 @@
+{
+  "version": "4.0.0-demo.5",
+  "base_blob": "93d389a35365b31ade0af7cb377fbba359839cef",
+  "new_blob": "b877b9510d37985b5399d21b66530416da4062b6",
+  "schema_version": "4.0-demo.4",
+  "logical_model_cases": [
+    {
+      "id": "EXIT-01",
+      "name": "当前授权可继续，不因没有菜单空停",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-02",
+      "name": "未来午饭不能授权今晚自动跳天",
+      "expected": "scope_boundary",
+      "actual": "scope_boundary",
+      "pass": true
+    },
+    {
+      "id": "EXIT-03",
+      "name": "用户授权快进可继续",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-04",
+      "name": "自然跨午夜的已选行动",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-05",
+      "name": "空闲时间真实D1选择",
+      "expected": "decision_required",
+      "actual": "decision_required",
+      "pass": true
+    },
+    {
+      "id": "EXIT-06",
+      "name": "不强行生成事件，归还场景方向",
+      "expected": "scope_boundary",
+      "actual": "scope_boundary",
+      "pass": true
+    },
+    {
+      "id": "EXIT-07",
+      "name": "NPC离场不冻结主角",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-08",
+      "name": "用户暂停高于可继续",
+      "expected": "user_pause",
+      "actual": "user_pause",
+      "pass": true
+    },
+    {
+      "id": "EXIT-09",
+      "name": "混合提问hold已选行动",
+      "expected": "meta_hold",
+      "actual": "meta_hold",
+      "pass": true
+    },
+    {
+      "id": "EXIT-10",
+      "name": "只写到指定处允许无菜单收束",
+      "expected": "requested_endpoint",
+      "actual": "requested_endpoint",
+      "pass": true
+    },
+    {
+      "id": "EXIT-11",
+      "name": "真实技术边界可停",
+      "expected": "technical_checkpoint",
+      "actual": "technical_checkpoint",
+      "pass": true
+    },
+    {
+      "id": "EXIT-12",
+      "name": "关键证据缺失可停",
+      "expected": "blocker",
+      "actual": "blocker",
+      "pass": true
+    },
+    {
+      "id": "EXIT-13",
+      "name": "无新信息循环不能硬续写",
+      "expected": "scope_boundary",
+      "actual": "scope_boundary",
+      "pass": true
+    },
+    {
+      "id": "EXIT-14",
+      "name": "完整故事结束可无选项",
+      "expected": "story_complete",
+      "actual": "story_complete",
+      "pass": true
+    },
+    {
+      "id": "EXIT-15",
+      "name": "子任务结束不等于故事结束",
+      "expected": "scope_boundary",
+      "actual": "scope_boundary",
+      "pass": true
+    },
+    {
+      "id": "EXIT-16",
+      "name": "已授权队列继续不二次确认",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-17",
+      "name": "出现新的未授权决定须停",
+      "expected": "decision_required",
+      "actual": "decision_required",
+      "pass": true
+    },
+    {
+      "id": "EXIT-18",
+      "name": "授权自动小说不机械问真人",
+      "expected": "continue_auto",
+      "actual": "continue_auto",
+      "pass": true
+    },
+    {
+      "id": "EXIT-19",
+      "name": "自动小说手动门保留",
+      "expected": "decision_required",
+      "actual": "decision_required",
+      "pass": true
+    },
+    {
+      "id": "EXIT-20",
+      "name": "暂停不能被自动小说吞掉",
+      "expected": "user_pause",
+      "actual": "user_pause",
+      "pass": true
+    },
+    {
+      "id": "EXIT-21",
+      "name": "查询不因技术问题推进故事",
+      "expected": "meta_hold",
+      "actual": "meta_hold",
+      "pass": true
+    },
+    {
+      "id": "EXIT-22",
+      "name": "同日已授权转场继续",
+      "expected": "continue",
+      "actual": "continue",
+      "pass": true
+    },
+    {
+      "id": "EXIT-23",
+      "name": "同日但新目标未授权，不能代选",
+      "expected": "decision_required",
+      "actual": "decision_required",
+      "pass": true
+    },
+    {
+      "id": "EXIT-24",
+      "name": "日界授权边界高于继续到菜单",
+      "expected": "scope_boundary",
+      "actual": "scope_boundary",
+      "pass": true
+    },
+    {
+      "id": "EXIT-25",
+      "name": "真实阻塞不伪装下个剧情选项",
+      "expected": "blocker",
+      "actual": "blocker",
+      "pass": true
+    },
+    {
+      "id": "EXIT-26",
+      "name": "终点已到不无限追求下一场",
+      "expected": "requested_endpoint",
+      "actual": "requested_endpoint",
+      "pass": true
+    },
+    {
+      "id": "FOOTER-01",
+      "name": "四字段分别换行",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-02",
+      "name": "真实待选不能写无需确认",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-03",
+      "name": "拒绝旧横排收尾",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-04",
+      "name": "用户暂停允许无需确认",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-05",
+      "name": "阻塞必须反映问题",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-06",
+      "name": "拒绝空白问题遮蔽阻塞",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-07",
+      "name": "continue不是交付终点",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "id": "FOOTER-08",
+      "name": "明确完结允许无选项",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "document_checks": [
+    {
+      "id": "DOC-release_version",
+      "pass": true
+    },
+    {
+      "id": "DOC-unchanged_schema",
+      "pass": true
+    },
+    {
+      "id": "DOC-unique_exit_section",
+      "pass": true
+    },
+    {
+      "id": "DOC-latest_footer_policy",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_old_compact_rule",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_old_single_line_phrase",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_old_pipe_template",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_fake_unused_tasks",
+      "pass": true
+    },
+    {
+      "id": "DOC-future_plan_not_authorization",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_proactive_skip_preserved",
+      "pass": true
+    },
+    {
+      "id": "DOC-meta_hold_preserved",
+      "pass": true
+    },
+    {
+      "id": "DOC-preflight_wired",
+      "pass": true
+    },
+    {
+      "id": "DOC-output_wired",
+      "pass": true
+    },
+    {
+      "id": "DOC-pipeline_wired",
+      "pass": true
+    },
+    {
+      "id": "DOC-footer_legacy_test_updated",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_required_menu_every_turn",
+      "pass": true
+    },
+    {
+      "id": "DOC-no_automatic_next_day",
+      "pass": true
+    },
+    {
+      "id": "DOC-anti_duplicate_action",
+      "pass": true
+    }
+  ],
+  "protected_sha256": {
+    "skills/complex-tavern/SKILL.md": "a0f165e9788bd67f1715806f1d0004ed46888dae505da7117cd957a62d5c8ac7",
+    "skills/no-rush/SKILL.md": "0702047b20cd4b7528de931f151bae6c542dc63113776c08aeb5995898c4e0f9"
+  },
+  "coverage": "Pure reference decision table and targeted text lint only. No story generation, runtime behavior, persistence or historical 80-case behavioral suite executed."
+}

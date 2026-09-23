@@ -1,6 +1,6 @@
 # Complex Tavern v4 Demo
 
-- Version: `4.0.0-demo.4`
+- Version: `4.0.0-demo.5`
 - Status: `experimental-demo`
 - Stable remains: `skills/complex-tavern/SKILL.md`
 - Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
@@ -39,3 +39,11 @@
 ## demo.4 logic regression
 - 80 / 80 rule-level/static logic checks passed.
 - This does not claim live vector retrieval, branch database isolation, visual inspector, or transactional backend runtime testing.
+
+## demo.5 — 回合出口与分类收尾
+
+- 已授权范围内继续；真实D1/授权边界归还控制权，不再无菜单空停。
+- 未来邀约不自动授权跨天；用户暂停、技术边界和完整完结仍可无选项停止。
+- 收尾四类分别换行，未完成只列真实任务/待执行动作，内容与停点一致。
+- 保留 schema 4.0-demo.4；稳定版与 No-Rush 全局文件不改。
+- 新检查仅为纯决策表逻辑模型和定向文本静态检查，不是 LLM 玩法或 Runtime 实测。
