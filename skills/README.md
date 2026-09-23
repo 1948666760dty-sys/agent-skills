@@ -19,13 +19,13 @@
 ## Complex Tavern Engine v4 Demo
 
 - Demo path: `skills/complex-tavern-v4-demo/SKILL.md`
-- Current demo version: `4.0.0-demo.3`
+- Current demo version: `4.0.0-demo.4`
 - Status: `experimental-demo`
 - Activation: explicit only — “复杂酒馆 4.0 demo / v4 demo / 继续 4.0 demo”. Ordinary Complex Tavern triggers still use stable v3.7.1.
 - Safety architecture: Single Authority, Single Context Assembly, branch scoping, capability registry, fail-closed high-risk modules.
 - Included demo modules: Calendar & Day Rhythm; Context Composer/Inspector; Source-linked Memory; Director Note; Trigger Eligibility; Branch/Checkpoint contract; Group Speaker Scheduler; Entity Template/Instance; read-only Continuity Debugger.
 - Save isolation: `/TavernSavesV4/`; v3 saves are clone-for-demo/read-only and never overwritten in place.
-- Regression: 50/50 contract + scenario checks passed on demo.3. Real vector DB / isolated branch database / visual inspector / binary card package integrations remain unverified runtime capabilities and must stay degraded/unavailable until a host provides them.
+- Regression: demo.4 adds interaction/conflict logic tests on top of the prior 50-case suite. These are rule-level/static logic checks only; real vector DB / isolated branch database / visual inspector / binary card package integrations remain unverified runtime capabilities and must stay degraded/unavailable until a host provides them.
 
 ## Video Understanding / 视频理解
 
