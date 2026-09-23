@@ -25,7 +25,7 @@
 - Safety architecture: Single Authority, Single Context Assembly, branch scoping, capability registry, fail-closed high-risk modules.
 - Included demo modules: Calendar & Day Rhythm; Context Composer/Inspector; Source-linked Memory; Director Note; Trigger Eligibility; Branch/Checkpoint contract; Group Speaker Scheduler; Entity Template/Instance; read-only Continuity Debugger.
 - Save isolation: `/TavernSavesV4/`; v3 saves are clone-for-demo/read-only and never overwritten in place.
-- Regression: demo.4 adds interaction/conflict logic tests on top of the prior 50-case suite. These are rule-level/static logic checks only; real vector DB / isolated branch database / visual inspector / binary card package integrations remain unverified runtime capabilities and must stay degraded/unavailable until a host provides them.
+- Regression: **80/80 rule-level/static logic checks passed on demo.4**. Real vector DB / isolated branch database / visual inspector / transactional backend / binary card package integrations remain unverified runtime capabilities and must stay degraded/unavailable until a host provides them.
 
 ## Video Understanding / 视频理解
 
