@@ -4,15 +4,16 @@
 
 下列 canonical path 均相对于仓库根目录。
 
-## Complex Tavern Engine v3.6.7
+## Complex Tavern Engine v3.7.0
 
 - Canonical path: `skills/complex-tavern/SKILL.md`
-- Current version: `3.6.7`
+- Current version: `3.7.0`
 - Status: `stable-default`
 - Triggers: “开始复杂酒馆”, “继续复杂酒馆”, “按复杂酒馆 v3 玩”, “继续当前酒馆故事”
 - Loading rule: on any Complex Tavern trigger, fetch the canonical `SKILL.md` from GitHub before starting or resuming; unless the user explicitly asks for an older version, use the latest canonical version by default.
 - Source of truth: GitHub copy above. Library/local copies are backups only.
 - Runtime: pure text; image generation is disabled by default.
+- v3.7.0 relationship-stage upgrade: confirmed relationships now switch out of pre-confirmation ambiguity grammar; adds relationship stage/condition tracking, romance scene-mix arbitration, NPC/player independent-life enforcement, callback-density reduction, sweetness-wave realism, ordinary friction, and anti-idealized-response audits.
 
 
 ## Video Understanding / 视频理解
