@@ -2,14 +2,14 @@
 name: complex-tavern-engine-v4-demo
 display_name: 复杂酒馆
 description: 复杂酒馆 4.0 并行 Demo。以 v3.7.1 为稳定基线，新增 Core Runtime Contract / Single Authority、Calendar & Day Rhythm、Context Composer、Source-linked Memory、Scene Director Note、Trigger Eligibility、Branch Namespace、Group Speaker Scheduler、Entity Card Template/Instance、Continuity Debugger 等受控接口。高风险模块默认采用只读、候选或显式启用模式，禁止 Memory/Trigger/Debugger/Template 直接写 Canon；Demo 不覆盖 v3.7.1 stable-default。
-version: 4.0.0-demo.1
+version: 4.0.0-demo.2
 status: experimental-demo
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern-v4-demo/SKILL.md
 activation: explicit-demo-trigger
 ---
 
-# Complex Tavern Engine v4.0.0-demo.1 — Safe Modular Runtime Demo
+# Complex Tavern Engine v4.0.0-demo.2 — Safe Modular Runtime Demo
 
 ## 0. 性质与真实性边界
 
@@ -19,10 +19,10 @@ activation: explicit-demo-trigger
 
 复杂酒馆的规范主源（canonical）固定为：
 - Repo: `1948666760dty-sys/agent-skills`
-- Path: `skills/complex-tavern/SKILL.md`
+- Path: `skills/complex-tavern-v4-demo/SKILL.md`
 
 默认加载规则：
-- 当用户表达“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等明确触发语义，且未指定旧版本时，默认使用 GitHub canonical 的最新正式版本。
+- **Demo 只接受明确 v4 语义触发**，例如“复杂酒馆 4.0 demo / v4 demo / 用 4.0 demo / 继续 4.0 demo”。普通“开始/继续复杂酒馆”不得由本文件接管，应路由到 stable `skills/complex-tavern/SKILL.md`。
 - GitHub 可访问时，启用前优先读取 canonical 文件；Library / 本地副本只作为 fallback。
 - GitHub 与 Library / 本地版本不一致时，以 GitHub canonical 为准。
 - GitHub 暂时不可访问时，可以使用 Library / 本地 fallback，但不得声称已经验证为 GitHub 最新版。
@@ -31,7 +31,7 @@ activation: explicit-demo-trigger
 
 ### 0.1.1 Canonical Load Verification Gate / 主源加载验证闸门
 
-当用户明确触发“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等语义，且 GitHub canonical 可访问时，**正式执行前必须在当前运行/当前窗口中真实读取一次 canonical 文件**。这一步属于启动流程本身，不得用模型记忆、聊天摘要、旧窗口中的读取结果、Library 副本、缓存版本号或“我记得规则”代替。
+当用户明确触发“复杂酒馆 4.0 demo / v4 demo / 用 4.0 demo / 继续 4.0 demo”等 Demo 语义，且 GitHub canonical 可访问时，**正式执行前必须在当前运行/当前窗口中真实读取一次 Demo canonical 文件**。这一步属于启动流程本身，不得用模型记忆、聊天摘要、旧窗口中的读取结果、Library 副本、缓存版本号或“我记得规则”代替。
 
 硬规则：
 - 只有当前运行已经真实读取 `1948666760dty-sys/agent-skills/skills/complex-tavern-v4-demo/SKILL.md`，并从该文件 frontmatter 取得 `version` 后，才允许说“已载入最新版 / 已按 vX.Y.Z 启动 / 当前 canonical 是 vX.Y.Z”。
@@ -113,7 +113,7 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 
 新篇默认按以下逻辑推进；已有信息的节点直接标记 resolved：
 
-`THEME/SOURCE SELECTION → ADAPTATION MODE (IF SOURCE-BASED) → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → NOVEL OUTPUT CONTRACT (IF autonomous_novel) → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
+`THEME/SOURCE SELECTION → ADAPTATION MODE (IF SOURCE-BASED) → PLAYER CORE → AGE/RELATIONSHIP GATE → HARD EXCLUSIONS AUTO-RESOLVE → PLAYER INTRO PROFILE AUTO-FILL → WORLD LOCK → CALENDAR DISPLAY CHOICE → NOVEL OUTPUT CONTRACT (IF autonomous_novel) → SCENE 1 OPENING PASS [BRIEF INTEGRATION + EXPOSITION INTEGRATION + NORMALITY ANCHOR] → PLAY`
 
 硬规则：
 - **新篇的第一个未解析前台节点必须是 THEME/SOURCE SELECTION。** 在故事题材或具体作品母体尚未确定时，不得先要求玩家选择“是否架空 / 怎么分叉 / 平行世界 C”等 adaptation 方案，也不得把某个 adaptation 方案提前锁定
@@ -464,7 +464,7 @@ v4 Demo 的核心不是让更多模块同时改状态，而是建立 **Single Au
 | 实体模板 | Entity Card Registry | Template 只用于创建/显式合并，不覆盖既有 Instance |
 
 #### 2.1.1 Single Writer Rule
-- 非 owner 模块产生的任何状态变化统一写成 `proposal`，进入 Delta Resolver；只有对应 authority 校验通过后才提交。
+- 非 owner 模块产生的任何状态变化统一写成 `proposal`，进入 Delta Resolver；只有对应 authority 校验通过后才提交。每个 authority 维护单调递增 `authority_revision`；proposal 必须携带 `base_revision`，若提交时 revision 已变化则视为 stale proposal，必须重新解析或拒绝，禁止旧 proposal 覆盖新状态。
 - Memory 命中、Trigger 命中、Director Note、Context Candidate、Debugger 发现均**不是 Canon**。
 - 同一 TURN 内若两个 proposal 修改同一 owner 字段且冲突，默认不做 last-write-wins；进入 Conflict Resolver，优先使用明确用户作者指令、已确认 Canon、直接可观察新事实，其次保留 unknown/不提交。
 
@@ -481,7 +481,7 @@ v4 Demo 的核心不是让更多模块同时改状态，而是建立 **Single Au
 - Context Inspector UI unavailable → 可输出按权限过滤的文本 trace，但不得泄露 Private State。
 
 ### 2.2 Safe v4 Execution Pipeline
-`Branch Resolver → User/Author Instruction Resolver → State Resolver → Day Boundary/Calendar Resolver → Trigger Eligibility → Entity Resolution → Memory Retrieval → Context Composer → Director Note Overlay → Scene Director → NPC Director → Speaker Scheduler → Narrative Draft → Release/Continuity Preflight → Delta Resolver → Authority Owners Validate → Atomic Commit → Visible Output`
+`Branch Resolver → User/Author Instruction Resolver → State Resolver → Day Boundary/Calendar Resolver → Entity Resolution → Trigger Eligibility → Memory Retrieval → Director Note Resolver → Context Composer → Scene Director → NPC Director → Speaker Scheduler → Narrative Draft → Release/Continuity Preflight → Delta Resolver → Authority Owners Validate → Atomic Commit → Visible Output`
 
 Continuity Debugger 位于写入链外，只读取已提交状态/来源。任何 Debugger 调用不得生成 Delta。
 
@@ -870,7 +870,7 @@ narrative_voice_profile:
 ### 4.18 Calendar Ledger & Day Rhythm / 日历与日节奏
 
 `Calendar Ledger` 是时间/日程的唯一权威，建议字段：`absolute_date / date_precision / weekday / daypart / local_time_precision / current_location / commitments[]`。
-`date_precision` 至少区分 `exact / day_known_date_unknown / approximate / unknown`。只有 `exact` 才允许显示完整绝对日期；未知不倒编。
+`date_precision` 至少区分 `exact / day_known_date_unknown / approximate / unknown`。只有 `exact` 才允许显示完整绝对日期；未知不倒编。`weekday` 在 exact 公历日期下由可靠日期计算/校验产生，不允许模型凭感觉填写；若宿主无法可靠校验则省略星期。
 `commitments` 分三档：`hard`（考试、车票、明确已答应活动）、`soft`（准备做项目/可能出行）、`window`（某几天里找一天）。
 Time Resolver 之后必须执行 Day Boundary Resolver；跨午夜要真实更新 calendar day。`第二天下午`允许记录 day + `daypart=afternoon`，不得擅自补 14:23。
 `Day Closure Opportunity` 是软规则：一天自然收束时可用回宿舍、洗澡、关电脑、最后一条消息等形成结束感，但禁止机械要求“每天必须写睡觉/几点睡”。
@@ -884,7 +884,7 @@ Context Composer 是 v4 唯一 story-context 组装入口。候选默认优先�
 
 ### 4.20 Source-linked Memory Retriever / 带来源记忆检索
 
-Memory 状态分 `hint / verified / canon`。`hint` 只是相关候选；`verified` 必须回查 source_turn/Raw Story Log；`canon` 表示相应事实已由 Canon Ledger 确认。
+Memory 状态分 `hint / verified / canon_linked`。`hint` 只是相关候选；`verified` 必须回查 source_turn/Raw Story Log；`canon_linked` 只表示该记忆指向一个已由 Canon Ledger 确认的事实，Memory 自身仍无 Canon 写权限。
 流程：`query → branch/ancestry filter → candidate hits → source_turn → Raw Story Log verification → context_candidate`。
 不得跨 story/sibling branch；相似事件不得仅凭语义相似合并；Archive/Summary 只定位，精确对白/日期/承诺必须回查原文。无真实向量能力时使用 source-index/lexical fallback，并明确模式。
 
@@ -892,12 +892,12 @@ Memory 状态分 `hint / verified / canon`。`hint` 只是相关候选；`verifi
 
 `director_note` 最小字段：`note_id / scope(scene|turns|chapter|until_revoked) / target / focus / allowed_effects / forbidden_effects / expires_at`。
 允许调整当前 Scene 焦点、甜度压力、callback 密度、描写密度、当前表现倾向；禁止直接修改 Canon、永久人格、关系事实、NPC Knowledge、Calendar hard commitment、玩家已确认选择。
-到期必须清除；用户说“以后都这样”才允许转为持久 profile/canon proposal，并仍经 authority 校验。
+到期必须清除；用户说“以后都这样”才允许转为持久 profile/canon proposal，并仍经 authority 校验。Director Note Resolver 不直接改最终 prompt，而是提交高优先级、受 scope 限制的 `context_candidate` 给 Context Composer；因此不构成第二个上下文入口。
 
 ### 4.22 Trigger Eligibility Engine / 事件资格触发器
 
 Trigger 只回答“事件是否有资格进入候选池”，不保证发生/结果。字段：`trigger_id / conditions / candidate_event_id / once / repeatable / cooldown / branch_id / eligible / consumed`。
-裁决：`conditions → eligible candidates → conflict/calendar availability → pacing/scene focus → 0..N candidates offered to Scene Director`。
+裁决：`conditions → eligible candidates → conflict/calendar availability → pacing/scene focus → 0..N candidates offered to Scene Director`。`eligible` 是每 TURN 重算的派生值，不跨 TURN 持久化；只持久化 `consumed / cooldown_until / last_fired_turn` 等必要状态，防止旧 eligibility 残留。
 条件满足仍允许 0 个事件进入 Scene；`consumed/cooldown` branch-scoped；Trigger 不替玩家做 D2/D3，不自动移动 NPC、不自动建立/解除关系；Calendar hard conflict 需 schedule proposal。
 
 ### 4.23 Branch Manager / Checkpoint / Rewind（高风险，默认关闭）
@@ -1086,7 +1086,7 @@ v4 Demo 以 2.2 的 Safe v4 Pipeline 为唯一宏观顺序。下面 v3 既有流
 
 1. **Input Parser / Run Mode Resolver**：解析玩家输入、run_mode、自动小说目标、`novel_output_contract`、授权范围、连续/条件动作；模式未明确时保持当前模式。若进入 autonomous_novel，先把用户已说出的长度/章节/批次/聊天可见方式/Word 等交付要求结构化，避免后续重复询问
 2. **Theme Gate**：若尚未 WORLD LOCK，只处理设定收敛，不进入正式剧情。新篇必须先检查 `THEME/SOURCE SELECTION`；它未 resolved 时只收敛“玩什么题材/哪部作品”，不得先问 adaptation。母体确定后，若为既有作品/混合世界，再解析 `ADAPTATION MODE`；原创世界跳过 adaptation
-3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK；若 `run_mode=autonomous_novel`，必须在 Scene 1 前额外检查 `Novel Output Contract` 是否 resolved；之后才进入 Scene 1 Opening Pass。`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
+3. **Opening Gate**：若是新篇且尚未完成 Opening State Machine，按 `THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP` 的依赖顺序检查，再检查 player_intro_profile、WORLD LOCK、CALENDAR DISPLAY CHOICE；若 `run_mode=autonomous_novel`，必须在 Scene 1 前额外检查 `Novel Output Contract` 是否 resolved；之后才进入 Scene 1 Opening Pass。`C1>0` 时主角性别必须已解析；hard exclusions 无信号时自动为空。玩家提前提供的后置字段可直接记为 resolved，但不能让前置节点失序。缺少硬门槛时先补齐，不得进入正式 SCENE 1
 4. **Action Queue**：建立/继续当前连续指令队列
 5. **Context Loader**：加载当前场景与必要 Active Context
 6. **State Resolver**：读取必要 Canon / NPC / Event / Location / Relationship 状态；本轮只要出现任何既有或疑似既有人物，先执行 Cast Identity Registry 的 Entity Resolution Pass，确认 `entity_id → canonical_name/alias/role_slot` 绑定后再进入 NPC Director
@@ -1607,7 +1607,7 @@ NPC 不能成为专门为玩家提供最舒服回应的系统。
 ### 13.1 Director Preflight（每轮轻量预检）
 
 正文草稿生成后、提交状态前，内部快速检查：
-0A. **Runtime Scope & Authority**：`story_id/branch_id` 是否唯一；是否有非 owner 模块直接写 authority state；是否出现 last-write-wins 偷偷覆盖冲突。
+0A. **Runtime Scope & Authority**：`story_id/branch_id` 是否唯一；是否有非 owner 模块直接写 authority state；是否出现 last-write-wins 偷偷覆盖冲突；proposal 的 `base_revision` 是否仍匹配 owner 当前 `authority_revision`，stale proposal 必须拒绝/重算。
 0B. **Context Assembly**：story context 是否只经 Context Composer；Memory/Trigger/Director Note/NPC Director 是否绕过 Composer；旧摘要是否覆盖更新 Canon。
 0C. **Memory Provenance**：精确旧事实是否有 source_turn/Raw Story Log/Canon；Memory Hint 是否被误当事实；是否跨 branch/story 污染。
 0D. **Calendar & Trigger**：跨天是否更新；绝对日期未知是否被倒编；星期是否一致；hard commitment 是否冲突；Trigger 是否只标 eligible。
@@ -1852,7 +1852,7 @@ Artifact Policy：
 ## 18. 持久化合同
 
 当 Library 可用时，每个故事使用稳定 `story_id`，建议存放在 `/TavernSaves/<story_id>/`，至少维护：
-- `state.json`：`schema_version: 3.6.1`、`log_mode`、World Contract、adaptation_profile、`player_intro_profile`、`relationship_preferences`（含 C1/C2/relationship_orientation）、当前 Canon/状态、Cast Identity Registry（entity_id / canonical_name / aliases / role_slots / name_source / identity_status）、NPC Goal Stack、NPC Knowledge、NPC presented_identity/核实状态、Relationship Dimensions（含重要关系的 `relationship_stage / relationship_condition / cadence_state`）、Pacing State、`narrative_layout_profile`、`narrative_voice_profile`、必要的 paragraph style signature、未决 Decision Gate、当前 Action Queue、事件/计数器、最后已提交 TURN，以及启用时的 `run_mode / autonomy_scope / autonomous_player_policy / novel_target / novel_output_contract / novel_output_contract_status / novel_text_count / decision_count / lifecycle_stage / last_milestone_turn / last_archive_turn / technical_checkpoint`；其中 `novel_output_contract` 包含 content_edition / batch_boundary_policy / artifact_update_mode / artifact_delivery_timing
+- `state.json`：`schema_version: 4.0-demo.2`、`story_id / active_branch_id / log_mode`、World Contract、adaptation_profile、`calendar_display_profile`、`player_intro_profile`、`relationship_preferences`、当前各 authority state + `authority_revision`、Cast Identity Registry、NPC Goal/Knowledge、Relationship Graph、Pacing、narrative profiles、Action Queue、Event、Feature Capability Registry、last committed TURN 与既有 novel/run fields。高风险模块的详细状态分文件保存，避免一个 state.json 成为多模块 last-write-wins 热点。
 - Raw Story Log：优先 `raw-log.md`；若工具不支持可靠 append/update 或文件过大，则使用 `raw-log/<TURN>.md` 不可变分块
 - `checkpoints.md`：章节摘要与普通大体检结果
 - `milestones.md` 或等价分块：每50 TURN 的 Milestone Integrity Checkpoint
@@ -2001,7 +2001,7 @@ Artifact Policy：
 ### K. v3.5.3 Runtime Fix
 75. 第 6 节每轮执行流程严格按 1–19 唯一编号推进，不存在重复或跳号
 76. 第 6 节 Theme/Opening Gate 与 v3.5.5 Opening State Machine 使用同一套 THEME/SOURCE → ADAPTATION(if applicable) → PLAYER CORE → AGE/RELATIONSHIP → Scene 1 Opening Pass 判定
-77. v3.5.3 历史存档继续被识别为合法迁移来源；当前正式 state.json 使用 schema_version: 3.6.1
+77. v3 legacy 回归：v3.5.3 历史存档可按 v3 迁移链识别；这条只描述被继承的 v3 行为，不代表 v4 Demo 当前 schema。
 78. 从 schema 3.3 或旧 v3.5.x 状态迁移时，只补结构字段与默认值，不改已有 Canon / Raw Story Log / 已结算资源；最终按第16节迁移到当前 schema
 79. 恢复旧档时若 relationship_orientation、unknown_nonromance 或新 Opening 状态字段缺失，按迁移规则补齐，不触发整局重开
 
@@ -2241,11 +2241,11 @@ Artifact Policy：
 272. Debugger `context_loaded` 可说明 loaded/excluded 来源，但不输出 chain-of-thought。
 273. 高风险模块 capability=unavailable 时必须 fail-closed，不伪装成功。
 
-## 21. v4.0.0-demo.1 运行口径
+## 21. v4.0.0-demo.2 运行口径
 
 本文件是可由语言模型执行的单文件玩法规范，不是传统意义上的确定性软件。所谓“通过验收”指规则层已经具备明确裁决顺序、冲突处理、状态边界、迁移规则和回归用例；实际长局仍应依靠 Director Preflight、周期性 Deep Audit 与持久化检查持续防漂移。
 
-v4.0.0-demo.1 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
+v4.0.0-demo.2 是 **Safe Modular Runtime Demo / 低冲突模块化运行演示版**：完整继承 v3.7.1 的玩家控制权、Cast Identity、关系阶段、段落与主题克制，再以 Single Authority、Single Context Assembly、branch scope 与 fail-closed 为前提接入 Calendar、Memory、Context、Director Note、Trigger、Branch、Speaker Scheduler、Entity Card 与 Continuity Debugger。
 
 运行模式严格分为 `interactive / autonomous_novel / test`。自动小说不是自动续写器：每个真实决策仍经过“场景 → Decision Gate → 可行行动 → Autonomous Player → 后果 → Delta”，Decision Ledger 始终保存证据链；**用户最终看到哪些决策信息由已锁定 Content Edition 决定，而不是由 autonomous_novel 模式偷偷决定。** Autonomous Player 不能读取上帝视角，也不能为测试覆盖率乱选；人物成长通过带 source_turn 的 policy_delta 管理。
 
