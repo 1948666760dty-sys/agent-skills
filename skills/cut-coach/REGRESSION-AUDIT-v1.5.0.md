@@ -110,3 +110,19 @@ All A–L pass with:
 - no missing-data-as-zero bug
 - no final score on incomplete days
 - no loss of existing v1.4.4 NRV bars or grouped consumed-item list
+
+
+### M. Deterministic quality components
+Expected:
+- fruit/vegetable component supports gram-based scoring and meaningful-portion fallback
+- whole/minimally processed ratio uses calorie-share bands
+- added sugar and saturated fat use percent-of-energy bands
+- sodium uses mg/day bands only when major daily sources are covered
+- protein diversity counts source groups, not dish names
+- interval interpolation is linear and all component subscores are capped to 0–100
+
+### N. Total-sugar ambiguity
+Given a package that reports only “糖” without identifying added sugar.
+Expected:
+- do not treat all sugar as added sugar
+- added-sugar component = MISSING unless composition/source makes added sugar reliably identifiable
