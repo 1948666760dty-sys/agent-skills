@@ -1,0 +1,27 @@
+name: Complex Tavern Cloud Version Router Audit
+on:
+  push:
+    paths:
+      - 'skills/complex-tavern/**'
+      - '.github/workflows/complex-tavern-cloud-router.yml'
+      - 'README.md'
+      - 'skills/README.md'
+  pull_request:
+    paths:
+      - 'skills/complex-tavern/**'
+      - '.github/workflows/complex-tavern-cloud-router.yml'
+      - 'README.md'
+      - 'skills/README.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  route-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify cloud-version router and remote demo path
+        run: python skills/complex-tavern/evals/check_version_router.py --remote
