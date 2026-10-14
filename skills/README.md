@@ -4,12 +4,13 @@
 
 下列 canonical path 均相对于仓库根目录。
 
-## Complex Tavern Engine v3.7.1
+## Complex Tavern Engine v3.7.2 (v3.7.1 Core + Cloud Version Router)
 
 - Canonical path: `skills/complex-tavern/SKILL.md`
-- Current version: `3.7.1`
+- Current version: `3.7.2` (v3.7.1 narrative engine preserved)
 - Status: `stable-default`
 - Triggers: “开始复杂酒馆”, “继续复杂酒馆”, “按复杂酒馆 v3 玩”, “继续当前酒馆故事”
+- Cloud version menu: no version selected => banner first, then A stable v3 or B Muse × GPT-6 v4 Demo from its explicit experiment branch. Explicit selection skips the menu; no reading/migrating any private save.
 - Loading rule: on any Complex Tavern trigger, fetch the canonical `SKILL.md` from GitHub before starting or resuming; unless the user explicitly asks for an older version, use the latest canonical version by default.
 - Source of truth: GitHub copy above. Library/local copies are backups only.
 - Runtime: pure text; image generation is disabled by default.

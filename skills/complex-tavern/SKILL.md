@@ -2,14 +2,14 @@
 name: complex-tavern-engine-v3
 display_name: 复杂酒馆
 description: 通用、纯文字、长局持续世界互动叙事与自动长篇小说引擎。v3.7.1 在 v3.7.0 稳定关系推进系统基础上新增 Cast Identity Binding / 人物实体与姓名绑定修复：已有未命名角色先分配稳定 entity_id / role_slot，不得在后续场景为阅读方便擅自补名、换名或把另一故事的人名串入当前 Canon；任何后续命名都必须先完成同一实体解析并记录 name_source。继续保留关系阶段语法、NPC 独立生活、Persistent Paragraph Style Lock、Theme Restraint、Reader Annotation、Visible Output Semantics Lock 与既有长篇运行规则。
-version: 3.7.1
+version: 3.7.2
 status: stable-default
 canonical_repository: 1948666760dty-sys/agent-skills
 canonical_path: skills/complex-tavern/SKILL.md
 activation: default-on-trigger
 ---
 
-# Complex Tavern Engine v3.7.1 — Cast Identity Binding
+# Complex Tavern Engine v3.7.2 — Cloud Version Router over v3.7.1
 
 ## 0. 性质与真实性边界
 
@@ -22,7 +22,7 @@ activation: default-on-trigger
 - Path: `skills/complex-tavern/SKILL.md`
 
 默认加载规则：
-- 当用户表达“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等明确触发语义，且未指定旧版本时，默认使用 GitHub canonical 的最新正式版本。
+- 当用户表达“开始复杂酒馆 / 继续复杂酒馆 / 按复杂酒馆玩 / 使用复杂酒馆”等明确触发语义时，先读取 GitHub canonical。未指定版本且未绑定本会话已选择的引擎时，先进入 0.1.3 云端版本选择，**不静默直接开始 v3 剧情**；用户已明确选定版本或当前会话已有效绑定引擎时则直达相应引擎。
 - GitHub 可访问时，启用前优先读取 canonical 文件；Library / 本地副本只作为 fallback。
 - GitHub 与 Library / 本地版本不一致时，以 GitHub canonical 为准。
 - GitHub 暂时不可访问时，可以使用 Library / 本地 fallback，但不得声称已经验证为 GitHub 最新版。
@@ -69,6 +69,27 @@ GitHub canonical 本次读取成功时，固定语义格式为：
 - 工具读取 canonical 可以发生在版本行之前，但工具结果不是玩家剧情输出；一旦读取成功，下一段玩家可见文本必须先发版本确认。若同一回复里包含后续设定或剧情，版本确认仍必须占第一行，不能埋在中间
 - 普通“复杂酒馆 / 开始复杂酒馆 / 按复杂酒馆玩”默认进入 interactive，也**同样**适用首个可见输出硬闸门；小说模式不是触发版本提示的前提
 - 显示的版本号与本轮 `skill_version`、frontmatter `version` 不一致时属于 Critical 启动错误
+
+### 0.1.3 Cloud Version Router / 云端版本选择入口（v3.7.2 新增，元操作）
+
+**目标：** 现有 ChatGPT `@复杂酒馆` 不必创建第二个插件或更换 @ 名称；用户开头选版本后再到 GitHub 读取对应规则。此路由只改变启动行为，v3.7.1 其余互动叙事逻辑不变；v4 仍是实验候选，不代表已正式发布。
+
+**适用范围与覆盖：** 本节对 0.1 中“未指定版本默认使用最新版”和 1.1 中“新篇第一个未解析前台节点为题材选择”作前置路由覆盖：**先完成云端引擎选择，之后才运行所选版本的 Opening State Machine**。该选择为作者层/宿主层 meta，不是剧情 D0–D3 决策，不消耗 TURN/游戏时间、不会触碰或复制任何存档。0.1.1 当轮 GitHub 读取与 0.1.2 首个可见版本确认始终优先：不能先显示菜单再补一条版本确认。
+
+**首次启动流程：**
+1. 当前运行真实读取 `1948666760dty-sys/agent-skills` 的 `main:skills/complex-tavern/SKILL.md`，确认 frontmatter version/status；读不到 GitHub 则按 0.1 fallback 标识，不能声称云端已经验证。
+2. 若玩家没有在本轮消息或当前会话明确选过版本，第一行显示 0.1.2 的**入口**版本确认（如 `复杂酒馆 v3.7.2｜GitHub canonical 已验证`；它只确认入口加载成功，**不代表已经选定 v3 游戏引擎**）。下一行显示以下两项真实选择并停止：
+   - `A. 稳定版 v3（v3.7.1 叙事核心 + v3.7.2 云端路由）`：云端 `main:skills/complex-tavern/SKILL.md`；选择后保留 v3 稳定规则。
+   - `B. Muse × GPT-6 v4 Demo（实验整合版）`：云端 `feat/complex-tavern-muse-gpt6-20261014:skills/complex-tavern-v4-demo/SKILL.md`；尚未合并 main，须显示“指定实验分支，非正式最新版”。
+   - 附加 `自由输入：直接说“稳定版”“v4 Demo”、问区别或取消`。不假装 UI 按钮必定可用，文字 A/B 可靠兜底。
+3. 如用户明确给出“用v3/稳定版”或“用v4/4.0 Demo/整合版”，省略版本菜单直接路由，不重复问。选择 A/B 只记录当前会话的 `engine_selection` 与 `source_ref`（不写故事 Canon、不建立持久状态）。
+4. 当玩家选 A：本轮已真实读取 `main` 且读取版本可信时，可按该入口继续运行 v3 Opening；显式再次启动需照 0.1.1 重新取源和首行确认。B：必须在**本轮**从指定 GitHub 分支读取**完整** v4 Demo `SKILL.md`，从其 frontmatter 取得真实版本，再按该 Demo 的首行规则显示“**指定实验分支已读取（非 main canonical 最新版）**”及版本。若 No-Rush 当前确实启用，可以合并 `不着急 ✓` 前缀；不可伪称 Demo main canonical 已验证。玩家通过该入口选 B 本身视为明确选择 v4 Demo 及其指定 Git ref，满足 Demo explicit activation 的用户授权。
+5. B 加载成功后，按当轮实际读取的**整份 v4 规则**执行，包含所有单一 Authority、队列、年龄/关系门、菜单、时间/世界锁与能力降级；路由层不能截取少数摘录代替全篇，也不能把 v3 规则混用成 v4 状态机。v4 加载失败时必须明确报告失败并保持在版本选择阶段；不回退使用缓存当作新版。
+6. 会话中已选定版本后，普通叙事操作及单独“继续”维持当前选择，不每轮重复显示菜单。再次明确 `@复杂酒馆` 或“使用/开始/继续复杂酒馆”若没有切换意图且当前版本绑定可验证，则按当前版本重新核验启动来源后继续，不强制重选；明确“切换版本/选版本”才重显 A/B。
+7. **存档隔离**：选择 B **不等于**允许读取或迁移 v3 私人故事。任何当前私人存档只有用户对**该存档**另行明确授权后才可按 v4 的 clone_for_demo 语义只读复制；本次版本菜单不扫描、不打开、不上传、不改写任何私人剧情。不同版本选项只是改变引擎，不是剧情恢复指令。
+8. 版本列表中的 v4 路径是**GitHub 指定实验分支**；PR #8 未合并前必须始终标注实验候选，不得把它误称 main 正式最新版，也不触发自动发布。未来若将 v4 正式发布到稳定路径，须通过人工审核同步修改此路由及索引；不能从年份、缓存或名称猜测云端最新版本。
+
+**阻塞规则：** 没读到用户所选版本的完整规则，不可进入剧情；没有用户选择，不自动走 A 或 B；GitHub 不可用只能报告 fallback/无法校验，不捏造“云端已验证”；没有外部持久化工具不可声称已保存；任何场景都不应新建同名插件。版本菜单内的 A/B 是元选择，不调用游戏中同名字母行动。
 
 当 Files/Library 等持久化工具可用时，优先用它保存/读取存档、Raw Story Log 与章节检查点；工具不可用时仍可在当前对话内按同一规则运行，但不得声称已持久保存到外部。
 

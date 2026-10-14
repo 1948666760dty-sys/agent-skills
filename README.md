@@ -6,9 +6,15 @@
 
 | 分类 | Skill | 当前版本 | 用途 |
 | --- | --- | --- | --- |
-| 互动叙事 | [复杂酒馆 / Complex Tavern](skills/complex-tavern/SKILL.md) | 3.6.6 | 纯文字互动故事、持续世界与长篇小说 |
+| 互动叙事 | [复杂酒馆 / Complex Tavern](skills/complex-tavern/SKILL.md) | 3.7.2 | 云端版本菜单：v3.7.1 叙事核心或 Muse × GPT-6 v4 Demo 实验分支 |
 | 工作流程 | [不着急 / No-Rush](skills/no-rush/SKILL.md) | 2.5.0 | 默认预加载、需求澄清、任务跟踪与交付检查 |
 | 饮食记录 | [duty-NRV / Cut Coach / 减脂教练](skills/cut-coach/SKILL.md) | 1.3.0 | 低成本饮食记录、主动减脂干预、运动配合与趋势审计 |
+
+## 复杂酒馆云端版本选择（v3.7.2）
+
+现有 `@复杂酒馆` 在宿主实际按 GitHub canonical 读取时，首次启动先显示入口版本确认，再显示 **A 稳定版 v3 / B Muse × GPT-6 v4 实验版**；明确指定版本时直接读取对应 GitHub 规则。选择实验版并不会自动读取、转移或上传任何私人剧情。
+
+当前 B 指向未合并的实验分支 `feat/complex-tavern-muse-gpt6-20261014`，不是 main 的正式稳定版。GitHub 路由规则的变更也不保证每个 ChatGPT 客户端的已安装 Skill 已自动刷新；必须通过实际 `@` 会话核验。
 
 ## 如何使用
 
