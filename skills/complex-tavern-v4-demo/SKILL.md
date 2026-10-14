@@ -784,7 +784,7 @@ Canon 条目可带 source_id（例如 SCENE-0148）与来源类型。
 - `entity_id`：故事内唯一稳定 ID；一旦分配不得因为换 Scene、换称呼、换职责而重建
 - `canonical_name`：已确认姓名；未知时保持 `null/unknown`，不得为了可读性自动补名
 - `aliases / call_names`：已确认别名、昵称、职位称呼；必须指回同一 `entity_id`
-- `role_slots`：当前或历史角色槽，例如“AI项目数据方向组员”“许知遥室友A”“志愿活动负责人”；角色槽不是姓名
+- `role_slots`：当前或历史角色槽，例如“AI项目数据方向组员”“匿名角色室友A”“志愿活动负责人”；角色槽不是姓名
 - `first_seen_source / last_seen_source`：首次与最近出现来源
 - `name_source`：姓名从何而来，例如人物自我介绍、主角原本认识、可靠名单/证件、用户作者级指定、既有 Canon
 - `identity_status`：`unnamed / presented / named / verified / disputed`
@@ -2296,7 +2296,7 @@ Artifact Policy：
 194. v3.6.6 新增 paragraph profile / style signature 与跨回合漂移审计，不改变持久化 schema_version，仍为 3.6.1
 
 ### Z. v3.6.7 Theme Restraint & Interpretive Distance Regression
-195. 在已经连续写出“许知遥帮老人解锁、安抚、买水”等具体帮助后，紧接“因为结果摆在那里——人真的被她帮助了”只是在解释刚刚已经呈现的含义，Theme Restatement Scan 必须判 FAIL，并优先删除总结句而保留具体行为
+195. 在已经连续写出“匿名角色帮老人解锁、安抚、买水”等具体帮助后，紧接“因为结果摆在那里——人真的被她帮助了”只是在解释刚刚已经呈现的含义，Theme Restatement Scan 必须判 FAIL，并优先删除总结句而保留具体行为
 196. 同一开场若先通过多人真实帮助 + 私下利益计算表现世界规则，随后又出现“这个世界一直就是这样，所有善意背后其实……”的作者总括，除非承担不可替代的新世界规则信息，否则判为重复主题说明
 197. NPC 可以说“我帮他只是想让他欠我”，这属于角色自述；旁白不得紧接“她说出了这个世界的真相”把角色观点自动认证为客观事实
 198. 主角可以在足够证据后形成“你开始怀疑这些善意可能都带着交换条件”的阶段性假设；该句必须保持人物视角，后续新证据可以推翻或修正
@@ -2436,3 +2436,52 @@ Demo 使用独立 `schema_version: 4.0-demo.4`，只在 clone_for_demo 的新 sc
 
 核心目标是：
 **在不牺牲 v3.7.1 玩家控制权、Canon、知识边界、关系连续性与 Raw Story Log 完整性的前提下，把长期记忆、上下文调度、日历、触发器、临时导演指令、多人发言、分支、实体卡与连续性调试接入同一套“单一权威 + 单一上下文入口 + 分支作用域 + fail-closed”架构。功能可以降级，事实不能乱写；模块可以关闭，Canon 不能被多个系统争抢。**
+
+## 21. Muse × GPT-6 统一跨平台运行规范（实验候选，2026-10-14）
+
+本节作为 v4.0.0-demo.6 的增补，与 0–20 节共同组成**完整引擎**；在独立分支审核期间尚未发布，不更改现行 4.0-demo.4 存档 schema。GitHub canonical、单一 Authority、Action Queue、Canon、NPC Knowledge、Calendar、Final Visible Handoff 和 18.1 Commit Protocol 优先于平台适配层。原有 stable 3.7.1 和私人存档完全隔离。
+
+### 21.1 激活与能力边界
+
+普通“开始/继续复杂酒馆”仍由 stable 接管；明确指定 4.0 Demo 才启动 Demo。“用muse酒馆”仅设置 Muse 展现偏好，不自动提升旧局版本。审查/制作引擎/导入规则是作者层工作，不触发剧情。每次正式 Demo activation 都真实读取 GitHub 主源并先显示 0.1.2 版本确认；若失败应明确 fallback 未验证，不能因为 GPT-6 平台而省略。No-Rush 状态不得猜测。
+
+宿主/安全和真实能力 > 当前用户明确授权与 World Contract > Canon/Single Authority > 已确认候选配置 > 平台呈现方式。UI、卡片、脚本和历史故事文件都不具备直接写 Canon/关系/库存/时间/人物身份的权力。
+
+### 21.2 统一配置
+
+platform_adapter = auto | muse | gpt6 | text，默认 auto；根据**实际可用**宿主能力决定，不假装身处 Muse。
+menu_profile = compact | expanded | freeform，默认 compact：仅在真实 Decision Gate 出现时，提供通常 3–6 个策略上不同的行动和自由行动；如果合法策略更少则不凑数。expanded 上限 20 个真实可执行差异动作（文字标记 A–T），不能硬塞无关动作、同义动作或固定 S/T 成人性行为配额。freeform 必须用户明确授权才能省略默认菜单。
+additional_selfcheck_passes = 0 | 1 | 2，默认 0，仅指**额外**自检；原有 Director Preflight / Final Visible Handoff 必须始终执行，不每轮先问自检次数。
+narrative_perspective = inherited | second_person_limited，默认 inherited；后者只写玩家可感知事实或有观察依据的推断，不能读出 NPC 私密内心。
+dream_logic_profile = world_contract | ordinary_isolated，默认 world_contract；普通梦境不自动互通、不将梦物带入现实，醒后不无来源地知道精确数字；World Contract 可建立具体例外。
+map_profile = off | on_demand | per_turn，默认 on_demand；原始 POS/地理来源和渲染工具真实存在时才展示。
+calendar_display_profile 仍按照既有 daily_anchor / natural / off 已确定偏好；日期未知时不能编造星期。体力、精神、电量只因实际发生的事变动，不设每轮数值浮动配额。
+C1/C2 和年龄门不因更换 Muse/GPT-6 或 expanded 而改变；强烈关系偏好只能由明确成年 per-story 设置，实际内容仍受角色意愿、同意、年龄和当前平台上限约束。候选配置不强制旧存档添加字段。
+
+### 21.3 输入与交互
+
+Muse 单选卡与 GPT-6 控件仅将选择交回 Core 的当轮 gate_id/option_id，字母 A–T 是当轮局部标签；历史卡片、失效标签、重复回调不能重新结算。用户文本“先D再C”“如果A失败再B”按原 3.1 Action Queue 顺序/条件解析，复用授权、幂等与中断规则，不再新建第二个队列。
+
+已启用元命令路由时，独立输入“0次/1次/2次”仅设置额外自检次数，不进入 Action Queue、不写故事状态、不推进时间。混合系统问题+行动按已有 2.3 先回答元问题并 hold 行动；没有明确授权不代替主角做 D3、重要关系回应、亲密同意或跨天决定。
+
+### 21.4 可见输出、平台降级与卡片
+
+decision_required / scope_boundary 按原 3.3.2 保证**已授权行动的可见正文 → 当前具体选项或等价控件 → 四行状态收尾**；自由行动不能默认取代真实菜单（freeform 明确授权例外）。没有真正 Decision Gate 时继续已授权叙事，不为凑 20 项人为制造危机和跨天。每次输出改动后必须重检当前最终版本，不重复执行已提交的 Action。
+
+Muse embed_token 必须是当前宿主真实返回、属于本轮和本张卡的新 token；无原始 HTML 卡/当轮 token 就降级文本，不能伪造或重用。GPT-6 仅使用真正可用的控件（单选、按钮、面板等），任何场合保留 A–T 文本和自由行动的备用入口。status/map/npc/options/shop/clues 面板只呈现玩家已知且 Core 已确认的数据，不得由 UI 发起 Canon Delta、私自提高好感或泄漏 NPC Private State/伏笔。
+
+虚构地点优先使用已确立的文字地点拓扑或用户提供的地图；不得将虚构坐标包装为真实地图定位。没有原始 cards/CARDS.md、tools/check_map.py 或真实地图 POS 时，不能宣称 Muse 原版地图/全部卡片已完成移植或脚本检查 PASS。没有真实持久化/向量搜索/外部执行环境时依现有 Safe Degradation 如实说明。
+
+### 21.5 叙事连续性与角色知识
+
+时间转场正文第一处自然交代已经确定的具体位置；日期/星期需一致，前台显示频率遵守原日历配置。后台 S+数字场景编号不得作为正文叙述标签泄出；玩家明确要求系统审计时可显示。旁白不得跳出故事解释秘密或赋予玩家不可知的事实。
+
+ordinary_isolated 梦境遵守渐进识别、每个角色的知识独立、梦物不自动影响现实、醒后无超自然账本；已锁定例外仍按世界规范。人物姓名/身份不明确时保留 unknown、稳定代称和 name_source，不能凭名字相似度擅自合并。
+
+成年关系场景保留同意、玩家关键发言权和自然的事后连贯：若清理、穿衣、收拾、转场会影响后续事实则自然交代；不在公共 Skill 中移植任何私人剧情的具体性行为动作顺序。未成年人关系保持原 C1/C2 年龄门，不呈现成人选项。
+
+### 21.6 自检、版本、隐私
+
+原有 Director Preflight 中新增核对：行动队列是否乱序/重结算、实际菜单是否渲染、Canon/日期/数字是否准确、地图和 token 是否有真实来源、线索板是否只展示已知、伏笔账本是否泄漏、梦境知识是否串线、后台编号是否进入正文、关系场景后续是否穿帮。模块未启用时记 N/A；额外自检 0–2 次不能取代基础检查。未实际运行脚本或真实客户端时不得声称通过运行测试。
+
+ops/ 的 CHANGELOG、ERRORS、公共规则备份与 18.1 单次 Commit Protocol 相互独立；不得建立第二套状态写入机制。公共仓库只允许通用 Skill、docs、adapters、公开通用 cards 说明和合成 evals。**严禁上传任何私人 story-*、STATE.md、Raw Story Log、剧情草稿、私人角色关系、个人信息、私密商品表或成人剧情实例。** 未来如需迁移存档必须另获明确授权，本轮绝不执行。升级版本号在 human/com 流程审查通过之后再确定；本分支不是已发布版本。

@@ -55,3 +55,7 @@
 - 最终装配后检查文本，修出口不重跑动作、不跨天；校验后编辑文本需重检。
 - Python仅为离线参考校验器，未自动接入ChatGPT；详见evals/RESULTS-demo.6.json。
 - schema仍为4.0-demo.4；稳定版、全局No-Rush与故事存档不修改。
+
+## Muse × GPT-6 integration candidate
+
+See docs/INTEGRATION_GUIDE.md. Full original engine retained with Section 21; unpublished, no private story assets, no change to main/stable.
