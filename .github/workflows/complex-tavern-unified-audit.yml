@@ -1,0 +1,30 @@
+name: Complex Tavern Unified Static Audit
+
+on:
+  push:
+    branches:
+      - feat/complex-tavern-muse-gpt6-20261014
+    paths:
+      - 'skills/complex-tavern-v4-demo/**'
+      - '.github/workflows/complex-tavern-unified-audit.yml'
+  pull_request:
+    paths:
+      - 'skills/complex-tavern-v4-demo/**'
+      - '.github/workflows/complex-tavern-unified-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check unified source and privacy boundaries
+        run: python skills/complex-tavern-v4-demo/evals/check_unified_contract.py
+      - name: Run historical demo.6 output logic cases
+        run: python skills/complex-tavern-v4-demo/evals/repair_demo6.py --logic-only
