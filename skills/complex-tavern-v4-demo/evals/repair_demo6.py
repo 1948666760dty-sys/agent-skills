@@ -19,9 +19,9 @@ LABELS = ('已完成', '未完成', '存在问题', '需要你确认')
 HANDOFF = {'decision_required', 'scope_boundary'}
 STOP_MODES = {'user_pause', 'meta_hold', 'requested_endpoint', 'blocker', 'technical_checkpoint', 'story_complete'}
 
-# Actual final-tail excerpt supplied by the user conversation, not generated gameplay.
+# Synthetic final-tail fixture based on a menu-omission pattern; no personal story records.
 BAD_BODY = '“你困了吗？”她问。\n\n你现在确实已经把项目做完、澡也洗了，时间也不早，但要不要继续聊、准备休息，还是再做点自己的事，还是由你决定。'
-BAD_FOOTER = '已完成：你明确表示明天中午本来就是和许知遥一起吃，并主动用了“许老师”这个旧称呼；她自然接了几句，没有重新陷入旧梗循环。\n未完成：今晚这通电话还没有决定什么时候结束。\n存在问题：无。\n需要你确认：你想继续聊、准备休息，还是做点别的都可以直接说。'
+BAD_FOOTER = '已完成：你明确表示明天中午本来就是和合成角色甲一起吃，并主动用了“旧昵称”这个旧称呼；她自然接了几句，没有重新陷入旧梗循环。\n未完成：今晚这通电话还没有决定什么时候结束。\n存在问题：无。\n需要你确认：你想继续聊、准备休息，还是做点别的都可以直接说。'
 BAD_TAIL = BAD_BODY + '\n\n' + BAD_FOOTER
 MENU = 'A. 继续语音聊一会儿，暂时不挂断。\nB. 告诉她自己有点困，互道晚安后结束通话；不跳到次日。\nC. 先结束电话，自己再做点别的。\nD. 自由行动或直接说你想怎样回答。'
 
